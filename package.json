@@ -1,0 +1,12 @@
+{
+  "name": "woorisai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "우리사이 — 함께한 순간을, 우리만의 이야기로.",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test.js"
+  },
+  "engines": { "node": ">=24" }
+}
