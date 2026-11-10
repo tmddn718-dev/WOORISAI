@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import http from 'node:http';
 
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'ws-'));
 const { server } = await import('./server.js');
@@ -175,6 +176,51 @@ assert.equal((await d.get('/api/me')).status, 401);
   for (const a of ADJECTIVES) for (const nn of NOUNS) assert.equal(validateNickname(a + nn).ok, true, a + nn);
   const recent = []; for (let i = 0; i < 5; i++) recent.push(suggest(recent));
   assert.equal(new Set(recent).size, 5, '직전 5개 재노출 방지');
+}
+
+
+// 간편가입(OAuth): 가짜 제공자로 인가 코드 흐름 전체를 검증한다
+{
+  const fake = http.createServer((req, res) => {
+    const u = new URL(req.url, 'http://x'), json = o => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)); };
+    if (u.pathname === '/auth') { res.writeHead(302, { location: `${u.searchParams.get('redirect_uri')}?code=fakecode&state=${u.searchParams.get('state')}` }); return res.end(); }
+    if (u.pathname === '/token') return json({ access_token: 'tkn' });
+    if (u.pathname === '/me') return json({ id: 987654, kakao_account: { profile: { nickname: '카톡유저' } } });
+    res.writeHead(404); res.end();
+  });
+  await new Promise(r => fake.listen(0, r));
+  const fb = `http://localhost:${fake.address().port}`;
+  Object.assign(process.env, { KAKAO_CLIENT_ID: 'cid', OAUTH_KAKAO_AUTH_URL: fb + '/auth', OAUTH_KAKAO_TOKEN_URL: fb + '/token', OAUTH_KAKAO_INFO_URL: fb + '/me' });
+  const get = (url, cookie) => fetch(url, { redirect: 'manual', headers: cookie ? { cookie } : {} });
+  const flow = async (cookieOverride) => {
+    const s1 = await get(base + '/api/oauth/kakao/start'); const st = s1.headers.get('set-cookie').split(';')[0];
+    const a = await get(s1.headers.get('location')); const cb = await get(a.headers.get('location'), cookieOverride ?? st);
+    return cb;
+  };
+  const pv = (await (await fetch(base + '/api/oauth/providers')).json());
+  assert.equal(pv.kakao, true); assert.equal(pv.google, false, '설정하지 않은 제공자는 꺼져 있다');
+  assert.equal((await get(base + '/api/oauth/google/start')).status, 404);
+  // state 불일치(CSRF)는 거절
+  assert.match((await flow('oauth_state=wrong')).headers.get('location'), /oauth_error/);
+  // 신규: 임시 가입 토큰 → 닉네임·이름 정하기 → 계정 생성 (비밀번호 없음)
+  const loc = (await flow()).headers.get('location'); assert.match(loc, /signup\/oauth\?t=/);
+  const t = new URL(loc, base).hash.split('t=')[1];
+  const k = client(); const pend = (await k.get('/api/oauth/pending?t=' + t)).data;
+  assert.equal(pend.label, '카카오톡'); assert.equal(pend.suggestion, '카톡유저');
+  assert.equal((await k.post('/api/signup/oauth', { token: 'nope', nickname: '카톡유저', username: 'kakaouser1' })).status, 410);
+  assert.equal((await k.post('/api/signup/oauth', { token: t, nickname: '가', username: 'kakaouser1' })).data.error_code, 'NICKNAME_TOO_SHORT');
+  const made = (await k.post('/api/signup/oauth', { token: t, nickname: '카톡유저', username: 'kakaouser1' })).data;
+  assert.equal(made.has_password, false); assert.equal(made.name, '카톡유저');
+  assert.equal((await k.post('/api/signup/oauth', { token: t, nickname: '카톡유저', username: 'kakaouser2' })).status, 410, '토큰은 한 번만 쓸 수 있다');
+  // 재방문: 같은 계정으로 바로 로그인 (세션 쿠키 발급)
+  const again = await flow(); assert.equal(again.headers.get('location'), '/#/');
+  assert.match(again.headers.getSetCookie().join(';'), /sid=/);
+  // 비밀번호 로그인은 거절(500이 아니라 401), 탈퇴는 이름 입력으로 확인
+  assert.equal((await client().post('/api/login', { username: 'kakaouser1', password: 'whatever1' })).status, 401);
+  assert.equal((await k.del('/api/me', { password: 'wrong' })).status, 401);
+  assert.equal((await k.del('/api/me', { password: 'kakaouser1' })).status, 200);
+  assert.equal((await flow()).headers.get('location').includes('signup/oauth'), true, '탈퇴 후에는 연결이 끊겨 다시 신규 가입');
+  fake.close();
 }
 
 console.log('✓ 모든 권한·삭제 시나리오 통과');

@@ -298,3 +298,14 @@ input[aria-invalid=true] { border-color: var(--danger); }
 .pwbox .pwtoggle { position: absolute; right: 4px; top: 2px; height: 44px; min-width: 44px; padding: 0 12px; border: 0; background: none; color: var(--green-d); font-size: .875rem; font-weight: 500; cursor: pointer; border-radius: var(--r-ctl); }
 .pwbox .pwtoggle:hover { background: var(--sage); }
 .uid { font-style: normal; font-size: .75rem; opacity: .75; }
+
+/* 간편가입: 원형 아이콘 + 짧은 라벨 */
+.snsrow { display: flex; justify-content: center; gap: 16px; }
+.sns { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 80px; min-height: 88px; padding: 8px; border: 0; background: none; cursor: pointer; border-radius: var(--r-ctl); transition: background-color var(--t) var(--ease); }
+.sns:hover { background: var(--sage); }
+.sns-ic { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 1.125rem; font-weight: 700; border: 1px solid var(--line); }
+.sns-l { font-size: .75rem; line-height: 16px; font-weight: 500; }
+.sns[aria-disabled=true] { opacity: .65; }
+.sns .cap { font-size: .6875rem; line-height: 14px; }
+.or { display: flex; align-items: center; gap: 12px; color: var(--sub); font-size: .8125rem; }
+.or::before, .or::after { content: ''; flex: 1; border-top: 1px solid var(--line); }

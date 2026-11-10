@@ -143,3 +143,17 @@ Node.js 24 (`node:http`, `node:sqlite`) · 바닐라 JS SPA · Pretendard / 나�
 | `server.js` | API, 권한 검사, 사진 저장, 정적 파일 |
 | `public/` | 웹 앱 (`app.js`, `style.css`, `index.html`, `logo.svg`) |
 | `test.js` | 권한·삭제 시나리오 테스트 |
+
+## 간편가입 설정
+
+제공자 앱을 만든 뒤 환경변수를 설정하면 해당 버튼이 켜져요. 설정하지 않은 제공자는 `준비 중`으로 표시돼요. 리디렉션 URI는 `<BASE_URL>/api/oauth/<kakao|google|naver>/callback`으로 등록하세요.
+
+```bash
+BASE_URL=https://example.com \
+KAKAO_CLIENT_ID=... KAKAO_CLIENT_SECRET=... \
+GOOGLE_CLIENT_ID=... GOOGLE_CLIENT_SECRET=... \
+NAVER_CLIENT_ID=... NAVER_CLIENT_SECRET=... \
+npm start
+```
+
+제공자의 계정 번호만 저장하고 이메일·토큰은 저장하지 않아요. 가입 화면의 간편가입 버튼은 공식 로고가 아닌 글자 마크이므로 출시 전 각 제공자의 버튼 가이드에 맞춰 교체해야 해요.

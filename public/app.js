@@ -73,7 +73,14 @@ const gone = e => e.status === 403 || e.status === 404
 const wordmark = () => `<div class="logo-row"><img src="/logo.svg" alt=""><div><div class="wordmark">우리사이</div><div class="wm-en">WOORISAI</div></div></div>`;
 
 // ---------- 인증 ----------
-// 회원가입 폼: 이름·사용자명·비밀번호. 입력 중 실시간 검증, 사용자명은 상태(확인 중/사용 가능/사용 불가)로 나눈다.
+// 간편가입 버튼 (제공자 공식 로고 대신 글자 마크. 출시 전 각 제공자의 버튼 가이드에 맞춰 교체한다)
+const SNS = [['kakao', '카카오톡', '카', '#FEE500', '#242622'], ['google', '구글', 'G', '#FFFFFF', '#242622'], ['naver', '네이버', 'N', '#03C75A', '#FFFFFF']];
+const eRo = w => { const j = (w.charCodeAt(w.length - 1) - 0xAC00) % 28; return j === 0 || j === 8 ? '로' : '으로'; }; // 받침에 맞춰 로/으로
+const snsRow = (verb, orText) => `<div class="snsrow" role="group" aria-label="간편 ${verb}">${SNS.map(([k, l, g, bg, fg]) => { const on = S.sns?.[k]; return `<button type="button" class="sns" data-act="sns" data-p="${k}" aria-label="${l}${eRo(l)} ${verb}하기" ${on ? '' : 'aria-disabled="true"'}><span class="sns-ic" style="background:${bg};color:${fg}" aria-hidden="true">${g}</span><span class="sns-l">${l}</span>${on ? '' : '<span class="cap">준비 중</span>'}</button>`; }).join('')}</div><div class="or"><span>${orText}</span></div>`;
+const nameField = () => `<div class="field"><label for="su-user"><span>이름</span></label><input id="su-user" type="text" name="username" maxlength="20" required autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="su-user-m"><small id="su-user-m" class="msg" aria-live="polite">영문 소문자, 숫자, _ 로 3–20자예요. 로그인과 친구 찾기에 써요.</small></div>`;
+const oauthView = () => { const p = S.pending || {}; return `<div class="page stack"><button class="icon-btn" data-act="auth" data-m="intro" aria-label="뒤로 가기" style="margin-left:-12px">${I('back')}</button><h1>${esc(p.label || '간편')} 계정으로 시작해요</h1><p class="sub body2">닉네임과 이름만 정하면 바로 시작할 수 있어요. 비밀번호는 필요 없어요.</p>
+  <form data-form="oauth-signup" class="stack" novalidate>${nickField('su-nick', '닉네임', p.suggestion || '')}${nameField()}<p class="err" role="alert"></p><div><button class="btn block" disabled>이 이름으로 시작하기</button><p id="su-why" class="cap" style="margin-top:8px" aria-live="polite"></p></div></form></div>`; };
+// 회원가입 폼: 닉네임 → 이름 → 비밀번호 → 비밀번호 확인. 입력 중 실시간 검증, 이름은 상태(확인 중/사용 가능/사용 불가)로 나눈다.
 function nickField(id, label = '닉네임', initial = '') {
   return `<div class="field" data-nick><label for="${id}"><span>${label}</span></label><input id="${id}" data-nick-input type="text" name="nickname" value="${esc(initial)}" maxlength="40" placeholder="${esc(suggest())}" autocomplete="nickname" aria-describedby="${id}-m" required>
     <div class="row between"><small id="${id}-m" class="msg" aria-live="polite">${NICK_HINT}</small><small id="${id}-c" class="count">${graphemes(initial)}/${NICK_MAX}</small></div>
@@ -94,10 +101,10 @@ document.addEventListener('input', e => { const el = e.target; if (el.matches?.(
 document.addEventListener('focusout', e => { const el = e.target; if (el.matches?.('[data-nick-input]') && !e.relatedTarget?.closest?.('[data-nick]')) nickRender(el, true); });
 const eyeI = '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>';
 const signupView = () => `<div class="page stack"><button class="icon-btn" data-act="auth" data-m="intro" aria-label="뒤로 가기" style="margin-left:-12px">${I('back')}</button>
-  <h1>우리사이에서 어떤 이름으로 불리고 싶나요?</h1><p class="sub body2">편하게 불릴 닉네임을 정해보세요. 나중에도 변경할 수 있어요.</p>
+  <h1>우리사이에서 어떤 이름으로 불리고 싶나요?</h1><p class="sub body2">편하게 불릴 닉네임을 정해보세요. 나중에도 변경할 수 있어요.</p>${snsRow('시작', '또는 직접 가입하기')}
   <form data-form="signup" class="stack" autocomplete="on" novalidate>
     ${nickField('su-nick')}
-    <div class="field"><label for="su-user"><span>사용자명</span></label><input id="su-user" type="text" name="username" maxlength="20" required autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="su-user-m"><small id="su-user-m" class="msg" aria-live="polite">영문 소문자, 숫자, _ 로 3–20자예요. 친구가 이 이름으로 나를 찾아요.</small></div>
+    ${nameField()}
     <div class="field"><label for="su-pw"><span>비밀번호</span></label>
       <div class="pwbox"><input id="su-pw" type="password" name="password" required autocomplete="new-password" aria-describedby="su-pw-r"><button type="button" class="pwtoggle" data-act="pw-toggle" aria-pressed="false">보기</button></div>
       <ul id="su-pw-r" class="rules" aria-live="polite"><li data-r="len">8자 이상</li><li data-r="letter">영문 포함</li><li data-r="digit">숫자 포함</li></ul></div>
@@ -109,16 +116,17 @@ const signupView = () => `<div class="page stack"><button class="icon-btn" data-
 function authView() {
   $('#tabs').hidden = true;
   const m = S.authMode;
+  if (m === 'oauth') return oauthView();
   if (m === 'intro') return `<div class="hero"><div class="hero-text">${wordmark()}<div class="stack"><p class="display">함께한 순간을,<br>우리만의 이야기로.</p><p class="sub">사진과 글을 모아 소중한 추억을 함께 완성해 보세요.</p></div>
     <div class="stack"><button class="btn block" data-act="auth" data-m="signup">시작하기</button><button class="btn line block" data-act="auth" data-m="login">이미 계정이 있어요</button></div>
     <p class="cap"><span style="display:inline-block;vertical-align:-4px">${I('lock', 's')}</span> 이 추억에 초대된 사람만 볼 수 있어요.</p></div><div class="hero-art demo" aria-hidden="true"><div class="card"><div class="ph">${KNOT}</div><div class="meta"><h2>성수동 브런치</h2><p class="cap">2025년 11월 9일 · 성수동, 서울 · 3명</p><div class="who"><span class="av s">지</span><span class="av s">민</span><span class="av s">하</span><span class="cap">사진 12장 · 이야기 4개</span></div></div></div></div></div>`;
   const su = m === 'signup';
   if (su) return signupView();
   return `<div class="page stack"><button class="icon-btn" data-act="auth" data-m="intro" aria-label="뒤로 가기" style="margin-left:-12px">${I('back')}</button>
-    <h1>${su ? '우리사이에 오신 걸 환영해요' : '다시 만나서 반가워요'}</h1>
+    <h1>다시 만나서 반가워요</h1>${snsRow('로그인', '또는 이름으로 로그인')}
     <form data-form="${m}" class="stack" autocomplete="on">
       ${su ? '<label class="field"><span>이름</span><input type="text" name="name" maxlength="20" required autocomplete="nickname"><small>함께하는 사람들에게 보이는 이름이에요.</small></label>' : ''}
-      <label class="field"><span>사용자명</span><input type="text" name="username" maxlength="20" required autocomplete="username" autocapitalize="none" spellcheck="false">${su ? '<small>영문 소문자, 숫자, _ 로 3–20자. 친구가 이 이름으로 나를 찾아요.</small>' : ''}</label>
+      <label class="field"><span>이름</span><input type="text" name="username" maxlength="20" required autocomplete="username" autocapitalize="none" spellcheck="false">${su ? '<small>영문 소문자, 숫자, _ 로 3–20자. 친구가 이 이름으로 나를 찾아요.</small>' : ''}</label>
       <label class="field"><span>비밀번호</span><input type="password" name="password" required minlength="8" autocomplete="${su ? 'new-password' : 'current-password'}">${su ? '<small>8자 이상</small>' : ''}</label>
       <p class="err" role="alert"></p>
       <button class="btn block">${su ? '가입하기' : '로그인'}</button>
@@ -172,7 +180,7 @@ P.newPost = async () => {
   const [pp, gg] = await Promise.all([api('GET', '/api/people'), api('GET', '/api/groups')]);
   let restored = false, d = S.draft; S.draft = null;
   if (!d) { try { d = JSON.parse(localStorage.getItem('ws_draft') || 'null'); restored = !!d; } catch { } } d ||= {}; window._groups = gg.groups;
-  if (!pp.friends.length) return `${top('새 추억 만들기')}${empty('함께할 사람을 먼저 연결해 주세요', '사용자명이나 초대 링크로 연결하면 함께 추억을 남길 수 있어요.', '<a class="btn" href="#/people">사람 연결하기</a>')}`;
+  if (!pp.friends.length) return `${top('새 추억 만들기')}${empty('함께할 사람을 먼저 연결해 주세요', '이름이나 초대 링크로 연결하면 함께 추억을 남길 수 있어요.', '<a class="btn" href="#/people">사람 연결하기</a>')}`;
   return `${top('새 추억 만들기')}<form class="page stack" data-form="newpost" data-meetup="${d.meetup_id || ''}">
     ${restored ? '<div class="note row between"><span>임시 저장된 초안을 불러왔어요.</span><button type="button" class="btn sm line" data-act="draft-clear">삭제</button></div>' : ''}
     <label class="field"><span>추억 제목</span><input type="text" name="title" maxlength="40" required value="${esc(d.title || '')}" placeholder="예) 성수동 브런치" data-counter><small class="count"></small></label>
@@ -266,7 +274,7 @@ P.meetup = async id => {
 P.people = async () => {
   const d = await api('GET', '/api/people');
   return `${top('사람')}<div class="page stack">
-    <form data-form="request" class="row" style="align-items:flex-end"><label class="field grow"><span>사용자명으로 연결하기</span><input type="text" name="username" placeholder="예) minsu" autocapitalize="none" required></label><button class="btn" style="flex:none">연결 요청</button></form><p class="err" role="alert" id="reqerr"></p>
+    <form data-form="request" class="row" style="align-items:flex-end"><label class="field grow"><span>이름으로 연결하기</span><input type="text" name="username" placeholder="예) minsu" autocapitalize="none" required></label><button class="btn" style="flex:none">연결 요청</button></form><p class="err" role="alert" id="reqerr"></p>
     <div class="card pad stack"><div class="row between"><b>초대 링크로 연결하기</b><button class="btn sm sec2" data-act="link-new">${I('link', 's')} 링크 만들기</button></div><ol class="steps"><li>링크를 만들어 연결하고 싶은 사람에게 보내요</li><li>받은 사람이 로그인한 뒤 연결을 확인해요</li><li>연결되면 함께 추억을 만들 수 있어요</li></ol><p class="cap">링크는 한 번만 쓸 수 있고 7일 뒤 만료돼요. 연결만으로 서로의 추억을 볼 수는 없어요.</p>
       ${d.links.map(l => { const u = `${location.origin}/#/join/${l.code}`, days = Math.max(1, Math.ceil((Date.parse(l.expires_at) - Date.now()) / 864e5)); return `<div class="codecard"><span class="cap">내 초대 링크 · ${days}일 뒤 만료 · 1회용</span><code>${esc(u)}</code><div class="row"><button class="btn grow" data-act="share" data-v="${esc(u)}">${I('link', 's')} 공유하기</button><button class="btn line" data-act="copy" data-v="${esc(u)}">복사</button><button class="btn dline" data-act="link-del" data-id="${esc(l.code)}">회수</button></div></div>`; }).join('')}</div>
     ${d.incoming.length ? `<section><h2 style="margin-bottom:12px">받은 요청</h2><div class="card list">${d.incoming.map(u => `<div>${av(u.name)}<span class="grow"><b>${esc(u.name)}</b><br><span class="cap">@${esc(u.username)}</span></span><button class="btn sm" data-act="accept-friend" data-id="${u.id}">수락</button><button class="btn sm line" data-act="decline-friend" data-id="${u.id}">거절</button></div>`).join('')}</div></section>` : ''}
@@ -314,7 +322,14 @@ async function route() {
   const my = ++seq, view = $('#view');
   if (!S.me) { try { S.me = await api('GET', '/api/me'); } catch { } }
   const [path, qs] = (location.hash.slice(1) || '/').split('?'); S.q = Object.fromEntries(new URLSearchParams(qs || ''));
-  if (!S.me) { if (/^\/join\//.test(path)) S.join = path; $('#app').classList.remove('authed'); view.innerHTML = authView(); initSignup(); return; }
+  if (!S.me) {
+    if (/^\/join\//.test(path)) S.join = path;
+    if (S.sns === undefined) { try { S.sns = await api('GET', '/api/oauth/providers'); } catch { S.sns = {}; } }
+    if (path === '/signup/oauth') { try { S.pending = await api('GET', '/api/oauth/pending?t=' + encodeURIComponent(S.q.t || '')); S.authMode = 'oauth'; } catch (e) { S.authMode = 'intro'; history.replaceState(null, '', '#/'); toast(e.message, 4000); } }
+    else if (S.authMode === 'oauth') S.authMode = 'intro';
+    if (S.q.oauth_error) { toast('간편가입을 완료하지 못했어요. 다시 시도해 주세요.', 4000); history.replaceState(null, '', '#/'); }
+    $('#app').classList.remove('authed'); view.innerHTML = authView(); initSignup(); return;
+  }
   if (S.join) { const j = S.join; S.join = null; if (path !== j) return go(j); }
   const r = routes.find(x => x[0].test(path)) || routes[0], args = r[0].exec(path).slice(1);
   const tabs = $('#tabs'); tabs.hidden = false;
@@ -348,7 +363,8 @@ const REPORT_UI = (t, id) => { const b = sheet(`<h2>신고하기</h2><p class="s
 const A = {
   back: () => history.length > 1 ? history.back() : go('/'),
   reload: () => route(),
-  auth: (d) => { S.authMode = d.m; route(); },
+  auth: (d) => { if (location.hash.startsWith('#/signup/oauth')) history.replaceState(null, '', '#/'); S.authMode = d.m; route(); },
+  sns: d => { if (!S.sns?.[d.p]) return toast('아직 연결되지 않았어요. 준비되면 이용할 수 있어요.', 3500); location.href = '/api/oauth/' + d.p + '/start'; },
   create: () => { const b = sheet(`<h2>무엇을 만들까요?</h2><div class="menu" style="margin-top:8px"><button data-go="/new-post">${I('photo')}<span><b>새 추억 만들기</b><br><span class="cap">함께한 사람과 사진·글을 모아요</span></span></button><button data-go="/new-meetup">${I('cal')}<span><b>새 모임 만들기</b><br><span class="cap">약속을 잡고 참석 여부를 받아요</span></span></button></div>`); b.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) { closeSheet(); go(g.dataset.go); } }); },
   respond: d => act(() => api('POST', `/api/posts/${d.id}/respond`, { accept: d.v === '1' }), d.v === '1' ? '추억에 참여했어요.' : '초대를 거절했어요.'),
   'accept-friend': d => act(() => api('POST', `/api/people/${d.id}/accept`), '연결됐어요.'),
@@ -455,7 +471,7 @@ const A = {
   rename: () => sheet(`<h2>닉네임 변경하기</h2><form data-form="rename" class="stack" style="margin-top:12px" novalidate>${nickField('rn-nick', '닉네임', S.me.name)}<p class="err" role="alert"></p><button class="btn">변경사항 저장하기</button></form>`),
   export: () => { const a = document.createElement('a'); a.href = '/api/me/export'; a.download = 'woorisai-my-data.json'; a.click(); },
   logout: () => act(async () => { await api('POST', '/api/logout'); S.me = null; S.authMode = 'intro'; }),
-  'delete-account': () => sheet(`<h2>계정을 탈퇴할까요?</h2><p class="sub body2">탈퇴하면 로그인할 수 없고 연결·그룹·내 모임이 정리돼요. 함께 만든 추억에 남긴 사진과 글은 이름이 ‘탈퇴한 사용자’로 바뀐 채 남아요. 함께 지우려면 아래를 선택해 주세요. <b>되돌릴 수 없어요.</b></p><form data-form="delete-account" class="stack" style="margin-top:12px"><label class="row"><input type="checkbox" name="dc" style="width:20px;height:20px"><span class="body2">내가 올린 사진과 글도 모두 삭제</span></label><label class="field"><span>비밀번호 확인</span><input type="password" name="password" required autocomplete="current-password"></label><p class="err" role="alert"></p><button class="btn danger">탈퇴하기</button></form>`),
+  'delete-account': () => sheet(`<h2>계정을 탈퇴할까요?</h2><p class="sub body2">탈퇴하면 로그인할 수 없고 연결·그룹·내 모임이 정리돼요. 함께 만든 추억에 남긴 사진과 글은 이름이 ‘탈퇴한 사용자’로 바뀐 채 남아요. 함께 지우려면 아래를 선택해 주세요. <b>되돌릴 수 없어요.</b></p><form data-form="delete-account" class="stack" style="margin-top:12px"><label class="row"><input type="checkbox" name="dc" style="width:20px;height:20px"><span class="body2">내가 올린 사진과 글도 모두 삭제</span></label>${S.me.has_password ? '<label class="field"><span>비밀번호 확인</span><input type="password" name="password" required autocomplete="current-password"></label>' : `<label class="field"><span>탈퇴 확인: 내 이름을 입력해 주세요</span><input type="text" name="password" required autocomplete="off" placeholder="${esc(S.me.username)}"></label>`}<p class="err" role="alert"></p><button class="btn danger">탈퇴하기</button></form>`),
 };
 
 function ATT_UI(m) { sheet(`<h2>실제로 함께한 사람</h2><p class="sub body2">응답과 상관없이 실제로 온 사람을 골라 주세요. 추억에 자동으로 초대되지는 않아요.</p><form data-form="attended" class="stack" style="margin-top:12px">${pick(m.participants, 'm', m.participants.filter(p => p.attended || (!m.participants.some(x => x.attended) && p.rsvp === 'yes')).map(p => p.id))}<button class="btn">확인하기</button></form>`); }
@@ -487,6 +503,7 @@ const F = {
   async note(fd, f) { await api('POST', `/api/posts/${f.dataset.id}/notes`, { kind: f.dataset.kind, text: fd.get('text') }); },
   async request(fd) { await api('POST', '/api/people/request', { username: fd.get('username') }); toast('연결 요청을 보냈어요. 상대가 수락하면 연결돼요.'); },
   async rename(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('PATCH', '/api/me', { nickname: r.value }); closeSheet(); toast('닉네임을 바꿨어요.'); },
+  async 'oauth-signup'(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('POST', '/api/signup/oauth', { token: S.q.t, nickname: r.value, username: fd.get('username') }); history.replaceState(null, '', '#/'); },
   async 'delete-account'(fd) { await api('DELETE', '/api/me', { password: fd.get('password'), deleteContent: fd.get('dc') === 'on' }); S.me = null; S.authMode = 'intro'; closeSheet(); toast('탈퇴가 완료됐어요.'); },
   async group(fd) { const r = await api('POST', '/api/groups', { name: fd.get('name'), type_hint: fd.get('hint'), member_ids: fd.getAll('m').map(Number) }); closeSheet(); if (r.duplicateOf) toast(`같은 사람으로 만든 ‘${r.duplicateOf}’ 그룹이 이미 있어요.`, 4000); },
   async 'group-add'(fd, f) { await api('POST', `/api/groups/${f.dataset.g}/members`, { user_ids: fd.getAll('m').map(Number) }); closeSheet(); },
@@ -524,18 +541,22 @@ function updSel() {
 }
 function saveDraft(f) { try { localStorage.setItem('ws_draft', JSON.stringify({ title: f.title.value, date: f.date.value, text: f.text.value, members: [...f.querySelectorAll('input[name=m]:checked')].map(i => +i.value) })); } catch { } }
 document.addEventListener('input', e => { if (e.target.matches?.('[data-counter]')) updCounters(); const f = e.target.closest?.('[data-form=newpost]'); if (f) saveDraft(f); });
-// 가입 폼 검증. 비밀번호는 어디에도 저장하지 않는다. (실서비스: 사용자명 확인 API는 호출 제한과 함께 운영)
+// 가입 폼 검증. 비밀번호는 어디에도 저장하지 않는다. (실서비스: 이름 확인 API는 호출 제한과 함께 운영)
+// 프로토타입이 아니라 실제 서버를 호출한다. 이 함수만 바꾸면 다른 확인 방식으로 교체할 수 있다.
+// 정책: 탈퇴·제재·예약 사유는 노출하지 않고 '사용 가능/사용 불가'로만 답한다. 이름은 공개 식별자라 이 확인은 계정 열거와 같으므로 서버에서 호출 횟수를 제한한다.
+// (이메일처럼 '이전에 사용한 값(rejoin_available)' 상태는 두지 않는다: 탈퇴한 이름은 즉시 일반 사용 가능 상태로 돌아간다.)
+const config = { checkName: v => api('GET', '/api/username-check?u=' + encodeURIComponent(v)) };
 function initSignup() {
-  const f = $('[data-form=signup]'); if (!f || f._init) return; f._init = 1;
+  const f = $('[data-form=signup], [data-form=oauth-signup]'); if (!f || f._init) return; f._init = 1;
   const E = n => f.elements[n], msg = (id, text, kind) => { const m = $('#' + id); m.textContent = text; m.className = 'msg' + (kind ? ' ' + kind : ''); };
   const u = { status: 'idle', checked: false, token: 0, timer: 0 };
   const rules = pw => ({ len: pw.length >= 8, letter: /[A-Za-z]/.test(pw), digit: /[0-9]/.test(pw) });
-  const UM = { idle: ['영문 소문자, 숫자, _ 로 3–20자예요. 친구가 이 이름으로 나를 찾아요.', ''], invalid: ['사용자명은 영문 소문자, 숫자, _ 로 3–20자예요.', 'bad'], checking: ['확인하고 있어요', ''], available: ['사용할 수 있는 사용자명이에요.', 'ok'], unavailable: ['이미 사용 중이거나 사용할 수 없는 사용자명이에요. 다른 이름을 써 주세요.', 'bad'], error: ['지금은 확인하지 못했어요. 잠시 후 다시 시도해 주세요.', 'bad'] };
+  const UM = { idle: ['영문 소문자, 숫자, _ 로 3–20자예요. 로그인과 친구 찾기에 써요.', ''], invalid: ['이름은 영문 소문자, 숫자, _ 로 3–20자예요.', 'bad'], checking: ['확인하고 있어요', ''], available: ['사용할 수 있는 이름이에요.', 'ok'], unavailable: ['현재 이 이름으로 가입할 수 없어요. 다른 이름을 써 주세요.', 'bad'], error: ['지금은 확인하지 못했어요. 잠시 후 다시 시도해 주세요.', 'bad'] };
   const setU = s => { u.status = s; u.checked = s === 'available'; msg('su-user-m', ...UM[s]); E('username').setAttribute('aria-invalid', s === 'invalid' || s === 'unavailable'); upd(); };
   const upd = () => {
-    const nickOk = validateNickname(E('nickname').value).ok, pw = E('password').value, r = rules(pw), c = E('confirm').value;
+    const nickOk = validateNickname(E('nickname').value).ok, hasPw = !!E('password'), pw = hasPw ? E('password').value : '', r = hasPw ? rules(pw) : { len: 1, letter: 1, digit: 1 }, c = hasPw ? E('confirm').value : '';
     f.querySelectorAll('[data-r]').forEach(li => { const ok = r[li.dataset.r]; li.classList.toggle('ok', ok); li.innerHTML = (ok ? I('check', 's') : '<i class="rdot"></i>') + li.textContent; });
-    const left = [!nickOk && '닉네임', !u.checked && '사용자명 확인', !(r.len && r.letter && r.digit) && '비밀번호 조건', !(c && c === pw) && '비밀번호 확인'].filter(Boolean);
+    const left = [!nickOk && '닉네임', !u.checked && '이름 확인', hasPw && !(r.len && r.letter && r.digit) && '비밀번호 조건', hasPw && !(c && c === pw) && '비밀번호 확인'].filter(Boolean);
     f.querySelector('.btn.block').disabled = left.length > 0;
     $('#su-why').textContent = left.length ? `남은 항목이 ${left.length}개 있어요: ${left.join(', ')}` : '';
   };
@@ -547,11 +568,11 @@ function initSignup() {
     if (!v) return setU('idle');
     if (!/^[a-z0-9_]{3,20}$/.test(v)) return setU('invalid'); // 값이 바뀌면 확인 완료를 무효화한다
     setU('checking');
-    u.timer = setTimeout(async () => { try { const r = await api('GET', '/api/username-check?u=' + encodeURIComponent(v)); if (tk === u.token) setU(r.state); } catch { if (tk === u.token) setU('error'); } }, 400); // 오래된 응답은 무시
+    u.timer = setTimeout(async () => { try { const r = await config.checkName(v); if (tk === u.token) setU(r.state); } catch { if (tk === u.token) setU('error'); } }, 400); // 오래된 응답은 무시
   });
-  E('password').addEventListener('input', () => { upd(); E('confirm').dispatchEvent(new Event('input')); });
+  E('password')?.addEventListener('input', () => { upd(); E('confirm').dispatchEvent(new Event('input')); });
   const cm = final => { const pw = E('password').value, c = E('confirm').value; if (!c) return msg('su-pw2-m', ''); if (c === pw) msg('su-pw2-m', '비밀번호가 일치해요.', 'ok'); else if (pw.startsWith(c) && !final) msg('su-pw2-m', ''); else msg('su-pw2-m', '비밀번호가 일치하지 않아요.', 'bad'); upd(); };
-  E('confirm').addEventListener('input', () => cm(false)); E('confirm').addEventListener('blur', () => cm(true));
+  E('confirm')?.addEventListener('input', () => cm(false)); E('confirm')?.addEventListener('blur', () => cm(true));
   upd();
 }
 // ---------- 이벤트 ----------
@@ -560,7 +581,7 @@ document.addEventListener('submit', async e => {
   const f = e.target.closest('[data-form]'); if (!f) return; e.preventDefault();
   const btn = f.querySelector('button:not([type=button])'), err = f.querySelector('.err'); if (err) err.textContent = '';
   const fd = new FormData(f); btn && (btn.disabled = true);
-  try { const r = await F[f.dataset.form](fd, f); if (r !== 'noroute') { if (f.dataset.form === 'login' || f.dataset.form === 'signup') S.authMode = 'intro'; route(); } }
+  try { const r = await F[f.dataset.form](fd, f); if (r !== 'noroute') { if (f.dataset.form === 'login' || f.dataset.form === 'signup' || f.dataset.form === 'oauth-signup') S.authMode = 'intro'; route(); } }
   catch (ex) { if (err) err.textContent = ex.message; else toast(ex.message); if (ex.network && btn) { btn.dataset.label ||= btn.textContent; btn.textContent = '다시 시도하기'; f.addEventListener('input', () => { btn.textContent = btn.dataset.label; }, { once: true }); } }
   finally { btn && (btn.disabled = false); f._upd?.(); }
 });

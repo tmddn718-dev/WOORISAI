@@ -39,6 +39,11 @@ create table if not exists hides(user_id integer, target_type text, target_id in
 `);
 if (!db.prepare('pragma table_info(users)').all().some(c => c.name === 'nickname_updated_at')) db.exec('alter table users add column nickname_updated_at text');
 
+db.exec(`
+create table if not exists oauth_identities(provider text, subject text, user_id integer, primary key(provider,subject));
+create table if not exists oauth_pending(token text primary key, provider text, subject text, nick text, expires integer);
+`);
+
 // ---------- helpers ----------
 const q = (sql, ...p) => db.prepare(sql).all(...p);
 const one = (sql, ...p) => db.prepare(sql).get(...p);
@@ -68,7 +73,7 @@ function startSession(c, uid) {
   run('insert into sessions(token,user_id) values(?,?)', token, uid);
   c.cookie = `sid=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${c.req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''}`;
 }
-const me = u => ({ id: u.id, name: u.name, nickname: u.name, username: u.username, mem_enabled: !!u.mem_enabled, nickname_updated_at: u.nickname_updated_at || null });
+const me = u => ({ id: u.id, name: u.name, nickname: u.name, username: u.username, mem_enabled: !!u.mem_enabled, has_password: !!u.pw, nickname_updated_at: u.nickname_updated_at || null });
 
 // ---------- 권한 코어 (PostMember가 열람권한의 유일한 기준) ----------
 function access(pid, uid) {
@@ -127,7 +132,7 @@ function leavePost(pid, uid, deleteMine) {
 const routes = [];
 const R = (method, pattern, fn, opt = {}) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn, opt });
 
-// 사용자명 규칙은 가입·확인 API가 같은 함수를 쓴다. 사유(탈퇴·제재 등)는 노출하지 않고 "사용할 수 없음"으로만 답한다.
+// 이름 규칙은 가입·확인 API가 같은 함수를 쓴다. 사유(탈퇴·제재 등)는 노출하지 않고 "사용할 수 없음"으로만 답한다.
 const RESERVED = ['admin', 'administrator', 'root', 'system', 'support', 'help', 'woorisai', 'official', 'staff', 'test', 'null', 'undefined'];
 const usernameState = u => !/^[a-z0-9_]{3,20}$/.test(u) ? 'invalid' : (RESERVED.includes(u) || u.startsWith('deleted_') || one('select 1 from users where username=?', u)) ? 'unavailable' : 'available';
 const pwProblem = pw => pw.length < 8 || pw.length > 100 ? '비밀번호는 8자 이상이어야 해요.' : !/[A-Za-z]/.test(pw) ? '비밀번호에 영문을 포함해 주세요.' : !/[0-9]/.test(pw) ? '비밀번호에 숫자를 포함해 주세요.' : null;
@@ -137,9 +142,9 @@ R('GET', '/api/username-check', c => { rate('uc:' + c.req.socket.remoteAddress, 
 R('POST', '/api/signup', c => {
   const username = str(c.body.username, 20, 3).toLowerCase(), name = nick(c.body.nickname ?? c.body.name), pw = String(c.body.password || '');
   const us = usernameState(username);
-  if (us === 'invalid') throw fail('사용자명은 영문 소문자, 숫자, _ 로 3–20자예요.');
+  if (us === 'invalid') throw fail('이름은 영문 소문자, 숫자, _ 로 3–20자예요.');
   if (pwProblem(pw)) throw fail(pwProblem(pw));
-  if (us === 'unavailable') throw fail('이미 사용 중이거나 사용할 수 없는 사용자명이에요.', 409);
+  if (us === 'unavailable') throw fail('이미 사용 중이거나 사용할 수 없는 이름이에요.', 409);
   const salt = crypto.randomBytes(16).toString('hex');
   const id = run('insert into users(username,name,pw,salt) values(?,?,?,?)', username, name, hashPw(pw, salt), salt).lastInsertRowid;
   startSession(c, id);
@@ -150,10 +155,67 @@ R('POST', '/api/login', c => {
   const username = String(c.body.username || '').toLowerCase().trim();
   const bump = throttle(c.req.socket.remoteAddress + ':' + username);
   const u = one(`select * from users where username=? and status='active'`, username);
-  const okPw = u && crypto.timingSafeEqual(Buffer.from(hashPw(String(c.body.password || ''), u.salt), 'hex'), Buffer.from(u.pw, 'hex'));
-  if (!okPw) { bump(); throw fail('사용자명 또는 비밀번호를 확인해 주세요.', 401); }
+  const okPw = u && u.pw && crypto.timingSafeEqual(Buffer.from(hashPw(String(c.body.password || ''), u.salt), 'hex'), Buffer.from(u.pw, 'hex'));
+  if (!okPw) { bump(); throw fail('이름 또는 비밀번호를 확인해 주세요.', 401); }
   startSession(c, u.id);
   return me(u);
+}, { pub: true });
+
+// ---------- 간편가입 (OAuth 2.0 인가 코드 방식) ----------
+// 각 제공자의 클라이언트 ID가 환경변수에 있어야 켜진다: KAKAO_CLIENT_ID(/_SECRET), GOOGLE_CLIENT_ID(/_SECRET), NAVER_CLIENT_ID(/_SECRET), BASE_URL.
+// 제공자의 계정 번호(subject)만 저장하고 이메일·토큰은 저장하지 않는다. 신규 계정은 닉네임·이름을 정한 뒤 만들어진다.
+const OAUTH = {
+  kakao: { label: '카카오톡', auth: 'https://kauth.kakao.com/oauth/authorize', token: 'https://kauth.kakao.com/oauth/token', info: 'https://kapi.kakao.com/v2/user/me', scope: 'profile_nickname', sub: j => j.id, nick: j => j.kakao_account?.profile?.nickname || j.properties?.nickname },
+  google: { label: '구글', auth: 'https://accounts.google.com/o/oauth2/v2/auth', token: 'https://oauth2.googleapis.com/token', info: 'https://openidconnect.googleapis.com/v1/userinfo', scope: 'openid profile', sub: j => j.sub, nick: j => j.name },
+  naver: { label: '네이버', auth: 'https://nid.naver.com/oauth2.0/authorize', token: 'https://nid.naver.com/oauth2.0/token', info: 'https://openapi.naver.com/v1/nid/me', scope: '', sub: j => j.response?.id, nick: j => j.response?.nickname || j.response?.name },
+};
+const oc = p => { const d = OAUTH[p], P = String(p).toUpperCase(); if (!d || !process.env[P + '_CLIENT_ID']) return null; return { ...d, cid: process.env[P + '_CLIENT_ID'], secret: process.env[P + '_CLIENT_SECRET'] || '', authUrl: process.env[`OAUTH_${P}_AUTH_URL`] || d.auth, tokenUrl: process.env[`OAUTH_${P}_TOKEN_URL`] || d.token, infoUrl: process.env[`OAUTH_${P}_INFO_URL`] || d.info }; };
+const baseUrl = c => process.env.BASE_URL || `http://${c.req.headers.host}`;
+const cookieOf = (c, n) => new RegExp(`(?:^|; )${n}=([^;]+)`).exec(c.req.headers.cookie || '')?.[1];
+const clearState = 'oauth_state=; HttpOnly; SameSite=Lax; Path=/api/oauth; Max-Age=0';
+R('GET', '/api/oauth/providers', () => Object.fromEntries(Object.keys(OAUTH).map(p => [p, !!oc(p)])), { pub: true });
+R('GET', '/api/oauth/:p/start', c => {
+  const o = oc(c.params.p); if (!o) throw fail('아직 연결되지 않은 간편가입이에요.', 404);
+  const state = crypto.randomBytes(16).toString('base64url');
+  c.cookie = `oauth_state=${state}; HttpOnly; SameSite=Lax; Path=/api/oauth; Max-Age=600`; // 제공자에서 돌아올 때 쿠키가 실려야 해서 Lax
+  const u = new URL(o.authUrl);
+  u.search = new URLSearchParams({ response_type: 'code', client_id: o.cid, redirect_uri: `${baseUrl(c)}/api/oauth/${c.params.p}/callback`, state, ...(o.scope ? { scope: o.scope } : {}) }).toString();
+  return { _redirect: u.toString() };
+}, { pub: true });
+R('GET', '/api/oauth/:p/callback', async c => {
+  const p = c.params.p, o = oc(p); c.cookie = clearState;
+  try {
+    const st = cookieOf(c, 'oauth_state');
+    if (!o || !st || st !== c.query.state || !c.query.code) throw 0; // state 불일치는 모두 실패로 처리 (CSRF 방어)
+    const tk = await (await fetch(o.tokenUrl, { method: 'POST', signal: AbortSignal.timeout(8000), headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body: new URLSearchParams({ grant_type: 'authorization_code', code: c.query.code, redirect_uri: `${baseUrl(c)}/api/oauth/${p}/callback`, client_id: o.cid, state: c.query.state, ...(o.secret ? { client_secret: o.secret } : {}) }) })).json();
+    if (!tk.access_token) throw 0;
+    const info = await (await fetch(o.infoUrl, { signal: AbortSignal.timeout(8000), headers: { authorization: `Bearer ${tk.access_token}` } })).json();
+    const subject = String(o.sub(info) ?? ''); if (!subject || subject === 'undefined') throw 0;
+    const idn = one('select user_id from oauth_identities where provider=? and subject=?', p, subject);
+    const user = idn && one(`select * from users where id=? and status='active'`, idn.user_id);
+    if (user) { startSession(c, user.id); c.cookie = [c.cookie, clearState]; return { _redirect: '/#/' }; }
+    const token = crypto.randomBytes(24).toString('base64url');
+    run('delete from oauth_pending where expires<?', Date.now());
+    run('insert into oauth_pending values(?,?,?,?,?)', token, p, subject, String(o.nick(info) || ''), Date.now() + 15 * 60000);
+    return { _redirect: '/#/signup/oauth?t=' + token };
+  } catch { return { _redirect: '/#/?oauth_error=1' }; }
+}, { pub: true });
+R('GET', '/api/oauth/pending', c => {
+  const r = one('select * from oauth_pending where token=? and expires>?', String(c.query.t || ''), Date.now());
+  if (!r) throw fail('간편가입 시간이 지났어요. 처음부터 다시 시도해 주세요.', 410);
+  const v = validateNickname(r.nick);
+  return { provider: r.provider, label: OAUTH[r.provider]?.label, suggestion: v.ok ? v.value : '' };
+}, { pub: true });
+R('POST', '/api/signup/oauth', c => {
+  rate('so:' + c.req.socket.remoteAddress, 20);
+  const r = one('select * from oauth_pending where token=? and expires>?', String(c.body.token || ''), Date.now());
+  if (!r) throw fail('간편가입 시간이 지났어요. 처음부터 다시 시도해 주세요.', 410);
+  const username = str(c.body.username, 20, 3).toLowerCase(), name = nick(c.body.nickname), us = usernameState(username);
+  if (us === 'invalid') throw fail('이름은 영문 소문자, 숫자, _ 로 3–20자예요.');
+  if (us === 'unavailable') throw fail('이미 사용 중이거나 사용할 수 없는 이름이에요.', 409);
+  const id = tx(() => { const uid = run('insert into users(username,name) values(?,?)', username, name).lastInsertRowid; run('insert into oauth_identities values(?,?,?)', r.provider, r.subject, uid); run('delete from oauth_pending where token=?', r.token); return uid; });
+  startSession(c, id);
+  return me(one('select * from users where id=?', id));
 }, { pub: true });
 
 R('POST', '/api/logout', c => { run('delete from sessions where token=?', /sid=([^;]+)/.exec(c.req.headers.cookie)[1]); c.cookie = 'sid=; Path=/; Max-Age=0'; return {}; });
@@ -176,7 +238,8 @@ R('GET', '/api/me/export', c => {
 R('DELETE', '/api/me', c => {
   const uid = c.u.id;
   const u = one('select * from users where id=?', uid);
-  if (hashPw(String(c.body.password || ''), u.salt) !== u.pw) throw fail('비밀번호를 확인해 주세요.', 401);
+  const typed = String(c.body.password || '');
+  if (u.pw ? hashPw(typed, u.salt) !== u.pw : typed.trim().toLowerCase() !== u.username) throw fail(u.pw ? '비밀번호를 확인해 주세요.' : '이름을 정확히 입력해 주세요.', 401); // 비밀번호가 없는 간편가입 계정은 이름 입력으로 탈퇴를 확인한다
   tx(() => {
     for (const m of q(`select post_id,role from post_members where user_id=? and access='accepted'`, uid)) {
       if (m.role === 'admin') {
@@ -195,6 +258,7 @@ R('DELETE', '/api/me', c => {
     run('delete from groups where owner_id=? and id not in (select group_id from group_members)', uid);
     run('delete from sessions where user_id=?', uid);
     run('delete from invite_links where creator=?', uid);
+    run('delete from oauth_identities where user_id=?', uid);
     run(`update users set status='deleted', name='탈퇴한 사용자', username=?, pw=null, salt=null where id=?`, 'deleted_' + uid, uid);
   });
   c.cookie = 'sid=; Path=/; Max-Age=0';
@@ -652,6 +716,7 @@ async function handle(req, res) {
   if (r.opt.soft && !u) { res.writeHead(401, { 'content-type': 'application/json' }); return res.end('{"error":"로그인이 필요해요."}'); }
   const out = await r.fn(c);
   const h = { 'cache-control': 'no-store', ...SEC }; if (c.cookie) h['set-cookie'] = c.cookie;
+  if (out?._redirect) { res.writeHead(302, { ...h, location: out._redirect }); return res.end(); }
   if (out?._raw) { res.writeHead(200, { ...h, 'content-type': out.type, 'cache-control': 'private, no-store' }); return res.end(out._raw); }
   if (out?._download) h['content-disposition'] = `attachment; filename="${out._download}"`;
   res.writeHead(200, { ...h, 'content-type': 'application/json; charset=utf-8' });
