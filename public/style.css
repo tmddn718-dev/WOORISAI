@@ -291,3 +291,10 @@ input[aria-invalid=true] { border-color: var(--danger); }
 .rules li.ok { color: var(--green-d); font-weight: 500; }
 .rdot { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid currentColor; margin: 0 5px; box-sizing: border-box; }
 .btn[disabled] { background: #B9C4BC; color: #fff; }
+
+/* 닉네임: 텍스트 전용 CTA, 글자 수 초과, 같은 닉네임 구분 */
+.btn[hidden] { display: none; }
+.field .count.bad { color: var(--danger); font-weight: 500; }
+.pwbox .pwtoggle { position: absolute; right: 4px; top: 2px; height: 44px; min-width: 44px; padding: 0 12px; border: 0; background: none; color: var(--green-d); font-size: .875rem; font-weight: 500; cursor: pointer; border-radius: var(--r-ctl); }
+.pwbox .pwtoggle:hover { background: var(--sage); }
+.uid { font-style: normal; font-size: .75rem; opacity: .75; }

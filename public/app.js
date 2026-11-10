@@ -1,3 +1,4 @@
+import { validateNickname, graphemes, suggest, NICK_MAX, NICK_HINT } from './nickname.js';
 // 우리사이 웹 앱 — 바닐라 JS SPA. 권한은 서버가 판단하고, 여기서는 그 결과만 보여준다.
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,9 +28,10 @@ const KNOT = '<svg class="knot" viewBox="0 0 120 120" aria-hidden="true"><path d
 const I = (n, c = '') => `<svg class="i ${c}" viewBox="0 0 24 24" aria-hidden="true">${ic[n]}</svg>`;
 
 // ---------- 공통 ----------
+const netFail = () => { const e = new Error('저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.'); e.network = true; return e; };
 async function api(method, url, body) {
   const blob = body instanceof Blob;
-  const r = await fetch(url, { method, headers: { 'x-ww': '1', ...(body ? { 'content-type': blob ? body.type : 'application/json' } : {}) }, body: body ? (blob ? body : JSON.stringify(body)) : undefined });
+  const r = await fetch(url, { method, headers: { 'x-ww': '1', ...(body ? { 'content-type': blob ? body.type : 'application/json' } : {}) }, body: body ? (blob ? body : JSON.stringify(body)) : undefined }).catch(() => { throw netFail(); });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) { const e = new Error(d.error || '문제가 생겼어요. 잠시 후 다시 시도해 주세요.'); e.status = r.status; e.data = d; throw e; }
   return d;
@@ -62,7 +64,7 @@ const won = n => Number(n).toLocaleString('ko-KR') + '원';
 const top = (title, o = {}) => `<header class="top">${o.back === false ? '' : `<button class="icon-btn" data-act="back" aria-label="뒤로 가기">${I('back')}</button>`}<h1>${esc(title)}</h1>${o.right || ''}</header>`;
 const empty = (t, d, btn) => `<div class="empty"><h2>${t}</h2><p>${d}</p>${btn || ''}</div>`;
 const av = (n, c = '') => `<span class="av ${c}" aria-hidden="true">${esc([...(n || '?')][0])}</span>`;
-const pick = (list, name = 'm', on = []) => `<div class="pick">${list.map(u => `<label><input type="checkbox" name="${name}" value="${u.id}" ${on.includes(u.id) ? 'checked' : ''}><span>${esc(u.name)}</span></label>`).join('')}</div>`;
+const pick = (list, name = 'm', on = []) => { const dup = list.reduce((m, u) => (m[u.name] = (m[u.name] || 0) + 1, m), {}); return `<div class="pick">${list.map(u => `<label><input type="checkbox" name="${name}" value="${u.id}" ${on.includes(u.id) ? 'checked' : ''}><span>${esc(u.name)}${u.username && dup[u.name] > 1 ? ` <i class="uid">@${esc(u.username)}</i>` : ''}</span></label>`).join('')}</div>`; };
 const tile = p => `<a class="tile" href="#/post/${p.id}"><span class="t-ph">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)}${p.place ? ' · ' + esc(p.place.label) : ''} · ${p.count}명</span></a>`;
 const postCard = p => `<a class="card post" href="#/post/${p.id}"><div class="ph">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</div><div class="meta"><h2>${esc(p.title)}</h2><p class="cap">${fmtDate(p.occurred_on)}${p.place ? ' · ' + esc(p.place.label) : ''} · ${p.count}명${p.status === 'closed' ? ' · 종료됨' : ''}${p.years_ago ? ` · ${p.years_ago}년 전 오늘` : ''}</p></div></a>`;
 const gone = e => e.status === 403 || e.status === 404
@@ -72,18 +74,36 @@ const wordmark = () => `<div class="logo-row"><img src="/logo.svg" alt=""><div><
 
 // ---------- 인증 ----------
 // 회원가입 폼: 이름·사용자명·비밀번호. 입력 중 실시간 검증, 사용자명은 상태(확인 중/사용 가능/사용 불가)로 나눈다.
+function nickField(id, label = '닉네임', initial = '') {
+  return `<div class="field" data-nick><label for="${id}"><span>${label}</span></label><input id="${id}" data-nick-input type="text" name="nickname" value="${esc(initial)}" maxlength="40" placeholder="${esc(suggest())}" autocomplete="nickname" aria-describedby="${id}-m" required>
+    <div class="row between"><small id="${id}-m" class="msg" aria-live="polite">${NICK_HINT}</small><small id="${id}-c" class="count">${graphemes(initial)}/${NICK_MAX}</small></div>
+    <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:8px"><button type="button" class="btn sec2 sm" data-act="nick-suggest" data-for="${id}">닉네임 추천받기</button><button type="button" class="btn line sm" data-act="nick-restore" data-for="${id}" hidden>이전 이름으로 돌아가기</button></div></div>`;
+}
+const nst = el => el._n ||= { recent: [], lastUser: '', suggested: false };
+function nickRender(el, final) {
+  const v = el.value, n = graphemes(v), r = validateNickname(v), s = nst(el), box = el.closest('[data-nick]'), m = $('#' + el.id + '-m'), cnt = $('#' + el.id + '-c');
+  cnt.textContent = `${n}/${NICK_MAX}`; cnt.classList.toggle('bad', n > NICK_MAX);
+  const showErr = n > NICK_MAX || (final && !r.ok); // 글자 수 초과는 입력 중에도, 나머지는 포커스를 벗어나거나 제출할 때 알린다
+  m.textContent = showErr ? r.message : s.suggested ? '추천한 닉네임이에요. 직접 바꿔도 좋아요.' : NICK_HINT; m.className = 'msg' + (showErr ? ' bad' : '');
+  el.setAttribute('aria-invalid', showErr);
+  box.querySelector('[data-act=nick-suggest]').textContent = s.suggested ? '다시 추천받기' : '닉네임 추천받기';
+  box.querySelector('[data-act=nick-restore]').hidden = !(s.suggested && s.lastUser);
+  el.dispatchEvent(new CustomEvent('nickchange', { bubbles: true }));
+}
+document.addEventListener('input', e => { const el = e.target; if (el.matches?.('[data-nick-input]')) { const s = nst(el); s.lastUser = el.value; s.suggested = false; nickRender(el, false); } });
+document.addEventListener('focusout', e => { const el = e.target; if (el.matches?.('[data-nick-input]') && !e.relatedTarget?.closest?.('[data-nick]')) nickRender(el, true); });
 const eyeI = '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>';
 const signupView = () => `<div class="page stack"><button class="icon-btn" data-act="auth" data-m="intro" aria-label="뒤로 가기" style="margin-left:-12px">${I('back')}</button>
-  <h1>우리사이에 오신 걸 환영해요</h1>
+  <h1>우리사이에서 어떤 이름으로 불리고 싶나요?</h1><p class="sub body2">편하게 불릴 닉네임을 정해보세요. 나중에도 변경할 수 있어요.</p>
   <form data-form="signup" class="stack" autocomplete="on" novalidate>
-    <div class="field"><label for="su-name"><span>이름</span></label><input id="su-name" type="text" name="name" maxlength="20" required autocomplete="nickname" aria-describedby="su-name-m" data-counter><div class="row between"><small id="su-name-m" class="msg" aria-live="polite">함께하는 사람들에게 보이는 이름이에요.</small><small class="count"></small></div></div>
+    ${nickField('su-nick')}
     <div class="field"><label for="su-user"><span>사용자명</span></label><input id="su-user" type="text" name="username" maxlength="20" required autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="su-user-m"><small id="su-user-m" class="msg" aria-live="polite">영문 소문자, 숫자, _ 로 3–20자예요. 친구가 이 이름으로 나를 찾아요.</small></div>
     <div class="field"><label for="su-pw"><span>비밀번호</span></label>
-      <div class="pwbox"><input id="su-pw" type="password" name="password" required autocomplete="new-password" aria-describedby="su-pw-r"><button type="button" class="icon-btn" data-act="pw-toggle" aria-label="비밀번호 보기" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" aria-hidden="true">${eyeI}</svg></button></div>
+      <div class="pwbox"><input id="su-pw" type="password" name="password" required autocomplete="new-password" aria-describedby="su-pw-r"><button type="button" class="pwtoggle" data-act="pw-toggle" aria-pressed="false">보기</button></div>
       <ul id="su-pw-r" class="rules" aria-live="polite"><li data-r="len">8자 이상</li><li data-r="letter">영문 포함</li><li data-r="digit">숫자 포함</li></ul></div>
     <div class="field"><label for="su-pw2"><span>비밀번호 확인</span></label><input id="su-pw2" type="password" name="confirm" required autocomplete="new-password" aria-describedby="su-pw2-m"><small id="su-pw2-m" class="msg" aria-live="polite"></small></div>
     <p class="err" role="alert"></p>
-    <div><button class="btn block" disabled>가입하기</button><p id="su-why" class="cap" style="margin-top:8px" aria-live="polite"></p></div>
+    <div><button class="btn block" disabled>이 이름으로 시작하기</button><p id="su-why" class="cap" style="margin-top:8px" aria-live="polite"></p></div>
     <button type="button" class="btn line block" data-act="auth" data-m="login">이미 계정이 있어요</button>
   </form></div>`;
 function authView() {
@@ -117,7 +137,7 @@ P.home = async () => {
   ${d.posts.length ? `<a class="btn block" href="#/new-post">${I('plus')} 추억 만들기</a>` : ''}
   <div class="chips" style="margin:12px 0 24px" aria-label="빠른 시작"><a class="chip" href="#/new-meetup">${I('cal', 's')} 모임 만들기</a><a class="chip" href="#/people">${I('users', 's')} 사람 초대하기</a><a class="chip" href="#/saved">${I('bookmark', 's')} 저장한 추억</a><a class="chip" href="#/memories?tab=map">${I('pin', 's')} 추억 지도</a></div>
   ${news ? `<section aria-label="새 소식"><div class="hd row between"><h2>새 소식</h2></div><div class="card list">
-    ${d.postInvites.map(x => `<a href="#/post/${x.id}">${av(x.inviter)}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${esc(x.inviter)}님이 추억에 초대했어요</span></span>${I('chev', 's')}</a>`).join('')}
+    ${d.postInvites.map(x => `<a href="#/post/${x.id}">${av(x.inviter)}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${esc(x.inviter)}${x.inviter_username ? ` (@${esc(x.inviter_username)})` : ''}님이 추억에 초대했어요</span></span>${I('chev', 's')}</a>`).join('')}
     ${d.friendRequests.map(x => `<div>${av(x.name)}<span class="grow"><b>${esc(x.name)}</b><br><span class="cap">연결을 요청했어요</span></span><button class="btn sm" data-act="accept-friend" data-id="${x.id}">수락</button><button class="btn sm line" data-act="decline-friend" data-id="${x.id}">거절</button></div>`).join('')}
     ${d.meetupInvites.map(x => `<a href="#/meetup/${x.id}">${av('약')}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${fmtDT(x.starts_at, x.tz)} · 참석 여부를 알려 주세요</span></span>${I('chev', 's')}</a>`).join('')}</div></section>` : ''}
   ${today.items.length ? `<section class="moment" aria-label="1년 전 오늘"><h2>그날의 우리가 여기 있어요</h2><p class="cap" style="margin:4px 0 16px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p>${postCard(today.items[0])}<div class="row" style="margin-top:12px;flex-wrap:wrap"><a class="btn sm line" href="#/post/${today.items[0].id}?add=1">${I('plus', 's')} 기억 더하기</a><button class="btn sm line" data-act="hide-post" data-id="${today.items[0].id}">다시 추천하지 않기</button></div></section>` : ''}
@@ -127,7 +147,7 @@ P.home = async () => {
 
 P.post = async id => {
   const p = await api('GET', '/api/posts/' + id);
-  if (p.preview) return `${top('추억 초대')}<div class="page stack"><div class="card pad stack"><span class="tag" style="align-self:flex-start">초대받은 추억</span><h1>${esc(p.title)}</h1><p class="sub body2">${esc(p.inviter)}님이 이 추억을 함께 기록하자고 초대했어요.</p><div class="note">수락하면 사진과 글, 함께한 사람을 볼 수 있어요. 수락하기 전에는 사진과 장소가 보이지 않아요.</div></div><div class="row"><button class="btn grow" data-act="respond" data-id="${p.id}" data-v="1">수락하기</button><button class="btn line grow" data-act="respond" data-id="${p.id}" data-v="0">거절하기</button></div></div>`;
+  if (p.preview) return `${top('추억 초대')}<div class="page stack"><div class="card pad stack"><span class="tag" style="align-self:flex-start">초대받은 추억</span><h1>${esc(p.title)}</h1><p class="sub body2">${esc(p.inviter)}${p.inviter_username ? ` (@${esc(p.inviter_username)})` : ''}님이 이 추억을 함께 기록하자고 초대했어요.</p><div class="note">수락하면 사진과 글, 함께한 사람을 볼 수 있어요. 수락하기 전에는 사진과 장소가 보이지 않아요.</div></div><div class="row"><button class="btn grow" data-act="respond" data-id="${p.id}" data-v="1">수락하기</button><button class="btn line grow" data-act="respond" data-id="${p.id}" data-v="0">거절하기</button></div></div>`;
   const isAdmin = p.me.role === 'admin', open = p.status === 'active';
   const acc = p.members.filter(m => m.access === 'accepted'), inv = p.members.filter(m => m.access === 'invited');
   const stories = p.notes.filter(n => n.kind === 'story'), cmts = p.notes.filter(n => n.kind === 'comment');
@@ -269,7 +289,7 @@ P.reports = async () => { const { reports } = await api('GET', '/api/reports'); 
 P.me = async () => {
   const u = S.me;
   const row = (h, i, t, s = '') => `<a href="${h}">${I(i)}<span class="grow">${t}${s ? `<br><span class="cap">${s}</span>` : ''}</span>${I('chev', 's')}</a>`;
-  return `<header class="top"><h1>나</h1></header><div class="page stack"><div class="card pad row">${av(u.name)}<span class="grow"><b>${esc(u.name)}</b><br><span class="cap">@${esc(u.username)}</span></span><button class="btn sm line" data-act="rename">이름 바꾸기</button></div>
+  return `<header class="top"><h1>나</h1></header><div class="page stack"><div class="card pad row">${av(u.name)}<span class="grow"><b>${esc(u.name)}</b><br><span class="cap">@${esc(u.username)}</span></span><button class="btn sm line" data-act="rename">닉네임 변경하기</button></div>
     <div class="card list">${row('#/people', 'users', '사람', '연결·초대 링크')}${row('#/groups', 'star', '그룹')}</div>
     <section><h3 style="margin:0 0 12px 4px">회상</h3><div class="card list"><div>${I('clock')}<span class="grow">1년 전 오늘<br><span class="cap">${u.mem_enabled ? '켜져 있어요. 앱 안에서만 보여줘요.' : '꺼져 있어요. 켜기 전에는 추천하지 않아요.'}</span></span><button class="btn sm ${u.mem_enabled ? 'line' : ''}" data-act="mem" data-v="${u.mem_enabled ? 0 : 1}">${u.mem_enabled ? '끄기' : '켜기'}</button></div>${row('#/hidden', 'eye', '숨긴 추억', '다시 추천하지 않기 관리')}</div></section>
     <section><h3 style="margin:0 0 12px 4px">안전·데이터</h3><div class="card list">${row('#/saved', 'bookmark', '저장한 추억', '나만 볼 수 있는 책갈피')}${row('#/privacy', 'lock', '개인정보 요청', '열람·정정·삭제·처리정지')}${row('#/blocks', 'block', '차단한 사람')}${row('#/reports', 'flag', '내 신고 내역')}<button class="li" data-act="export">${I('down')}<span class="grow">내 데이터 내보내기<br><span class="cap">내 프로필, 글, 사진 목록을 파일로 받아요</span></span></button></div></section>
@@ -378,7 +398,9 @@ const A = {
   'draft-clear': () => { try { localStorage.removeItem('ws_draft'); } catch { } S.draft = null; route(); },
   'rm-filter': d => { if (d.k === 'people') S.filter.people = S.filter.people.filter(x => x !== +d.v); else S.filter[d.k] = ''; route(); },
   share: d => { if (navigator.share) navigator.share({ title: '우리사이', text: '우리사이에서 연결해요. 이 링크는 한 번만 쓸 수 있어요.', url: d.v }).catch(() => { }); else A.copy(d); },
-  'pw-toggle': (d, t) => { const show = t.getAttribute('aria-pressed') !== 'true'; t.setAttribute('aria-pressed', show); t.setAttribute('aria-label', show ? '비밀번호 숨기기' : '비밀번호 보기'); document.querySelectorAll('#su-pw, #su-pw2').forEach(i => i.type = show ? 'text' : 'password'); },
+  'nick-suggest': d => { const el = $('#' + d.for), s = nst(el); if (el.value && !s.suggested) s.lastUser = el.value; const v = suggest(s.recent); s.recent = [...s.recent, v].slice(-5); el.value = v; s.suggested = true; nickRender(el, false); },
+  'nick-restore': d => { const el = $('#' + d.for), s = nst(el); el.value = s.lastUser; s.suggested = false; nickRender(el, false); },
+  'pw-toggle': (d, t) => { const show = t.getAttribute('aria-pressed') !== 'true'; t.setAttribute('aria-pressed', show); t.textContent = show ? '숨기기' : '보기'; document.querySelectorAll('#su-pw, #su-pw2').forEach(i => i.type = show ? 'text' : 'password'); },
   'mode': d => { S.filter.mode = d.v; route(); },
   'clear-filter': () => { S.filter = { people: [], mode: 'and', group: '', year: '' }; route(); },
   tab: d => go('/memories?tab=' + d.v),
@@ -430,7 +452,7 @@ const A = {
   'group-kick': d => act(() => api('DELETE', `/api/groups/${d.g}/members/${d.u}`)),
   'group-leave': async d => { if (await ask({ title: '그룹에서 나갈까요?', body: '이미 함께한 추억에는 영향이 없어요.', ok: '나가기', danger: true })) act(() => api('DELETE', `/api/groups/${d.g}/members/${S.me.id}`)); },
   'group-del': async d => { if (await ask({ title: `‘${d.name}’ 그룹을 삭제할까요?`, body: '그룹만 사라지고, 연결된 추억과 모임은 삭제되지 않아요.', ok: '그룹 삭제', danger: true })) act(() => api('DELETE', `/api/groups/${d.g}`), '그룹을 삭제했어요.'); },
-  rename: () => sheet(`<h2>이름 바꾸기</h2><form data-form="rename" class="stack" style="margin-top:12px"><input type="text" name="name" maxlength="20" required value="${esc(S.me.name)}" aria-label="이름"><p class="err" role="alert"></p><button class="btn">저장하기</button></form>`),
+  rename: () => sheet(`<h2>닉네임 변경하기</h2><form data-form="rename" class="stack" style="margin-top:12px" novalidate>${nickField('rn-nick', '닉네임', S.me.name)}<p class="err" role="alert"></p><button class="btn">변경사항 저장하기</button></form>`),
   export: () => { const a = document.createElement('a'); a.href = '/api/me/export'; a.download = 'woorisai-my-data.json'; a.click(); },
   logout: () => act(async () => { await api('POST', '/api/logout'); S.me = null; S.authMode = 'intro'; }),
   'delete-account': () => sheet(`<h2>계정을 탈퇴할까요?</h2><p class="sub body2">탈퇴하면 로그인할 수 없고 연결·그룹·내 모임이 정리돼요. 함께 만든 추억에 남긴 사진과 글은 이름이 ‘탈퇴한 사용자’로 바뀐 채 남아요. 함께 지우려면 아래를 선택해 주세요. <b>되돌릴 수 없어요.</b></p><form data-form="delete-account" class="stack" style="margin-top:12px"><label class="row"><input type="checkbox" name="dc" style="width:20px;height:20px"><span class="body2">내가 올린 사진과 글도 모두 삭제</span></label><label class="field"><span>비밀번호 확인</span><input type="password" name="password" required autocomplete="current-password"></label><p class="err" role="alert"></p><button class="btn danger">탈퇴하기</button></form>`),
@@ -461,10 +483,10 @@ const placeOf = fd => fd.get('pcity') || fd.get('pcountry') || fd.get('pname') ?
 // ---------- 폼 ----------
 const F = {
   async login(fd) { S.me = await api('POST', '/api/login', { username: fd.get('username'), password: fd.get('password') }); },
-  async signup(fd) { S.me = await api('POST', '/api/signup', { username: fd.get('username'), name: fd.get('name'), password: fd.get('password') }); },
+  async signup(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('POST', '/api/signup', { username: fd.get('username'), nickname: r.value, password: fd.get('password') }); try { sessionStorage.removeItem('ws_nick'); } catch { } },
   async note(fd, f) { await api('POST', `/api/posts/${f.dataset.id}/notes`, { kind: f.dataset.kind, text: fd.get('text') }); },
   async request(fd) { await api('POST', '/api/people/request', { username: fd.get('username') }); toast('연결 요청을 보냈어요. 상대가 수락하면 연결돼요.'); },
-  async rename(fd) { S.me = await api('PATCH', '/api/me', { name: fd.get('name') }); closeSheet(); },
+  async rename(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('PATCH', '/api/me', { nickname: r.value }); closeSheet(); toast('닉네임을 바꿨어요.'); },
   async 'delete-account'(fd) { await api('DELETE', '/api/me', { password: fd.get('password'), deleteContent: fd.get('dc') === 'on' }); S.me = null; S.authMode = 'intro'; closeSheet(); toast('탈퇴가 완료됐어요.'); },
   async group(fd) { const r = await api('POST', '/api/groups', { name: fd.get('name'), type_hint: fd.get('hint'), member_ids: fd.getAll('m').map(Number) }); closeSheet(); if (r.duplicateOf) toast(`같은 사람으로 만든 ‘${r.duplicateOf}’ 그룹이 이미 있어요.`, 4000); },
   async 'group-add'(fd, f) { await api('POST', `/api/groups/${f.dataset.g}/members`, { user_ids: fd.getAll('m').map(Number) }); closeSheet(); },
@@ -511,15 +533,15 @@ function initSignup() {
   const UM = { idle: ['영문 소문자, 숫자, _ 로 3–20자예요. 친구가 이 이름으로 나를 찾아요.', ''], invalid: ['사용자명은 영문 소문자, 숫자, _ 로 3–20자예요.', 'bad'], checking: ['확인하고 있어요', ''], available: ['사용할 수 있는 사용자명이에요.', 'ok'], unavailable: ['이미 사용 중이거나 사용할 수 없는 사용자명이에요. 다른 이름을 써 주세요.', 'bad'], error: ['지금은 확인하지 못했어요. 잠시 후 다시 시도해 주세요.', 'bad'] };
   const setU = s => { u.status = s; u.checked = s === 'available'; msg('su-user-m', ...UM[s]); E('username').setAttribute('aria-invalid', s === 'invalid' || s === 'unavailable'); upd(); };
   const upd = () => {
-    const name = E('name').value.trim(), pw = E('password').value, r = rules(pw), c = E('confirm').value;
+    const nickOk = validateNickname(E('nickname').value).ok, pw = E('password').value, r = rules(pw), c = E('confirm').value;
     f.querySelectorAll('[data-r]').forEach(li => { const ok = r[li.dataset.r]; li.classList.toggle('ok', ok); li.innerHTML = (ok ? I('check', 's') : '<i class="rdot"></i>') + li.textContent; });
-    const left = [!name && '이름', !u.checked && '사용자명 확인', !(r.len && r.letter && r.digit) && '비밀번호 조건', !(c && c === pw) && '비밀번호 확인'].filter(Boolean);
+    const left = [!nickOk && '닉네임', !u.checked && '사용자명 확인', !(r.len && r.letter && r.digit) && '비밀번호 조건', !(c && c === pw) && '비밀번호 확인'].filter(Boolean);
     f.querySelector('.btn.block').disabled = left.length > 0;
     $('#su-why').textContent = left.length ? `남은 항목이 ${left.length}개 있어요: ${left.join(', ')}` : '';
   };
   f._upd = upd;
-  E('name').addEventListener('input', () => { msg('su-name-m', '함께하는 사람들에게 보이는 이름이에요.'); upd(); });
-  E('name').addEventListener('blur', () => { if (!E('name').value.trim()) msg('su-name-m', '이름을 입력해 주세요.', 'bad'); });
+  f.addEventListener('nickchange', () => { upd(); try { sessionStorage.setItem('ws_nick', E('nickname').value); } catch { } }); // 닉네임 임시 입력만 세션에 유지 (비밀번호는 저장하지 않는다)
+  try { const d = sessionStorage.getItem('ws_nick'); if (d) { E('nickname').value = d; nst(E('nickname')).lastUser = d; nickRender(E('nickname'), false); } } catch { }
   E('username').addEventListener('input', () => {
     const v = E('username').value = E('username').value.toLowerCase().replace(/\s/g, ''); clearTimeout(u.timer); const tk = ++u.token;
     if (!v) return setU('idle');
@@ -539,7 +561,7 @@ document.addEventListener('submit', async e => {
   const btn = f.querySelector('button:not([type=button])'), err = f.querySelector('.err'); if (err) err.textContent = '';
   const fd = new FormData(f); btn && (btn.disabled = true);
   try { const r = await F[f.dataset.form](fd, f); if (r !== 'noroute') { if (f.dataset.form === 'login' || f.dataset.form === 'signup') S.authMode = 'intro'; route(); } }
-  catch (ex) { if (err) err.textContent = ex.message; else toast(ex.message); }
+  catch (ex) { if (err) err.textContent = ex.message; else toast(ex.message); if (ex.network && btn) { btn.dataset.label ||= btn.textContent; btn.textContent = '다시 시도하기'; f.addEventListener('input', () => { btn.textContent = btn.dataset.label; }, { once: true }); } }
   finally { btn && (btn.disabled = false); f._upd?.(); }
 });
 document.addEventListener('change', e => {

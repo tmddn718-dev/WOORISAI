@@ -1,5 +1,6 @@
 // 우리사이 서버 — 의존성 없음 (node:http + node:sqlite). 모든 권한 검사는 여기서 한다.
 import http from 'node:http';
+import { validateNickname } from './public/nickname.js';
 import { DatabaseSync } from 'node:sqlite';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -36,6 +37,7 @@ create table if not exists post_log(id integer primary key, post_id integer, act
 create table if not exists privacy_requests(id integer primary key, user_id integer, kind text, detail text, status text default 'RECEIVED', created_at text default (datetime('now')));
 create table if not exists hides(user_id integer, target_type text, target_id integer, primary key(user_id,target_type,target_id));
 `);
+if (!db.prepare('pragma table_info(users)').all().some(c => c.name === 'nickname_updated_at')) db.exec('alter table users add column nickname_updated_at text');
 
 // ---------- helpers ----------
 const q = (sql, ...p) => db.prepare(sql).all(...p);
@@ -54,6 +56,7 @@ const blockedBetween = (a, b) => !!one('select 1 from blocks where (blocker=? an
 const blockedIds = uid => ['0', ...q('select blocked x from blocks where blocker=? union select blocker from blocks where blocked=?', uid, uid).map(r => r.x)].join(',');
 const isFriend = (a, b) => !!one(`select 1 from connections where status='accepted' and ((from_id=? and to_id=?) or (from_id=? and to_id=?))`, a, b, b, a);
 const friendsOnly = (uid, list) => { for (const id of list) if (id === uid || !isFriend(uid, id) || blockedBetween(uid, id)) throw fail('연결된 사람만 초대할 수 있어요.'); return list; };
+const nick = raw => { const r = validateNickname(raw); if (!r.ok) throw fail(r.message, 400, { error_code: r.code }); return r.value; }; // 서버가 최종 검증한다 (표시 닉네임은 중복 가능, 식별은 user_id)
 const pub = u => ({ id: u.id, name: u.name, username: u.username });
 
 // ---------- 인증 ----------
@@ -65,7 +68,7 @@ function startSession(c, uid) {
   run('insert into sessions(token,user_id) values(?,?)', token, uid);
   c.cookie = `sid=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${c.req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''}`;
 }
-const me = u => ({ id: u.id, name: u.name, username: u.username, mem_enabled: !!u.mem_enabled });
+const me = u => ({ id: u.id, name: u.name, nickname: u.name, username: u.username, mem_enabled: !!u.mem_enabled, nickname_updated_at: u.nickname_updated_at || null });
 
 // ---------- 권한 코어 (PostMember가 열람권한의 유일한 기준) ----------
 function access(pid, uid) {
@@ -132,7 +135,7 @@ const checks = new Map();
 function rate(key, max) { const now = Date.now(), t = (checks.get(key) || []).filter(x => now - x < 600000); if (t.length >= max) throw fail('잠시 후 다시 시도해 주세요.', 429); t.push(now); checks.set(key, t); }
 R('GET', '/api/username-check', c => { rate('uc:' + c.req.socket.remoteAddress, 60); return { state: usernameState(String(c.query.u || '').toLowerCase()) }; }, { pub: true });
 R('POST', '/api/signup', c => {
-  const username = str(c.body.username, 20, 3).toLowerCase(), name = str(c.body.name, 20, 1), pw = String(c.body.password || '');
+  const username = str(c.body.username, 20, 3).toLowerCase(), name = nick(c.body.nickname ?? c.body.name), pw = String(c.body.password || '');
   const us = usernameState(username);
   if (us === 'invalid') throw fail('사용자명은 영문 소문자, 숫자, _ 로 3–20자예요.');
   if (pwProblem(pw)) throw fail(pwProblem(pw));
@@ -156,7 +159,7 @@ R('POST', '/api/login', c => {
 R('POST', '/api/logout', c => { run('delete from sessions where token=?', /sid=([^;]+)/.exec(c.req.headers.cookie)[1]); c.cookie = 'sid=; Path=/; Max-Age=0'; return {}; });
 R('GET', '/api/me', c => me(c.u), { pub: true, soft: true });
 R('PATCH', '/api/me', c => {
-  if (c.body.name !== undefined) run('update users set name=? where id=?', str(c.body.name, 20, 1), c.u.id);
+  if (c.body.nickname !== undefined || c.body.name !== undefined) run(`update users set name=?, nickname_updated_at=datetime('now') where id=?`, nick(c.body.nickname ?? c.body.name), c.u.id);
   if (c.body.mem_enabled !== undefined) run('update users set mem_enabled=? where id=?', c.body.mem_enabled ? 1 : 0, c.u.id);
   return me(one('select * from users where id=?', c.u.id));
 });
@@ -327,7 +330,7 @@ R('GET', '/api/today', c => {
 R('GET', '/api/home', c => {
   const u = c.u.id, now = new Date().toISOString();
   return {
-    postInvites: q(`select p.id,p.title,i.name inviter from post_members m join posts p on p.id=m.post_id join users i on i.id=m.invited_by where m.user_id=? and m.access='invited' and p.status!='deleted'`, u),
+    postInvites: q(`select p.id,p.title,i.name inviter,i.username inviter_username from post_members m join posts p on p.id=m.post_id join users i on i.id=m.invited_by where m.user_id=? and m.access='invited' and p.status!='deleted'`, u),
     friendRequests: q(`select u.id,u.name from connections c join users u on u.id=c.from_id where c.to_id=? and c.status='pending'`, u),
     meetupInvites: q(`select m.id,m.title,m.starts_at,m.tz from meetups m join meetup_participants p on p.meetup_id=m.id where p.user_id=? and p.rsvp='invited' and m.status='active' and m.starts_at>?`, u, now),
     upcoming: q(`select m.id,m.title,m.starts_at,m.tz,m.place,p.rsvp from meetups m join meetup_participants p on p.meetup_id=m.id where p.user_id=? and m.status='active' and m.starts_at>? order by m.starts_at limit 3`, u, now),
@@ -361,7 +364,7 @@ R('POST', '/api/posts', c => {
 R('GET', '/api/posts/:id', c => {
   const uid = c.u.id, pid = +c.params.id, { p, m } = access(pid, uid);
   if (m.access === 'invited') { // OD-01: 수락 전에는 초대한 사람 이름과 일반 제목만
-    return { preview: true, id: p.id, title: p.title, inviter: one('select name from users where id=?', m.invited_by)?.name };
+    return { preview: true, id: p.id, title: p.title, inviter: one('select name from users where id=?', m.invited_by)?.name, inviter_username: one('select username from users where id=?', m.invited_by)?.username };
   }
   const bl = blockedIds(uid);
   const hidden = new Set(q(`select target_type||':'||target_id k from hides where user_id=? and target_type in ('note','media')`, uid).map(r => r.k));

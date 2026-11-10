@@ -17,7 +17,7 @@ const client = () => {
     const ct = r.headers.get('content-type') || '';
     return { status: r.status, data: ct.includes('json') ? await r.json() : Buffer.from(await r.arrayBuffer()) };
   };
-  return { get: u => call('GET', u), post: (u, b) => call('POST', u, b || {}), del: (u, b) => call('DELETE', u, b || {}), put: (u, raw) => call('POST', u, null, raw) };
+  return { patch: (u, b) => call('PATCH', u, b || {}), get: u => call('GET', u), post: (u, b) => call('POST', u, b || {}), del: (u, b) => call('DELETE', u, b || {}), put: (u, raw) => call('POST', u, null, raw) };
 };
 const signup = async n => { const c = client(); const r = await c.post('/api/signup', { username: n, name: n, password: 'password123' }); c.id = r.data.id; return c; };
 const friend = async (a, b, uname) => { await a.post("/api/people/request", { username: uname }); await b.post(`/api/people/${a.id}/accept`); };
@@ -134,9 +134,47 @@ assert.equal((await d.get('/api/me')).status, 401);
   assert.equal((await g.get('/api/username-check?u=admin')).data.state, 'unavailable', '예약어');
   assert.equal((await g.get('/api/username-check?u=A!')).data.state, 'invalid');
   assert.equal((await g.get('/api/username-check?u=deleted_9')).data.state, 'unavailable', '탈퇴 계정 접두어');
-  assert.match((await g.post('/api/signup', { username: 'weakpw1', name: 'w', password: 'abcdefghij' })).data.error, /숫자/, '숫자 없는 비밀번호 거절');
-  assert.match((await g.post('/api/signup', { username: 'weakpw2', name: 'w', password: '1234567890' })).data.error, /영문/, '영문 없는 비밀번호 거절');
-  assert.equal((await g.post('/api/signup', { username: 'admin', name: 'w', password: 'abc12345' })).status, 409);
+  assert.match((await g.post('/api/signup', { username: 'weakpw1', name: 'wendy', password: 'abcdefghij' })).data.error, /숫자/, '숫자 없는 비밀번호 거절');
+  assert.match((await g.post('/api/signup', { username: 'weakpw2', name: 'wendy', password: '1234567890' })).data.error, /영문/, '영문 없는 비밀번호 거절');
+  assert.equal((await g.post('/api/signup', { username: 'admin', name: 'wendy', password: 'abc12345' })).status, 409);
+}
+
+
+// 닉네임 v1.1: 글자·길이·정규화·제한 표현, 중복 허용, 추천 사전
+{
+  const { validateNickname, graphemes, ADJECTIVES, NOUNS, suggest } = await import('./public/nickname.js');
+  const g = client(); let n = 0;
+  const su = async nickname => g.post('/api/signup', { username: 'nick' + (++n) + 'x', nickname, password: 'abc12345' });
+  const code = async nickname => (await su(nickname)).data.error_code;
+  assert.equal(await code('가'), 'NICKNAME_TOO_SHORT');
+  assert.equal(await code('가'.repeat(17)), 'NICKNAME_TOO_LONG', '17자 거절');
+  assert.equal((await su('가'.repeat(16))).status, 200, '한글 16자 허용');
+  assert.equal(graphemes('👨‍👩‍👧'), 1, '조합 이모지는 한 글자로 센다');
+  assert.equal(await code('좋아요😀'), 'NICKNAME_INVALID_CHAR', '이모지 불허');
+  assert.equal(await code('가나\u200b다'), 'NICKNAME_INVALID_CHAR', '제로폭 문자');
+  assert.equal(await code('가나\u202e다'), 'NICKNAME_INVALID_CHAR', '방향 제어 문자');
+  assert.equal(await code('가나\n다'), 'NICKNAME_INVALID_CHAR', '줄바꿈');
+  assert.equal(await code('<b>안녕</b>'), 'NICKNAME_INVALID_CHAR', 'HTML 태그 문자');
+  assert.equal(await code('우리사이 운영자'), 'NICKNAME_RESTRICTED', '운영자 사칭');
+  assert.equal(await code('Admin'), 'NICKNAME_RESTRICTED');
+  assert.equal(await code('010 1234 5678'), 'NICKNAME_RESTRICTED', '전화번호 형태');
+  assert.equal(validateNickname('  가   나  ').value, '가 나', '공백 정규화');
+  assert.equal(validateNickname('\u1112\u1161\u11ab글').value, '한글', 'NFC 정규화');
+  assert.equal(validateNickname('별빛_하늘.~!?♡☆').ok, true, '허용 특수문자');
+  // 같은 닉네임을 여러 계정이 써도 되고, user_id로 구분된다
+  const a1 = (await su('소통하는간짜장')).data, a2 = (await su('소통하는간짜장')).data;
+  assert.equal(a1.name, a2.name); assert.notEqual(a1.id, a2.id, '중복 닉네임은 서로 다른 user_id');
+  // 닉네임 변경: 같은 user_id, 구조화된 오류
+  assert.equal((await g.post('/api/logout')).status, 200);
+  const h = await signup('rename_me');
+  const bad = await h.patch('/api/me', { nickname: '가' });
+  assert.equal(bad.data.error_code, 'NICKNAME_TOO_SHORT');
+  const okr = await h.patch('/api/me', { nickname: '춤추는고구마' });
+  assert.equal(okr.data.id, h.id); assert.equal(okr.data.name, '춤추는고구마'); assert.ok(okr.data.nickname_updated_at);
+  // 추천 사전: 모든 조합이 규칙을 통과하고, 직전 추천은 피한다
+  for (const a of ADJECTIVES) for (const nn of NOUNS) assert.equal(validateNickname(a + nn).ok, true, a + nn);
+  const recent = []; for (let i = 0; i < 5; i++) recent.push(suggest(recent));
+  assert.equal(new Set(recent).size, 5, '직전 5개 재노출 방지');
 }
 
 console.log('✓ 모든 권한·삭제 시나리오 통과');
