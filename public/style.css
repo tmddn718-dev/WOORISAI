@@ -148,7 +148,14 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
 .small-logo img { width: 28px; height: 28px; }
 .small-logo .wordmark { font-size: 1.125rem; }
 .empty { text-align: center; padding: 40px 24px; }
+.empty-ic { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%; background: var(--sage); color: var(--green); display: grid; place-items: center; }
+.empty-ic .i { width: 28px; height: 28px; }
 .empty h2 { margin-bottom: 8px; }
+.only-pc { display: none; }
+.fab { position: fixed; z-index: 4; right: max(16px, calc(50% - 224px)); bottom: calc(76px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 20px; border-radius: 24px; background: var(--green); color: #fff; font-weight: 600; box-shadow: 0 4px 12px rgba(36,38,34,.18); }
+.fab .i { width: 20px; height: 20px; }
+@media (min-width: 768px) { .fab { right: max(24px, calc(50% - 336px)); } }
+@media (min-width: 1024px) { .fab { display: none; } .only-pc { display: inline-flex; } }
 .empty p { color: var(--sub); margin-bottom: 20px; font-size: .875rem; line-height: 22px; }
 .seg { display: grid; grid-auto-flow: column; background: var(--sage); border-radius: var(--r-ctl); padding: 4px; }
 .seg button { min-height: 36px; border: 0; background: none; border-radius: 10px; font-size: .875rem; font-weight: 500; color: var(--sub); cursor: pointer; transition: background-color var(--t) var(--ease); }

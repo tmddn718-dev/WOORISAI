@@ -62,7 +62,7 @@ const fmtDT = (iso, tz) => new Date(iso).toLocaleString('ko-KR', { timeZone: tz 
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const won = n => Number(n).toLocaleString('ko-KR') + '원';
 const top = (title, o = {}) => `<header class="top">${o.back === false ? '' : `<button class="icon-btn" data-act="back" aria-label="뒤로 가기">${I('back')}</button>`}<h1>${esc(title)}</h1>${o.right || ''}</header>`;
-const empty = (t, d, btn) => `<div class="empty"><h2>${t}</h2><p>${d}</p>${btn || ''}</div>`;
+const empty = (t, d, btn, icon = 'photo') => `<div class="empty"><span class="empty-ic">${I(icon)}</span><h2>${t}</h2><p>${d}</p>${btn || ''}</div>`;
 const av = (n, c = '') => `<span class="av ${c}" aria-hidden="true">${esc([...(n || '?')][0])}</span>`;
 const pick = (list, name = 'm', on = []) => { const dup = list.reduce((m, u) => (m[u.name] = (m[u.name] || 0) + 1, m), {}); return `<div class="pick">${list.map(u => `<label><input type="checkbox" name="${name}" value="${u.id}" ${on.includes(u.id) ? 'checked' : ''}><span>${esc(u.name)}${u.username && dup[u.name] > 1 ? ` <i class="uid">@${esc(u.username)}</i>` : ''}</span></label>`).join('')}</div>`; };
 const tile = p => `<a class="tile" href="#/post/${p.id}"><span class="t-ph">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)}${p.place ? ' · ' + esc(p.place.label) : ''} · ${p.count}명</span></a>`;
@@ -249,7 +249,7 @@ P.memories = async () => {
       : t.items.length ? `<section class="sec"><h2 style="margin-bottom:12px">그날의 우리가 여기 있어요.</h2><p class="cap" style="margin-bottom:12px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p><div class="feed">${t.items.map(p => `<div>${postCard(p)}<div class="row" style="margin-top:8px;flex-wrap:wrap"><a class="btn sm sec2" href="#/post/${p.id}?add=1">${I('plus', 's')} 기억 더하기</a><button class="btn sm line" data-act="save" data-id="${p.id}">${p.saved ? '저장함' : '저장'}</button><button class="btn sm line" data-act="hide-post" data-id="${p.id}">다시 추천하지 않기</button></div></div>`).join('')}</div></section>`
         : empty('오늘과 연결된 추억이 없어요.', '기록은 그대로 안전하게 보관되어 있어요.');
   }
-  return `<header class="top"><h1>추억</h1><a class="btn sm sec2" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '목록'], ['map', '지도'], ['today', '오늘']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${chipsUi}${filterUi}${hint}</div>${body}</div>`;
+  return `<header class="top"><h1>추억</h1><a class="btn sm sec2 only-pc" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '목록'], ['map', '지도'], ['today', '오늘']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${chipsUi}${filterUi}${hint}</div>${body}</div>${tab === 'today' ? '' : `<a class="fab" href="#/new-post">${I('plus')} 새 추억</a>`}`;
 };
 
 P.meetups = async () => {
