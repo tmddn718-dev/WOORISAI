@@ -228,3 +228,49 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
 .demo .ph svg { width: 40%; }
 .demo .meta { padding: 16px; }
 .demo .who { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+
+/* ===== 유아이볼 레퍼런스 반영 (공유앨범 타일 · 지도뷰 · 초대하기 · 큐레이션 · 사이드 네비게이션) ===== */
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 12px; }
+.tile { display: flex; flex-direction: column; gap: 4px; min-width: 0; transition: opacity var(--t) var(--ease); }
+.tile:hover { opacity: .9; }
+.tile b { font-size: 1rem; line-height: 24px; font-weight: 600; margin-top: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t-ph { aspect-ratio: 1; border-radius: var(--r-card); overflow: hidden; background: var(--sage); display: grid; place-items: center; }
+.t-ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.t-ph svg.knot { width: 40%; height: auto; }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+.chips::-webkit-scrollbar { display: none; }
+.chips .chip { flex: none; white-space: nowrap; text-decoration: none; }
+.chip:not(.on):not([aria-pressed=true]) { background: var(--white); border-color: var(--line); }
+.pill { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(88px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 22px; background: var(--ink); color: #fff; font-size: .875rem; font-weight: 500; z-index: 4; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+.preview:not([hidden]) ~ .pill { display: none; }
+.grab-h { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 8px; }
+.pv { justify-content: space-between; }
+.pv-t { display: flex; flex-direction: column; min-width: 0; }
+.pv-t b { font-size: 1rem; line-height: 24px; font-weight: 600; }
+.pv-ph { width: 72px; height: 72px; }
+.field .count { display: block; text-align: right; color: var(--sub); font-size: .75rem; margin-top: 4px; }
+.stickybar { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 3; background: var(--bg); border-top: 1px solid var(--line); margin: 8px -16px 0; padding: 12px 16px; }
+.stickybar .err { min-height: 0; }
+.steps { margin: 0; padding-left: 20px; font-size: .875rem; line-height: 22px; }
+.steps li + li { margin-top: 4px; }
+.codecard { background: var(--sage); border-radius: var(--r-card); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.codecard code { display: block; font: 400 .8125rem/20px ui-monospace, Menlo, monospace; word-break: break-all; background: var(--white); border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 12px 16px; }
+.side-label, .crumb, #tabs .side-user { display: none; }
+@media (min-width: 768px) { .tiles { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } .stickybar { margin-left: -24px; margin-right: -24px; padding-left: 24px; padding-right: 24px; } }
+@media (min-width: 1024px) {
+  .side-label { display: block; font-size: .75rem; line-height: 18px; font-weight: 500; color: var(--sub); padding: 16px 12px 4px; }
+  #tabs .brand { order: 0; }
+  #tabs [data-k=new] { order: 1; }
+  #tabs .l1 { order: 2; } #tabs [data-k=home] { order: 3; } #tabs [data-k=memories] { order: 4; }
+  #tabs .l2 { order: 5; } #tabs [data-k=meetups] { order: 6; }
+  #tabs .l3 { order: 7; } #tabs [data-k=me] { order: 8; }
+  #tabs .side-user { display: flex; order: 9; margin-top: auto; min-height: 56px; padding: 8px 12px; border-top: 1px solid var(--line); border-radius: 0; gap: 12px; }
+  #tabs .side-user span { display: flex; flex-direction: column; align-items: flex-start; line-height: 20px; }
+  #tabs .side-user b { font-size: .875rem; font-weight: 600; color: var(--ink); }
+  .crumb { display: block; padding: 24px 32px 0; font-size: .75rem; line-height: 18px; color: var(--sub); }
+  .crumb a:hover { color: var(--ink); }
+  .crumb + .top { padding-top: 8px; }
+  .cover { aspect-ratio: 21 / 9; max-height: 320px; }
+  .stickybar { bottom: 0; margin-left: -32px; margin-right: -32px; padding-left: 32px; padding-right: 32px; }
+  .pill { bottom: 24px; left: calc(50% + var(--side) / 2); }
+}

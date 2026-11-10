@@ -19,6 +19,7 @@ const ic = {
   down: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', out: '<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>', link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
   coin: '<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c.5-1 1.500-1.500 2.500-1.500 1.500 0 2.500.8 2.500 2s-1 1.800-2.500 2-2.500.8-2.500 2 1 2 2.500 2c1 0 2-.5 2.500-1.500"/>',
   check: '<path d="M5 12l5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>', help: '<circle cx="12" cy="12" r="8"/><path d="M9.5 9.500a2.500 2.500 0 1 1 3.500 2.300c-.700.400-1 .900-1 1.700M12 16.500v.01"/>',
+  list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
   bookmark: '<path d="M7 4h10v16l-5-4-5 4z"/>',
   star: '<path d="M12 4l2.400 5 5.600.7-4 3.900 1 5.500-5-2.700-5 2.700 1-5.500-4-3.900 5.600-.7z"/>',
 };
@@ -62,6 +63,7 @@ const top = (title, o = {}) => `<header class="top">${o.back === false ? '' : `<
 const empty = (t, d, btn) => `<div class="empty"><h2>${t}</h2><p>${d}</p>${btn || ''}</div>`;
 const av = (n, c = '') => `<span class="av ${c}" aria-hidden="true">${esc([...(n || '?')][0])}</span>`;
 const pick = (list, name = 'm', on = []) => `<div class="pick">${list.map(u => `<label><input type="checkbox" name="${name}" value="${u.id}" ${on.includes(u.id) ? 'checked' : ''}><span>${esc(u.name)}</span></label>`).join('')}</div>`;
+const tile = p => `<a class="tile" href="#/post/${p.id}"><span class="t-ph">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)}${p.place ? ' · ' + esc(p.place.label) : ''} · ${p.count}명</span></a>`;
 const postCard = p => `<a class="card post" href="#/post/${p.id}"><div class="ph">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</div><div class="meta"><h2>${esc(p.title)}</h2><p class="cap">${fmtDate(p.occurred_on)}${p.place ? ' · ' + esc(p.place.label) : ''} · ${p.count}명${p.status === 'closed' ? ' · 종료됨' : ''}${p.years_ago ? ` · ${p.years_ago}년 전 오늘` : ''}</p></div></a>`;
 const gone = e => e.status === 403 || e.status === 404
   ? `${top('추억', { back: false })}${empty(e.status === 404 ? '이 기록은 삭제되었어요' : '이 추억은 더 이상 공유되지 않아요', '다른 추억을 둘러보세요.', '<a class="btn" href="#/">다른 추억 보기</a>')}`
@@ -95,7 +97,9 @@ P.home = async () => {
   const [d, today] = await Promise.all([api('GET', '/api/home'), api('GET', '/api/today?date=' + localDate())]);
   const news = d.postInvites.length + d.friendRequests.length + d.meetupInvites.length;
   return `<header class="top home-top"><div class="small-logo"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div></header><div class="page">
-  ${d.posts.length ? `<a class="btn block" href="#/new-post" style="margin-bottom:24px">${I('plus')} 추억 만들기</a>` : ''}
+  <p class="cap" style="margin-bottom:8px">${new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</p>
+  ${d.posts.length ? `<a class="btn block" href="#/new-post">${I('plus')} 추억 만들기</a>` : ''}
+  <div class="chips" style="margin:12px 0 24px" aria-label="빠른 시작"><a class="chip" href="#/new-meetup">${I('cal', 's')} 모임 만들기</a><a class="chip" href="#/people">${I('users', 's')} 사람 초대하기</a><a class="chip" href="#/saved">${I('bookmark', 's')} 저장한 추억</a><a class="chip" href="#/memories?tab=map">${I('pin', 's')} 추억 지도</a></div>
   ${news ? `<section aria-label="새 소식"><div class="hd row between"><h2>새 소식</h2></div><div class="card list">
     ${d.postInvites.map(x => `<a href="#/post/${x.id}">${av(x.inviter)}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${esc(x.inviter)}님이 추억에 초대했어요</span></span>${I('chev', 's')}</a>`).join('')}
     ${d.friendRequests.map(x => `<div>${av(x.name)}<span class="grow"><b>${esc(x.name)}</b><br><span class="cap">연결을 요청했어요</span></span><button class="btn sm" data-act="accept-friend" data-id="${x.id}">수락</button><button class="btn sm line" data-act="decline-friend" data-id="${x.id}">거절</button></div>`).join('')}
@@ -112,7 +116,7 @@ P.post = async id => {
   const acc = p.members.filter(m => m.access === 'accepted'), inv = p.members.filter(m => m.access === 'invited');
   const stories = p.notes.filter(n => n.kind === 'story'), cmts = p.notes.filter(n => n.kind === 'comment');
   const noteHtml = n => `<div class="card pad" style="${n.kind === 'comment' ? 'border:0;background:var(--sage)' : ''}"><div class="row between"><span class="cap"><b style="color:var(--ink)">${esc(n.author)}</b> · ${n.created_at.slice(0, 10)}</span>${n.mine ? `<button class="btn sm line" data-act="del-note" data-id="${n.id}" aria-label="내 글 삭제하기">삭제</button>` : `<button class="btn sm line" data-act="report" data-t="note" data-id="${n.id}" aria-label="신고하기">신고</button>`}</div><p style="margin-top:8px;white-space:pre-wrap">${n.restricted ? '<span class="sub">검토 중인 콘텐츠예요</span>' : esc(n.text)}</p></div>`;
-  return `${top('', { right: `<button class="icon-btn" data-act="post-menu" data-id="${p.id}" aria-label="더 보기">${I('more')}</button>` })}
+  return `<nav class="crumb" aria-label="현재 위치"><a href="#/">홈</a> › <a href="#/memories">추억</a> › ${esc(p.title)}</nav>${top('', { right: `<button class="icon-btn" data-act="post-menu" data-id="${p.id}" aria-label="더 보기">${I('more')}</button>` })}
   <div class="page stack" style="padding-top:8px" data-post="${p.id}">
     ${(() => { const cv = p.media.find(m => m.id === p.cover && !m.restricted)?.id ?? p.media.find(m => !m.restricted)?.id; return cv ? `<div class="cover"><img src="/media/${cv}" alt="대표 사진"></div>` : ''; })()}
     <div><h1>${esc(p.title)}</h1><p class="sub body2">${fmtDate(p.occurred_on)}${p.place ? ` · <span title="${p.place.precision === 'exact' ? '정확한 장소' : p.place.precision === 'area' ? '동네까지만 표시' : '도시까지만 표시'}">${I('pin', 's')} ${esc(p.place.label)}</span>` : ''}${p.status === 'closed' ? ' · <span class="tag warn">종료됨</span>' : ''}</p>
@@ -135,7 +139,7 @@ P.newPost = async () => {
   if (!pp.friends.length) return `${top('새 추억 만들기')}${empty('함께할 사람을 먼저 연결해 주세요', '사용자명이나 초대 링크로 연결하면 함께 추억을 남길 수 있어요.', '<a class="btn" href="#/people">사람 연결하기</a>')}`;
   return `${top('새 추억 만들기')}<form class="page stack" data-form="newpost" data-meetup="${d.meetup_id || ''}">
     ${restored ? '<div class="note row between"><span>임시 저장된 초안을 불러왔어요.</span><button type="button" class="btn sm line" data-act="draft-clear">삭제</button></div>' : ''}
-    <label class="field"><span>추억 제목</span><input type="text" name="title" maxlength="40" required value="${esc(d.title || '')}" placeholder="예) 성수동 브런치"></label>
+    <label class="field"><span>추억 제목</span><input type="text" name="title" maxlength="40" required value="${esc(d.title || '')}" placeholder="예) 성수동 브런치" data-counter><small class="count"></small></label>
     <label class="field"><span>언제였나요?</span><input type="date" name="date" value="${d.date || localDate()}" max="${localDate()}"></label>
     <div class="field"><span>누구와 함께했나요?</span><div class="selbar" id="selbar" aria-live="polite"></div>${pick(pp.friends, 'm', d.members || [])}
       ${gg.groups.length ? `<label class="field" style="margin-top:12px"><span class="cap">그룹으로 빠르게 고르기 <small style="display:inline">(선택)</small></span><select name="group" data-fillgroup><option value="">그룹 없이 사람만 고를게요</option>${gg.groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select><small>그룹을 골라도 이 추억에 초대한 사람만 볼 수 있어요. 그룹을 나중에 바꿔도 이미 만든 추억의 멤버는 바뀌지 않아요.</small></label>` : ''}</div>
@@ -144,9 +148,9 @@ P.newPost = async () => {
       <div class="row"><label class="field grow"><span>동네</span><input type="text" name="parea" maxlength="30"></label><label class="field grow"><span>도시</span><input type="text" name="pcity" maxlength="30"></label></div>
       <label class="field"><span>국가</span><input type="text" name="pcountry" maxlength="30" value="대한민국"></label>
       <label class="field"><span>보여줄 위치 수준</span><select name="pprec"><option value="exact">정확한 장소까지</option><option value="area" selected>동네까지만</option><option value="city">도시까지만</option></select><small>선택한 수준보다 자세한 위치는 서버에서 내려주지 않아요. 사진의 GPS 정보는 올릴 때 항상 지워요.</small></label></div></details>
-    <label class="field"><span>첫 이야기 (선택)</span><textarea name="text" maxlength="2000" placeholder="그날을 한 줄로 남겨 보세요">${esc(d.text || '')}</textarea></label>
+    <label class="field"><span>첫 이야기 (선택)</span><textarea name="text" maxlength="2000" placeholder="그날을 한 줄로 남겨 보세요" data-counter>${esc(d.text || '')}</textarea><small class="count"></small></label>
     <label class="field"><span>사진 (선택)</span><input type="file" name="photos" accept="image/*" multiple></label>
-    <p class="err" role="alert"></p><button class="btn block">다음: 볼 수 있는 사람 확인</button></form>`;
+    <div class="stickybar"><p class="err" role="alert"></p><button class="btn block">다음: 볼 수 있는 사람 확인</button></div></form>`;
 };
 
 P.memories = async () => {
@@ -161,16 +165,17 @@ P.memories = async () => {
     <label class="field"><span class="cap">연도</span><select data-filter="year"><option value="">전체</option>${Array.from({ length: 12 }, (_, i) => yr - i).map(y => `<option ${+f.year === y ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
     ${active ? '<button class="btn sm line" data-act="clear-filter">필터 해제</button>' : ''}</div></details>`;
   const sumTxt = [f.people.length && pp.friends.filter(u => f.people.includes(u.id)).map(u => u.name).join(', '), f.group && gg.groups.find(g => g.id === +f.group)?.name, f.year && f.year + '년'].filter(Boolean).join(' · ');
+  const chipsUi = tab !== 'today' && active ? `<div class="chips" aria-label="적용 중인 필터">${f.people.map(id => `<button class="chip on" data-act="rm-filter" data-k="people" data-v="${id}">${esc(pp.friends.find(u => u.id === id)?.name || '')} ${I('x', 's')}</button>`).join('')}${f.group ? `<button class="chip on" data-act="rm-filter" data-k="group">${esc(gg.groups.find(g => g.id === +f.group)?.name || '')} ${I('x', 's')}</button>` : ''}${f.year ? `<button class="chip on" data-act="rm-filter" data-k="year">${f.year}년 ${I('x', 's')}</button>` : ''}</div>` : '';
   const hint = f.people.length > 1 ? `<p class="cap">${f.mode === 'and' ? '선택한 사람이 모두 함께한 추억만 보여줘요.' : '선택한 사람 중 누구든 함께한 추억을 보여줘요.'}</p>` : '';
   let body = '';
   if (tab === 'list') {
     const { posts } = await api('GET', '/api/posts?' + qs);
     const byYear = {}; posts.forEach(p => (byYear[(p.occurred_on || '날짜 미상').slice(0, 4)] ||= []).push(p));
-    body = posts.length ? Object.entries(byYear).map(([y, l]) => `<section class="sec"><h2 style="margin-bottom:12px">${esc(y)}</h2><div class="feed">${l.map(postCard).join('')}</div></section>`).join('') : (active ? empty('선택한 조건의 추억이 없어요', `선택한 조건: ${esc(sumTxt)}. 필터를 바꾸거나 해제해 보세요.`, '<button class="btn" data-act="clear-filter">필터 해제</button>') : empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>'));
+    body = posts.length ? `<p class="cap" style="margin-top:16px">총 ${posts.length}개</p>` + Object.entries(byYear).map(([y, l]) => `<section class="sec"><h2 style="margin-bottom:12px">${esc(y)}</h2><div class="tiles">${l.map(tile).join('')}</div></section>`).join('') : (active ? empty('선택한 조건의 추억이 없어요', `선택한 조건: ${esc(sumTxt)}. 필터를 바꾸거나 해제해 보세요.`, '<button class="btn" data-act="clear-filter">필터 해제</button>') : empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>'));
   } else if (tab === 'map') {
     const m = await api('GET', '/api/map?' + qs);
     window._map = m;
-    body = m.total ? `<p class="cap" style="margin-top:12px">내가 볼 수 있는 추억의 대표 사진을 장소별로 모았어요. 기록한 장소를 모은 것이라 실제 이동 경로와 다를 수 있어요. 목록 탭에서 같은 기록을 볼 수 있어요.</p>` + m.countries.map((c, ci) => `<section class="sec"><h2>${esc(c.country)} <span class="sub body2">· ${c.count}개의 추억</span></h2><div class="markers">${c.cities.map((city, i) => { const cv = city.items.find(x => x.cover)?.cover; return `<button class="marker" data-act="marker" data-c="${ci}" data-i="${i}" aria-pressed="false" aria-label="${esc(city.city)} 추억 ${city.count}개 보기"><span class="mk-ph">${cv ? `<img loading="lazy" src="/media/${cv}" alt="">` : KNOT}<b class="badge">${city.count}</b></span><span class="body2">${esc(city.city)}</span></button>`; }).join('')}</div></section>`).join('') + '<div id="preview" class="preview" hidden></div>'
+    body = m.total ? `<p class="cap" style="margin-top:12px">내가 볼 수 있는 추억의 대표 사진을 장소별로 모았어요. 기록한 장소를 모은 것이라 실제 이동 경로와 다를 수 있어요. 목록 탭에서 같은 기록을 볼 수 있어요.</p>` + m.countries.map((c, ci) => `<section class="sec"><h2>${esc(c.country)} <span class="sub body2">· ${c.count}개의 추억</span></h2><div class="markers">${c.cities.map((city, i) => { const cv = city.items.find(x => x.cover)?.cover; return `<button class="marker" data-act="marker" data-c="${ci}" data-i="${i}" aria-pressed="false" aria-label="${esc(city.city)} 추억 ${city.count}개 보기"><span class="mk-ph">${cv ? `<img loading="lazy" src="/media/${cv}" alt="">` : KNOT}<b class="badge">${city.count}</b></span><span class="body2">${esc(city.city)}</span></button>`; }).join('')}</div></section>`).join('') + '<div id="preview" class="preview" hidden></div><a class="pill" href="#/memories?tab=list">' + I('list', 's') + ' 목록 보기</a>'
       : empty(active ? '선택한 조건의 추억이 없어요' : '아직 지도에 남긴 추억이 없어요', active ? `선택한 조건: ${esc(sumTxt)}. 필터를 바꾸거나 해제해 보세요.` : '추억을 만들 때 장소를 함께 남겨 보세요.', active ? '<button class="btn" data-act="clear-filter">필터 해제</button>' : '<a class="btn" href="#/new-post">새 추억 만들기</a>');
   } else {
     const t = await api('GET', '/api/today?date=' + localDate());
@@ -178,7 +183,7 @@ P.memories = async () => {
       : t.items.length ? `<section class="sec"><h2 style="margin-bottom:12px">그날의 우리가 여기 있어요.</h2><p class="cap" style="margin-bottom:12px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p><div class="feed">${t.items.map(p => `<div>${postCard(p)}<div class="row" style="margin-top:8px;flex-wrap:wrap"><a class="btn sm sec2" href="#/post/${p.id}?add=1">${I('plus', 's')} 기억 더하기</a><button class="btn sm line" data-act="save" data-id="${p.id}">${p.saved ? '저장함' : '저장'}</button><button class="btn sm line" data-act="hide-post" data-id="${p.id}">다시 추천하지 않기</button></div></div>`).join('')}</div></section>`
         : empty('오늘과 연결된 추억이 없어요.', '기록은 그대로 안전하게 보관되어 있어요.');
   }
-  return `<header class="top"><h1>추억</h1><a class="btn sm sec2" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '목록'], ['map', '지도'], ['today', '오늘']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${filterUi}${hint}</div>${body}</div>`;
+  return `<header class="top"><h1>추억</h1><a class="btn sm sec2" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '목록'], ['map', '지도'], ['today', '오늘']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${chipsUi}${filterUi}${hint}</div>${body}</div>`;
 };
 
 P.meetups = async () => {
@@ -226,8 +231,8 @@ P.people = async () => {
   const d = await api('GET', '/api/people');
   return `${top('사람')}<div class="page stack">
     <form data-form="request" class="row" style="align-items:flex-end"><label class="field grow"><span>사용자명으로 연결하기</span><input type="text" name="username" placeholder="예) minsu" autocapitalize="none" required></label><button class="btn" style="flex:none">연결 요청</button></form><p class="err" role="alert" id="reqerr"></p>
-    <div class="card pad stack"><div class="row between"><b>초대 링크로 연결하기</b><button class="btn sm sec2" data-act="link-new">${I('link', 's')} 링크 만들기</button></div><p class="cap">링크는 한 번만 쓸 수 있고 7일 뒤 만료돼요. 받은 사람이 로그인한 뒤 연결을 확인해요.</p>
-      ${d.links.map(l => `<div class="row"><code class="grow body2" style="overflow:hidden;text-overflow:ellipsis">${esc(location.origin)}/#/join/${esc(l.code)}</code><button class="btn sm line" data-act="copy" data-v="${esc(location.origin)}/#/join/${esc(l.code)}">복사</button><button class="btn sm dline" data-act="link-del" data-id="${esc(l.code)}">회수</button></div>`).join('')}</div>
+    <div class="card pad stack"><div class="row between"><b>초대 링크로 연결하기</b><button class="btn sm sec2" data-act="link-new">${I('link', 's')} 링크 만들기</button></div><ol class="steps"><li>링크를 만들어 연결하고 싶은 사람에게 보내요</li><li>받은 사람이 로그인한 뒤 연결을 확인해요</li><li>연결되면 함께 추억을 만들 수 있어요</li></ol><p class="cap">링크는 한 번만 쓸 수 있고 7일 뒤 만료돼요. 연결만으로 서로의 추억을 볼 수는 없어요.</p>
+      ${d.links.map(l => { const u = `${location.origin}/#/join/${l.code}`, days = Math.max(1, Math.ceil((Date.parse(l.expires_at) - Date.now()) / 864e5)); return `<div class="codecard"><span class="cap">내 초대 링크 · ${days}일 뒤 만료 · 1회용</span><code>${esc(u)}</code><div class="row"><button class="btn grow" data-act="share" data-v="${esc(u)}">${I('link', 's')} 공유하기</button><button class="btn line" data-act="copy" data-v="${esc(u)}">복사</button><button class="btn dline" data-act="link-del" data-id="${esc(l.code)}">회수</button></div></div>`; }).join('')}</div>
     ${d.incoming.length ? `<section><h2 style="margin-bottom:12px">받은 요청</h2><div class="card list">${d.incoming.map(u => `<div>${av(u.name)}<span class="grow"><b>${esc(u.name)}</b><br><span class="cap">@${esc(u.username)}</span></span><button class="btn sm" data-act="accept-friend" data-id="${u.id}">수락</button><button class="btn sm line" data-act="decline-friend" data-id="${u.id}">거절</button></div>`).join('')}</div></section>` : ''}
     <section><h2 style="margin-bottom:12px">연결된 사람 ${d.friends.length}명</h2>${d.friends.length ? `<div class="card list">${d.friends.map(u => `<div>${av(u.name)}<span class="grow"><b>${esc(u.name)}</b><br><span class="cap">@${esc(u.username)}</span></span><button class="icon-btn" data-act="friend-menu" data-id="${u.id}" data-name="${esc(u.name)}" aria-label="${esc(u.name)} 관리">${I('more')}</button></div>`).join('')}</div>` : '<p class="sub body2">아직 연결된 사람이 없어요.</p>'}</section>
     ${d.outgoing.length ? `<section><h2 style="margin-bottom:12px">보낸 요청</h2><div class="card list">${d.outgoing.map(u => `<div>${av(u.name)}<span class="grow">${esc(u.name)}</span><button class="btn sm line" data-act="decline-friend" data-id="${u.id}">취소</button></div>`).join('')}</div></section>` : ''}</div>`;
@@ -279,10 +284,10 @@ async function route() {
   const tabs = $('#tabs'); tabs.hidden = false;
   const T = [['home', '홈', 'home', '#/'], ['meetups', '약속', 'cal', '#/meetups'], ['new', '만들기', 'plus'], ['memories', '추억', 'photo', '#/memories'], ['me', '나', 'user', '#/me']];
   $('#app').classList.add('authed');
-  tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i, h]) => k === 'new' ? `<button data-act="create" aria-label="만들기"><span class="mk">${I('plus')}</span>${l}</button>` : `<a href="${h}" ${r[2] === k ? 'aria-current="page"' : ''}>${I(i)}${l}</a>`).join('');
+  tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i, h]) => k === 'new' ? `<button data-act="create" data-k="new" aria-label="만들기"><span class="mk">${I('plus')}</span>${l}</button>` : `<a href="${h}" data-k="${k}" ${r[2] === k ? 'aria-current="page"' : ''}>${I(i)}${l}</a>`).join('') + '<div class="side-label l1">둘러보기</div><div class="side-label l2">함께하기</div><div class="side-label l3">내 공간</div>' + `<a class="side-user" href="#/me" data-k="user">${av(S.me.name, 's')}<span><b>${esc(S.me.name)}</b><span class="cap">@${esc(S.me.username)}</span></span></a>`;
   let html; try { html = await r[1](...args); } catch (e) { if (e.status === 401) { S.me = null; return route(); } html = gone(e); }
   if (my !== seq) return;
-  view.innerHTML = html; if (S.q.add) $('#story-ta')?.focus(); updSel(); if (!/^\/post\//.test(path) || true) { window.scrollTo(0, 0); }
+  view.innerHTML = html; if (S.q.add) $('#story-ta')?.focus(); updSel(); updCounters(); if (!/^\/post\//.test(path) || true) { window.scrollTo(0, 0); }
 }
 window.addEventListener('hashchange', () => { closeSheet(); route(); });
 
@@ -350,11 +355,13 @@ const A = {
     const city = window._map.countries[+d.c].cities[+d.i], pv = $('#preview');
     document.querySelectorAll('.marker').forEach(b => b.setAttribute('aria-pressed', b === t));
     pv.hidden = false;
-    pv.innerHTML = `<div class="row between"><b>${I('pin', 's')} ${esc(city.city)} · ${city.count}개의 추억</b><button class="icon-btn" data-act="marker-x" aria-label="닫기">${I('x')}</button></div><div class="pv-scroll">${city.items.map(i => `<a class="pv" href="#/post/${i.id}"><span class="pv-ph">${i.cover ? `<img loading="lazy" src="/media/${i.cover}" alt="">` : KNOT}</span><span><b>${esc(i.title)}</b><br><span class="cap">${fmtDate(i.occurred_on)} · ${esc(i.label)}<br>함께한 ${i.count}명</span></span></a>`).join('')}</div>`;
+    pv.innerHTML = `<span class="grab-h" aria-hidden="true"></span><div class="row between"><b>${I('pin', 's')} ${esc(city.city)} · ${city.count}개의 추억</b><button class="icon-btn" data-act="marker-x" aria-label="닫기">${I('x')}</button></div><div class="pv-scroll">${city.items.map(i => `<a class="pv" href="#/post/${i.id}"><span class="pv-t"><b>${esc(i.title)}</b><span class="cap">${esc(i.label)}</span><span class="cap">${fmtDate(i.occurred_on)} · 함께한 ${i.count}명</span></span><span class="pv-ph">${i.cover ? `<img loading="lazy" src="/media/${i.cover}" alt="">` : KNOT}</span></a>`).join('')}</div>`;
   },
   'marker-x': () => { $('#preview').hidden = true; document.querySelectorAll('.marker').forEach(b => b.setAttribute('aria-pressed', 'false')); },
   'att-open': () => ATT_UI(window._m),
   'draft-clear': () => { try { localStorage.removeItem('ws_draft'); } catch { } S.draft = null; route(); },
+  'rm-filter': d => { if (d.k === 'people') S.filter.people = S.filter.people.filter(x => x !== +d.v); else S.filter[d.k] = ''; route(); },
+  share: d => { if (navigator.share) navigator.share({ title: '우리사이', text: '우리사이에서 연결해요. 이 링크는 한 번만 쓸 수 있어요.', url: d.v }).catch(() => { }); else A.copy(d); },
   'mode': d => { S.filter.mode = d.v; route(); },
   'clear-filter': () => { S.filter = { people: [], mode: 'and', group: '', year: '' }; route(); },
   tab: d => go('/memories?tab=' + d.v),
@@ -470,13 +477,14 @@ const F = {
 };
 
 // 새 추억: 선택한 사람 고정 표시 + 초안 자동 저장 (제목·날짜·사람·글만, 사진은 저장하지 않음)
+function updCounters() { document.querySelectorAll('[data-counter]').forEach(el => { const c = el.parentElement.querySelector('.count'); if (c) c.textContent = `${el.value.length}/${el.maxLength}`; }); }
 function updSel() {
   const f = $('[data-form=newpost]'), bar = $('#selbar'); if (!f || !bar) return;
   const names = [...f.querySelectorAll('input[name=m]:checked')].map(i => i.nextElementSibling.textContent);
   bar.innerHTML = names.length ? `<b>${names.length + 1}명이 볼 수 있어요</b> · 나, ${esc(names.join(', '))}` : '함께한 사람을 선택해 주세요. 선택한 사람만 이 추억을 볼 수 있어요.';
 }
 function saveDraft(f) { try { localStorage.setItem('ws_draft', JSON.stringify({ title: f.title.value, date: f.date.value, text: f.text.value, members: [...f.querySelectorAll('input[name=m]:checked')].map(i => +i.value) })); } catch { } }
-document.addEventListener('input', e => { const f = e.target.closest?.('[data-form=newpost]'); if (f) saveDraft(f); });
+document.addEventListener('input', e => { if (e.target.matches?.('[data-counter]')) updCounters(); const f = e.target.closest?.('[data-form=newpost]'); if (f) saveDraft(f); });
 // ---------- 이벤트 ----------
 document.addEventListener('click', e => { const t = e.target.closest('[data-act]'); if (t && A[t.dataset.act]) { e.preventDefault(); A[t.dataset.act](t.dataset, t); } });
 document.addEventListener('submit', async e => {
