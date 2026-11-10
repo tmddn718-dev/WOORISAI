@@ -309,3 +309,27 @@ input[aria-invalid=true] { border-color: var(--danger); }
 .sns .cap { font-size: .6875rem; line-height: 14px; }
 .or { display: flex; align-items: center; gap: 12px; color: var(--sub); font-size: .8125rem; }
 .or::before, .or::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+
+/* 간편가입 시작 화면(텍스트 전용 CTA), 동의 블록, 인라인 오류 */
+.sns-btn { min-height: 52px; border: 1px solid transparent; color: var(--ink); font-size: .9375rem; }
+.sns-btn:hover { filter: brightness(.96); background-image: none; }
+.sns-btn[style*="#FFFFFF"] { border-color: var(--line); }
+.sns-btn[aria-disabled=true] { opacity: .6; }
+.sns-btn[disabled] { opacity: .6; color: var(--ink); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.consent { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.crow { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 12px 16px; }
+.crow.req { border-left: 4px solid var(--green); }
+.crow.opt { background: var(--bg); }
+.crow.all { display: flex; align-items: center; gap: 12px; background: var(--sage); border-color: transparent; min-height: 48px; }
+.crow label { display: flex; align-items: center; gap: 12px; min-height: 28px; cursor: pointer; font-size: .9375rem; }
+.crow input[type=checkbox] { width: 20px; height: 20px; flex: none; }
+.crow details { margin: 4px 0 0 32px; }
+.crow summary { font-size: .75rem; color: var(--sub); cursor: pointer; min-height: 24px; }
+.tag2 { font-style: normal; font-size: .6875rem; padding: 1px 8px; border-radius: 999px; background: var(--sage); color: var(--sub); margin-left: 4px; }
+.tag2.must { background: var(--green); color: #fff; }
+.field small.fe, .fe { display: block; color: var(--danger); font-size: .8125rem; line-height: 18px; margin-top: 4px; font-weight: 500; }
+.consent + .fe { margin-top: 4px; }
+[data-field=consent] > .fe { margin-top: 4px; }
+input[aria-invalid=true], select[aria-invalid=true], textarea[aria-invalid=true] { border-color: var(--danger); outline-color: var(--danger); }
+.pick:has(input[aria-invalid=true]) span { border-color: #E2C3BC; }

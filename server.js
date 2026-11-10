@@ -44,6 +44,11 @@ create table if not exists oauth_identities(provider text, subject text, user_id
 create table if not exists oauth_pending(token text primary key, provider text, subject text, nick text, expires integer);
 `);
 
+db.exec(`
+create table if not exists user_consents(user_id integer, consent_type text, version text, granted integer, created_at text default (datetime('now')));
+create table if not exists auth_events(id integer primary key, event_type text, provider text, result text, created_at text default (datetime('now')));
+`);
+
 // ---------- helpers ----------
 const q = (sql, ...p) => db.prepare(sql).all(...p);
 const one = (sql, ...p) => db.prepare(sql).get(...p);
@@ -61,7 +66,7 @@ const blockedBetween = (a, b) => !!one('select 1 from blocks where (blocker=? an
 const blockedIds = uid => ['0', ...q('select blocked x from blocks where blocker=? union select blocker from blocks where blocked=?', uid, uid).map(r => r.x)].join(',');
 const isFriend = (a, b) => !!one(`select 1 from connections where status='accepted' and ((from_id=? and to_id=?) or (from_id=? and to_id=?))`, a, b, b, a);
 const friendsOnly = (uid, list) => { for (const id of list) if (id === uid || !isFriend(uid, id) || blockedBetween(uid, id)) throw fail('연결된 사람만 초대할 수 있어요.'); return list; };
-const nick = raw => { const r = validateNickname(raw); if (!r.ok) throw fail(r.message, 400, { error_code: r.code }); return r.value; }; // 서버가 최종 검증한다 (표시 닉네임은 중복 가능, 식별은 user_id)
+const nick = raw => { const r = validateNickname(raw); if (!r.ok) throw fail(r.message, 400, { error_code: r.code, field: 'nickname' }); return r.value; }; // 서버가 최종 검증한다 (표시 닉네임은 중복 가능, 식별은 user_id)
 const pub = u => ({ id: u.id, name: u.name, username: u.username });
 
 // ---------- 인증 ----------
@@ -133,6 +138,10 @@ const routes = [];
 const R = (method, pattern, fn, opt = {}) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn, opt });
 
 // 이름 규칙은 가입·확인 API가 같은 함수를 쓴다. 사유(탈퇴·제재 등)는 노출하지 않고 "사용할 수 없음"으로만 답한다.
+const CONSENT_VERSION = '2026-11-10-draft';
+const consentsOf = b => { const c = b || {}; if (c.terms !== true || c.privacy !== true) throw fail('필수 동의 항목을 확인해 주세요.', 400, { error_code: 'CONSENT_REQUIRED', field: 'consent' }); return [['terms', 1], ['privacy', 1], ['marketing', c.marketing === true ? 1 : 0]]; };
+const saveConsents = (uid, list) => list.forEach(([t, g]) => run('insert into user_consents(user_id,consent_type,version,granted) values(?,?,?,?)', uid, t, CONSENT_VERSION, g));
+const ev = (type, provider, result) => run('insert into auth_events(event_type,provider,result) values(?,?,?)', type, provider || null, result || null);
 const RESERVED = ['admin', 'administrator', 'root', 'system', 'support', 'help', 'woorisai', 'official', 'staff', 'test', 'null', 'undefined'];
 const usernameState = u => !/^[a-z0-9_]{3,20}$/.test(u) ? 'invalid' : (RESERVED.includes(u) || u.startsWith('deleted_') || one('select 1 from users where username=?', u)) ? 'unavailable' : 'available';
 const pwProblem = pw => pw.length < 8 || pw.length > 100 ? '비밀번호는 8자 이상이어야 해요.' : !/[A-Za-z]/.test(pw) ? '비밀번호에 영문을 포함해 주세요.' : !/[0-9]/.test(pw) ? '비밀번호에 숫자를 포함해 주세요.' : null;
@@ -140,14 +149,14 @@ const checks = new Map();
 function rate(key, max) { const now = Date.now(), t = (checks.get(key) || []).filter(x => now - x < 600000); if (t.length >= max) throw fail('잠시 후 다시 시도해 주세요.', 429); t.push(now); checks.set(key, t); }
 R('GET', '/api/username-check', c => { rate('uc:' + c.req.socket.remoteAddress, 60); return { state: usernameState(String(c.query.u || '').toLowerCase()) }; }, { pub: true });
 R('POST', '/api/signup', c => {
-  const username = str(c.body.username, 20, 3).toLowerCase(), name = nick(c.body.nickname ?? c.body.name), pw = String(c.body.password || '');
+  const name = nick(c.body.nickname ?? c.body.name), username = String(c.body.username || '').trim().toLowerCase(), pw = String(c.body.password || '');
   const us = usernameState(username);
-  if (us === 'invalid') throw fail('이름은 영문 소문자, 숫자, _ 로 3–20자예요.');
-  if (pwProblem(pw)) throw fail(pwProblem(pw));
-  if (us === 'unavailable') throw fail('이미 사용 중이거나 사용할 수 없는 이름이에요.', 409);
-  const salt = crypto.randomBytes(16).toString('hex');
-  const id = run('insert into users(username,name,pw,salt) values(?,?,?,?)', username, name, hashPw(pw, salt), salt).lastInsertRowid;
-  startSession(c, id);
+  if (us === 'invalid') throw fail('이름은 영문 소문자, 숫자, _ 로 3–20자예요.', 400, { field: 'username' });
+  if (us === 'unavailable') throw fail('현재 이 이름으로 가입할 수 없어요. 다른 이름을 써 주세요.', 409, { field: 'username' });
+  if (pwProblem(pw)) throw fail(pwProblem(pw), 400, { field: 'password' });
+  const cons = consentsOf(c.body.consents), salt = crypto.randomBytes(16).toString('hex');
+  const id = tx(() => { const uid = run('insert into users(username,name,pw,salt) values(?,?,?,?)', username, name, hashPw(pw, salt), salt).lastInsertRowid; saveConsents(uid, cons); return uid; });
+  ev('signup', 'password', 'ok'); startSession(c, id);
   return me(one('select * from users where id=?', id));
 }, { pub: true });
 
@@ -156,7 +165,7 @@ R('POST', '/api/login', c => {
   const bump = throttle(c.req.socket.remoteAddress + ':' + username);
   const u = one(`select * from users where username=? and status='active'`, username);
   const okPw = u && u.pw && crypto.timingSafeEqual(Buffer.from(hashPw(String(c.body.password || ''), u.salt), 'hex'), Buffer.from(u.pw, 'hex'));
-  if (!okPw) { bump(); throw fail('이름 또는 비밀번호를 확인해 주세요.', 401); }
+  if (!okPw) { bump(); ev('login', 'password', 'fail'); throw fail('이름 또는 비밀번호를 확인해 주세요.', 401, { field: 'password' }); }
   startSession(c, u.id);
   return me(u);
 }, { pub: true });
@@ -185,6 +194,7 @@ R('GET', '/api/oauth/:p/start', c => {
 R('GET', '/api/oauth/:p/callback', async c => {
   const p = c.params.p, o = oc(p); c.cookie = clearState;
   try {
+    if (c.query.error) { ev('oauth', p, 'cancel'); return { _redirect: `/#/?oauth_error=cancel&p=${p}` }; } // 사용자가 제공자 화면에서 취소/거부
     const st = cookieOf(c, 'oauth_state');
     if (!o || !st || st !== c.query.state || !c.query.code) throw 0; // state 불일치는 모두 실패로 처리 (CSRF 방어)
     const tk = await (await fetch(o.tokenUrl, { method: 'POST', signal: AbortSignal.timeout(8000), headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' }, body: new URLSearchParams({ grant_type: 'authorization_code', code: c.query.code, redirect_uri: `${baseUrl(c)}/api/oauth/${p}/callback`, client_id: o.cid, state: c.query.state, ...(o.secret ? { client_secret: o.secret } : {}) }) })).json();
@@ -193,12 +203,13 @@ R('GET', '/api/oauth/:p/callback', async c => {
     const subject = String(o.sub(info) ?? ''); if (!subject || subject === 'undefined') throw 0;
     const idn = one('select user_id from oauth_identities where provider=? and subject=?', p, subject);
     const user = idn && one(`select * from users where id=? and status='active'`, idn.user_id);
-    if (user) { startSession(c, user.id); c.cookie = [c.cookie, clearState]; return { _redirect: '/#/' }; }
+    if (user) { ev('login', p, 'ok'); startSession(c, user.id); c.cookie = [c.cookie, clearState]; return { _redirect: '/#/' }; }
     const token = crypto.randomBytes(24).toString('base64url');
     run('delete from oauth_pending where expires<?', Date.now());
     run('insert into oauth_pending values(?,?,?,?,?)', token, p, subject, String(o.nick(info) || ''), Date.now() + 15 * 60000);
+    ev('oauth', p, 'new');
     return { _redirect: '/#/signup/oauth?t=' + token };
-  } catch { return { _redirect: '/#/?oauth_error=1' }; }
+  } catch { ev('oauth', p, 'fail'); return { _redirect: `/#/?oauth_error=fail&p=${p}` }; }
 }, { pub: true });
 R('GET', '/api/oauth/pending', c => {
   const r = one('select * from oauth_pending where token=? and expires>?', String(c.query.t || ''), Date.now());
@@ -210,11 +221,12 @@ R('POST', '/api/signup/oauth', c => {
   rate('so:' + c.req.socket.remoteAddress, 20);
   const r = one('select * from oauth_pending where token=? and expires>?', String(c.body.token || ''), Date.now());
   if (!r) throw fail('간편가입 시간이 지났어요. 처음부터 다시 시도해 주세요.', 410);
-  const username = str(c.body.username, 20, 3).toLowerCase(), name = nick(c.body.nickname), us = usernameState(username);
-  if (us === 'invalid') throw fail('이름은 영문 소문자, 숫자, _ 로 3–20자예요.');
-  if (us === 'unavailable') throw fail('이미 사용 중이거나 사용할 수 없는 이름이에요.', 409);
-  const id = tx(() => { const uid = run('insert into users(username,name) values(?,?)', username, name).lastInsertRowid; run('insert into oauth_identities values(?,?,?)', r.provider, r.subject, uid); run('delete from oauth_pending where token=?', r.token); return uid; });
-  startSession(c, id);
+  const name = nick(c.body.nickname), username = String(c.body.username || '').trim().toLowerCase(), us = usernameState(username);
+  if (us === 'invalid') throw fail('이름은 영문 소문자, 숫자, _ 로 3–20자예요.', 400, { field: 'username' });
+  if (us === 'unavailable') throw fail('현재 이 이름으로 가입할 수 없어요. 다른 이름을 써 주세요.', 409, { field: 'username' });
+  const cons = consentsOf(c.body.consents);
+  const id = tx(() => { const uid = run('insert into users(username,name) values(?,?)', username, name).lastInsertRowid; saveConsents(uid, cons); run('insert into oauth_identities values(?,?,?)', r.provider, r.subject, uid); run('delete from oauth_pending where token=?', r.token); return uid; });
+  ev('signup', r.provider, 'ok'); startSession(c, id);
   return me(one('select * from users where id=?', id));
 }, { pub: true });
 
@@ -285,8 +297,9 @@ function connect(a, b) {
 }
 R('POST', '/api/people/request', c => {
   const t = one(`select id from users where username=? and status='active'`, String(c.body.username || '').toLowerCase().replace(/^@/, ''));
-  if (!t) throw fail('사용자를 찾을 수 없어요.', 404);
-  connect(c.u.id, t.id); return {};
+  if (!t) throw fail('사용자를 찾을 수 없어요.', 404, { field: 'username' });
+  try { connect(c.u.id, t.id); } catch (e) { if (e.status) e.extra = { ...e.extra, field: 'username' }; throw e; }
+  return {};
 });
 R('POST', '/api/people/:id/accept', c => {
   const r = run(`update connections set status='accepted' where from_id=? and to_id=? and status='pending'`, +c.params.id, c.u.id);
@@ -301,6 +314,7 @@ R('POST', '/api/invites', c => {
   return { code };
 });
 const linkOk = code => { const l = one('select * from invite_links where code=?', code); if (!l || l.revoked || l.expires_at < new Date().toISOString()) throw fail('만료되었거나 사용할 수 없는 초대 링크예요.', 410); const u = one(`select * from users where id=? and status='active'`, l.creator); if (!u) throw fail('만료되었거나 사용할 수 없는 초대 링크예요.', 410); return u; };
+R('GET', '/api/invites/:code/peek', c => { rate('peek:' + c.req.socket.remoteAddress, 60); return { from: pub(linkOk(c.params.code)).name }; }, { pub: true });
 R('GET', '/api/invites/:code', c => ({ from: pub(linkOk(c.params.code)).name }));
 R('POST', '/api/invites/:code/accept', c => {
   const from = linkOk(c.params.code);

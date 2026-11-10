@@ -48,7 +48,7 @@ function sheet(html) {
   const b = document.createElement('div'); b.className = 'back';
   b.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" tabindex="-1"><div class="grab"></div>${html}</div>`;
   b.addEventListener('mousedown', e => { if (e.target === b) closeSheet(); });
-  $('#layer').append(b); b.firstElementChild.focus(); return b;
+  $('#layer').append(b); b.querySelectorAll('form[data-form]').forEach(f => f.noValidate = true); b.firstElementChild.focus(); return b;
 }
 const closeSheet = () => { $('#layer').innerHTML = ''; };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
@@ -73,14 +73,21 @@ const gone = e => e.status === 403 || e.status === 404
 const wordmark = () => `<div class="logo-row"><img src="/logo.svg" alt=""><div><div class="wordmark">우리사이</div><div class="wm-en">WOORISAI</div></div></div>`;
 
 // ---------- 인증 ----------
-// 간편가입 버튼 (제공자 공식 로고 대신 글자 마크. 출시 전 각 제공자의 버튼 가이드에 맞춰 교체한다)
-const SNS = [['kakao', '카카오톡', '카', '#FEE500', '#242622'], ['google', '구글', 'G', '#FFFFFF', '#242622'], ['naver', '네이버', 'N', '#03C75A', '#FFFFFF']];
-const eRo = w => { const j = (w.charCodeAt(w.length - 1) - 0xAC00) % 28; return j === 0 || j === 8 ? '로' : '으로'; }; // 받침에 맞춰 로/으로
-const snsRow = (verb, orText) => `<div class="snsrow" role="group" aria-label="간편 ${verb}">${SNS.map(([k, l, g, bg, fg]) => { const on = S.sns?.[k]; return `<button type="button" class="sns" data-act="sns" data-p="${k}" aria-label="${l}${eRo(l)} ${verb}하기" ${on ? '' : 'aria-disabled="true"'}><span class="sns-ic" style="background:${bg};color:${fg}" aria-hidden="true">${g}</span><span class="sns-l">${l}</span>${on ? '' : '<span class="cap">준비 중</span>'}</button>`; }).join('')}</div><div class="or"><span>${orText}</span></div>`;
-const nameField = () => `<div class="field"><label for="su-user"><span>이름</span></label><input id="su-user" type="text" name="username" maxlength="20" required autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="su-user-m"><small id="su-user-m" class="msg" aria-live="polite">영문 소문자, 숫자, _ 로 3–20자예요. 로그인과 친구 찾기에 써요.</small></div>`;
-const oauthView = () => { const p = S.pending || {}; return `<div class="page stack"><button class="icon-btn" data-act="auth" data-m="intro" aria-label="뒤로 가기" style="margin-left:-12px">${I('back')}</button><h1>${esc(p.label || '간편')} 계정으로 시작해요</h1><p class="sub body2">닉네임과 이름만 정하면 바로 시작할 수 있어요. 비밀번호는 필요 없어요.</p>
-  <form data-form="oauth-signup" class="stack" novalidate>${nickField('su-nick', '닉네임', p.suggestion || '')}${nameField()}<p class="err" role="alert"></p><div><button class="btn block" disabled>이 이름으로 시작하기</button><p id="su-why" class="cap" style="margin-top:8px" aria-live="polite"></p></div></form></div>`; };
-// 회원가입 폼: 닉네임 → 이름 → 비밀번호 → 비밀번호 확인. 입력 중 실시간 검증, 이름은 상태(확인 중/사용 가능/사용 불가)로 나눈다.
+// 간편가입: 우리사이 자체 CTA는 아이콘 없이 텍스트만 쓴다. 제공자 공식 버튼 규정과 충돌하면 규정을 우선한다(출시 전 확인).
+const SNS = [['kakao', '카카오 계정으로 계속하기', '#FEE500'], ['naver', '네이버 계정으로 계속하기', '#03C75A'], ['google', 'Google 계정으로 계속하기', '#FFFFFF']];
+// 약관 문구는 임시입니다. 출시 전에 법률 검토를 거친 정식 문서로 바꿔야 해요.
+const DOCS = {
+  '/terms': ['이용약관', ['이 문서는 임시 안내문이에요. 출시 전에 법률 검토를 거친 정식 약관으로 바꿔요.', '우리사이는 초대한 사람끼리만 사진과 글을 함께 남기는 서비스예요.', '내가 올린 사진과 글은 언제든 직접 삭제할 수 있어요.', '다른 사람의 사생활을 침해하거나 괴롭히는 이용은 제한될 수 있어요.']],
+  '/privacy-policy': ['개인정보처리방침', ['이 문서는 임시 안내문이에요. 출시 전에 법률 검토를 거친 정식 방침으로 바꿔요.', '수집 항목: 이름(로그인 아이디), 닉네임, 비밀번호(암호화) 또는 로그인 제공자의 계정 번호.', '이메일, 전화번호, 친구 목록, 주소록은 수집하지 않아요.', '사진의 위치 정보(GPS)는 올릴 때 지워요.', '계정을 삭제하면 로그인과 연결이 정리돼요. 이미 다른 사람이 저장한 사진은 되돌릴 수 없어요.']],
+  '/help': ['로그인 도움말', ['카카오·네이버·Google로 가입했다면 첫 화면에서 같은 버튼으로 계속해 주세요. 이름과 비밀번호로 가입했다면 \u2018이름으로 로그인하기\u2019를 쓰세요.', '우리사이에서 로그아웃해도 카카오·네이버·Google 계정은 로그아웃되지 않아요.', '다른 로그인 방법으로 들어오면 새 계정이 만들어질 수 있어요. 이메일이 같아도 계정을 자동으로 합치지 않아요.', '로그인 정보를 잃어버렸다면 지원에 문의해 주세요. 신분증 같은 민감한 정보는 요구하지 않아요.']],
+};
+const docPage = path => { const [t, ps] = DOCS[path]; return `<div class="page stack"><button class="icon-btn" data-act="back" aria-label="뒤로 가기" style="margin-left:-12px">${I('back')}</button><h1>${t}</h1>${ps.map(p => `<p>${esc(p)}</p>`).join('')}</div>`; };
+
+const CONSENTS = [['c_terms', '이용약관 동의', true, '/terms', '우리사이 이용약관의 임시 문구예요. 출시 전 법률 검토가 필요해요.'], ['c_privacy', '개인정보 수집·이용 동의', true, '/privacy-policy', '수집 항목은 이름(아이디), 닉네임, 비밀번호(암호화) 또는 로그인 제공자 계정 번호예요. 이메일·전화번호·친구 목록은 수집하지 않아요.'], ['c_marketing', '마케팅 정보 수신 동의', false, '', '선택 사항이에요. 동의하지 않아도 모든 기능을 쓸 수 있어요.']];
+const consentBlock = () => `<fieldset class="consent" data-field="consent"><legend class="sr">서비스 이용 동의</legend>
+  <label class="crow all"><input type="checkbox" name="c_all"><span><b>전체 동의</b></span></label>
+  ${CONSENTS.map(([n, l, req, href, desc]) => `<div class="crow ${req ? 'req' : 'opt'}"><label><input type="checkbox" name="${n}"><span>${l} <em class="tag2 ${req ? 'must' : ''}">${req ? '필수' : '선택'}</em></span></label><details><summary>내용 보기</summary><p class="cap">${desc}</p>${href ? `<a class="cap" href="#${href}">전문 보기</a>` : ''}</details></div>`).join('')}</fieldset>`;
+
 function nickField(id, label = '닉네임', initial = '') {
   return `<div class="field" data-nick><label for="${id}"><span>${label}</span></label><input id="${id}" data-nick-input type="text" name="nickname" value="${esc(initial)}" maxlength="40" placeholder="${esc(suggest())}" autocomplete="nickname" aria-describedby="${id}-m" required>
     <div class="row between"><small id="${id}-m" class="msg" aria-live="polite">${NICK_HINT}</small><small id="${id}-c" class="count">${graphemes(initial)}/${NICK_MAX}</small></div>
@@ -99,9 +106,18 @@ function nickRender(el, final) {
 }
 document.addEventListener('input', e => { const el = e.target; if (el.matches?.('[data-nick-input]')) { const s = nst(el); s.lastUser = el.value; s.suggested = false; nickRender(el, false); } });
 document.addEventListener('focusout', e => { const el = e.target; if (el.matches?.('[data-nick-input]') && !e.relatedTarget?.closest?.('[data-nick]')) nickRender(el, true); });
-const eyeI = '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>';
-const signupView = () => `<div class="page stack"><button class="icon-btn" data-act="auth" data-m="intro" aria-label="뒤로 가기" style="margin-left:-12px">${I('back')}</button>
-  <h1>우리사이에서 어떤 이름으로 불리고 싶나요?</h1><p class="sub body2">편하게 불릴 닉네임을 정해보세요. 나중에도 변경할 수 있어요.</p>${snsRow('시작', '또는 직접 가입하기')}
+const nameField = () => `<div class="field"><label for="su-user"><span>이름</span></label><input id="su-user" type="text" name="username" maxlength="20" required autocomplete="username" autocapitalize="none" spellcheck="false" aria-describedby="su-user-m"><small id="su-user-m" class="msg" aria-live="polite">영문 소문자, 숫자, _ 로 3–20자예요. 로그인과 친구 찾기에 써요.</small></div>`;
+const backBtn = '<button class="icon-btn" data-act="auth" data-m="intro" aria-label="뒤로 가기" style="margin-left:-12px">' + I('back') + '</button>';
+const submitRow = label => `<p class="err" role="alert"></p><div><button class="btn block" disabled>${label}</button><p id="su-why" class="cap" style="margin-top:8px" aria-live="polite"></p></div>`;
+const dupHint = '<div class="note stack"><span>이미 사용 중인 우리사이 계정이 있나요?</span><button type="button" class="btn line sm" data-act="auth" data-m="login">기존 계정으로 로그인하기</button></div>';
+const oauthView = () => {
+  const p = S.pending || {};
+  if (S.oauthStep !== 'profile') return `<div class="page stack">${backBtn}<h1>우리사이를 이용하기 위한 내용을 확인해 주세요.</h1><p class="sub body2">${esc(p.label || '간편')} 계정으로 시작해요. 외부 계정에서 한 동의와 별개로 우리사이 이용 동의가 필요해요.</p><form data-form="oauth-consent" class="stack" novalidate>${consentBlock()}${submitRow('동의하고 계속하기')}</form></div>`;
+  return `<div class="page stack">${backBtn}<h1>우리사이에서 어떤 이름으로 불리고 싶나요?</h1><p class="sub body2">편하게 불릴 닉네임을 정해보세요. 나중에도 변경할 수 있어요.</p><form data-form="oauth-signup" class="stack" novalidate>${nickField('su-nick', '닉네임', p.suggestion || '')}${nameField()}${submitRow('이 이름으로 시작하기')}</form>${dupHint}</div>`;
+};
+// 회원가입 폼: 닉네임 → 이름 → 비밀번호 → 비밀번호 확인 → 이용 동의. 입력 중 실시간 검증, 이름은 상태(확인 중/사용 가능/사용 불가)로 나눈다.
+const signupView = () => `<div class="page stack">${backBtn}
+  <h1>우리사이에서 어떤 이름으로 불리고 싶나요?</h1><p class="sub body2">편하게 불릴 닉네임을 정해보세요. 나중에도 변경할 수 있어요.</p>
   <form data-form="signup" class="stack" autocomplete="on" novalidate>
     ${nickField('su-nick')}
     ${nameField()}
@@ -109,28 +125,34 @@ const signupView = () => `<div class="page stack"><button class="icon-btn" data-
       <div class="pwbox"><input id="su-pw" type="password" name="password" required autocomplete="new-password" aria-describedby="su-pw-r"><button type="button" class="pwtoggle" data-act="pw-toggle" aria-pressed="false">보기</button></div>
       <ul id="su-pw-r" class="rules" aria-live="polite"><li data-r="len">8자 이상</li><li data-r="letter">영문 포함</li><li data-r="digit">숫자 포함</li></ul></div>
     <div class="field"><label for="su-pw2"><span>비밀번호 확인</span></label><input id="su-pw2" type="password" name="confirm" required autocomplete="new-password" aria-describedby="su-pw2-m"><small id="su-pw2-m" class="msg" aria-live="polite"></small></div>
-    <p class="err" role="alert"></p>
-    <div><button class="btn block" disabled>이 이름으로 시작하기</button><p id="su-why" class="cap" style="margin-top:8px" aria-live="polite"></p></div>
+    ${consentBlock()}
+    ${submitRow('이 이름으로 시작하기')}
     <button type="button" class="btn line block" data-act="auth" data-m="login">이미 계정이 있어요</button>
   </form></div>`;
+const introView = () => {
+  const n = S.authNotice, jf = S.joinFrom;
+  return `<div class="hero"><div class="hero-text">${wordmark()}<div class="stack"><p class="display">우리 사이에 쌓이는<br>모든 순간.</p><p class="sub">친구들과의 사진과 이야기를 함께 남겨보세요.</p></div>
+    ${jf ? `<div class="note"><b>${esc(jf)}님이 초대했어요.</b><br>가입하면 초대 화면으로 돌아와요. 초대를 수락하기 전에는 사진과 글이 보이지 않아요.</div>` : ''}
+    ${n ? `<div class="note warn stack" role="alert"><span>${esc(n.msg)}</span><div class="row" style="flex-wrap:wrap;gap:8px">${n.retry ? `<button class="btn sm" data-act="sns" data-p="${n.retry}">다시 시도하기</button>` : ''}<button class="btn sm line" data-act="notice-clear">다른 계정으로 계속하기</button></div></div>` : ''}
+    <div class="stack" role="group" aria-label="간편 로그인">${SNS.map(([k, label, bg]) => `<button class="btn block sns-btn" style="background:${bg}" data-act="sns" data-p="${k}" ${S.sns?.[k] ? '' : 'aria-disabled="true"'}>${label}</button>`).join('')}<p id="sns-status" class="cap" aria-live="polite">계속하면 서비스 이용에 필요한 안내를 확인할 수 있어요.${SNS.some(x => !S.sns?.[x[0]]) ? ' 흐리게 보이는 로그인은 아직 준비 중이에요.' : ''}</p></div>
+    <div class="or"><span>또는</span></div>
+    <div class="row"><button class="btn line grow" data-act="auth" data-m="signup">이름으로 가입하기</button><button class="btn line grow" data-act="auth" data-m="login">이름으로 로그인하기</button></div>
+    <p class="cap row" style="flex-wrap:wrap;gap:4px 16px"><a href="#/terms">이용약관</a><a href="#/privacy-policy">개인정보처리방침</a><a href="#/help">로그인 도움말</a></p></div>
+    <div class="hero-art demo" aria-hidden="true"><div class="card"><div class="ph">${KNOT}</div><div class="meta"><h2>성수동 브런치</h2><p class="cap">2025년 11월 9일 · 성수동, 서울 · 3명</p><div class="who"><span class="av s">지</span><span class="av s">민</span><span class="av s">하</span><span class="cap">사진 12장 · 이야기 4개</span></div></div></div></div></div>`;
+};
 function authView() {
   $('#tabs').hidden = true;
   const m = S.authMode;
   if (m === 'oauth') return oauthView();
-  if (m === 'intro') return `<div class="hero"><div class="hero-text">${wordmark()}<div class="stack"><p class="display">함께한 순간을,<br>우리만의 이야기로.</p><p class="sub">사진과 글을 모아 소중한 추억을 함께 완성해 보세요.</p></div>
-    <div class="stack"><button class="btn block" data-act="auth" data-m="signup">시작하기</button><button class="btn line block" data-act="auth" data-m="login">이미 계정이 있어요</button></div>
-    <p class="cap"><span style="display:inline-block;vertical-align:-4px">${I('lock', 's')}</span> 이 추억에 초대된 사람만 볼 수 있어요.</p></div><div class="hero-art demo" aria-hidden="true"><div class="card"><div class="ph">${KNOT}</div><div class="meta"><h2>성수동 브런치</h2><p class="cap">2025년 11월 9일 · 성수동, 서울 · 3명</p><div class="who"><span class="av s">지</span><span class="av s">민</span><span class="av s">하</span><span class="cap">사진 12장 · 이야기 4개</span></div></div></div></div></div>`;
-  const su = m === 'signup';
-  if (su) return signupView();
-  return `<div class="page stack"><button class="icon-btn" data-act="auth" data-m="intro" aria-label="뒤로 가기" style="margin-left:-12px">${I('back')}</button>
-    <h1>다시 만나서 반가워요</h1>${snsRow('로그인', '또는 이름으로 로그인')}
-    <form data-form="${m}" class="stack" autocomplete="on">
-      ${su ? '<label class="field"><span>이름</span><input type="text" name="name" maxlength="20" required autocomplete="nickname"><small>함께하는 사람들에게 보이는 이름이에요.</small></label>' : ''}
-      <label class="field"><span>이름</span><input type="text" name="username" maxlength="20" required autocomplete="username" autocapitalize="none" spellcheck="false">${su ? '<small>영문 소문자, 숫자, _ 로 3–20자. 친구가 이 이름으로 나를 찾아요.</small>' : ''}</label>
-      <label class="field"><span>비밀번호</span><input type="password" name="password" required minlength="8" autocomplete="${su ? 'new-password' : 'current-password'}">${su ? '<small>8자 이상</small>' : ''}</label>
+  if (m === 'intro') return introView();
+  if (m === 'signup') return signupView();
+  return `<div class="page stack">${backBtn}<h1>다시 만나서 반가워요</h1><p class="sub body2">이름과 비밀번호로 로그인해요. 카카오·네이버·Google로 가입했다면 처음 화면에서 같은 버튼으로 계속해 주세요.</p>
+    <form data-form="login" class="stack" autocomplete="on" novalidate>
+      <div class="field"><label for="li-user"><span>이름</span></label><input id="li-user" type="text" name="username" maxlength="20" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+      <div class="field"><label for="li-pw"><span>비밀번호</span></label><input id="li-pw" type="password" name="password" autocomplete="current-password"></div>
       <p class="err" role="alert"></p>
-      <button class="btn block">${su ? '가입하기' : '로그인'}</button>
-      <button type="button" class="btn line block" data-act="auth" data-m="${su ? 'login' : 'signup'}">${su ? '이미 계정이 있어요' : '새로 시작하기'}</button>
+      <button class="btn block">로그인하기</button>
+      <button type="button" class="btn line block" data-act="auth" data-m="signup">새로 시작하기</button>
     </form></div>`;
 }
 
@@ -301,7 +323,7 @@ P.me = async () => {
     <div class="card list">${row('#/people', 'users', '사람', '연결·초대 링크')}${row('#/groups', 'star', '그룹')}</div>
     <section><h3 style="margin:0 0 12px 4px">회상</h3><div class="card list"><div>${I('clock')}<span class="grow">1년 전 오늘<br><span class="cap">${u.mem_enabled ? '켜져 있어요. 앱 안에서만 보여줘요.' : '꺼져 있어요. 켜기 전에는 추천하지 않아요.'}</span></span><button class="btn sm ${u.mem_enabled ? 'line' : ''}" data-act="mem" data-v="${u.mem_enabled ? 0 : 1}">${u.mem_enabled ? '끄기' : '켜기'}</button></div>${row('#/hidden', 'eye', '숨긴 추억', '다시 추천하지 않기 관리')}</div></section>
     <section><h3 style="margin:0 0 12px 4px">안전·데이터</h3><div class="card list">${row('#/saved', 'bookmark', '저장한 추억', '나만 볼 수 있는 책갈피')}${row('#/privacy', 'lock', '개인정보 요청', '열람·정정·삭제·처리정지')}${row('#/blocks', 'block', '차단한 사람')}${row('#/reports', 'flag', '내 신고 내역')}<button class="li" data-act="export">${I('down')}<span class="grow">내 데이터 내보내기<br><span class="cap">내 프로필, 글, 사진 목록을 파일로 받아요</span></span></button></div></section>
-    <div class="card list"><button class="li" data-act="logout">${I('out')}<span class="grow">로그아웃</span></button><button class="li" data-act="delete-account" style="color:var(--danger)">${I('block')}<span class="grow">계정 탈퇴하기</span></button></div>
+    <div class="card list"><button class="li" data-act="logout">${I('out')}<span class="grow">로그아웃하기</span></button><button class="li" data-act="delete-account" style="color:var(--danger)">${I('block')}<span class="grow">계정 삭제하기</span></button></div>
     <p class="cap" style="text-align:center">이 추억에 초대된 사람만 볼 수 있어요.<br>우리사이 v0.1</p></div>`;
 };
 
@@ -316,21 +338,24 @@ P.join = async code => {
 };
 
 // ---------- 라우터 ----------
-const routes = [[/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, 'home'], [/^\/new-post$/, P.newPost, 'home'], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
+const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, 'home'], [/^\/new-post$/, P.newPost, 'home'], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
 let seq = 0;
 async function route() {
   const my = ++seq, view = $('#view');
   if (!S.me) { try { S.me = await api('GET', '/api/me'); } catch { } }
   const [path, qs] = (location.hash.slice(1) || '/').split('?'); S.q = Object.fromEntries(new URLSearchParams(qs || ''));
   if (!S.me) {
-    if (/^\/join\//.test(path)) S.join = path;
+    if (DOCS[path]) { $('#app').classList.remove('authed'); $('#tabs').hidden = true; view.innerHTML = docPage(path); window.scrollTo(0, 0); return; }
+    if (/^\/join\//.test(path)) { S.join = path; try { sessionStorage.setItem('ws_join', path); } catch { } }
+    else if (!S.join) { try { S.join = sessionStorage.getItem('ws_join'); } catch { } }
+    if (S.join && S.joinFrom === undefined) { try { S.joinFrom = (await api('GET', '/api/invites/' + S.join.split('/')[2] + '/peek')).from; } catch { S.joinFrom = null; S.authNotice = { msg: '초대가 만료되었어요. 초대한 사람에게 다시 요청해 주세요.' }; } }
     if (S.sns === undefined) { try { S.sns = await api('GET', '/api/oauth/providers'); } catch { S.sns = {}; } }
-    if (path === '/signup/oauth') { try { S.pending = await api('GET', '/api/oauth/pending?t=' + encodeURIComponent(S.q.t || '')); S.authMode = 'oauth'; } catch (e) { S.authMode = 'intro'; history.replaceState(null, '', '#/'); toast(e.message, 4000); } }
+    if (path === '/signup/oauth') { try { S.pending = await api('GET', '/api/oauth/pending?t=' + encodeURIComponent(S.q.t || '')); S.authMode = 'oauth'; S.oauthStep ||= 'consent'; } catch (e) { S.authMode = 'intro'; history.replaceState(null, '', '#/'); toast(e.message, 4000); } }
     else if (S.authMode === 'oauth') S.authMode = 'intro';
-    if (S.q.oauth_error) { toast('간편가입을 완료하지 못했어요. 다시 시도해 주세요.', 4000); history.replaceState(null, '', '#/'); }
+    if (S.q.oauth_error) { S.authNotice = { msg: S.q.oauth_error === 'cancel' ? '로그인을 취소했어요.' : '지금은 해당 계정으로 로그인하기 어려워요.', retry: S.sns?.[S.q.p] ? S.q.p : null }; S.snsBusy = false; history.replaceState(null, '', '#/'); }
     $('#app').classList.remove('authed'); view.innerHTML = authView(); initSignup(); return;
   }
-  if (S.join) { const j = S.join; S.join = null; if (path !== j) return go(j); }
+  if (S.join) { const j = S.join; S.join = null; S.joinFrom = undefined; try { sessionStorage.removeItem('ws_join'); } catch { } if (path !== j) return go(j); }
   const r = routes.find(x => x[0].test(path)) || routes[0], args = r[0].exec(path).slice(1);
   const tabs = $('#tabs'); tabs.hidden = false;
   const T = [['home', '홈', 'home', '#/'], ['meetups', '약속', 'cal', '#/meetups'], ['new', '만들기', 'plus'], ['memories', '추억', 'photo', '#/memories'], ['me', '나', 'user', '#/me']];
@@ -338,7 +363,7 @@ async function route() {
   tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i, h]) => k === 'new' ? `<button data-act="create" data-k="new" aria-label="만들기"><span class="mk">${I('plus')}</span>${l}</button>` : `<a href="${h}" data-k="${k}" ${r[2] === k ? 'aria-current="page"' : ''}>${I(i)}${l}</a>`).join('') + '<div class="side-label l1">둘러보기</div><div class="side-label l2">함께하기</div><div class="side-label l3">내 공간</div>' + `<a class="side-user" href="#/me" data-k="user">${av(S.me.name, 's')}<span><b>${esc(S.me.name)}</b><span class="cap">@${esc(S.me.username)}</span></span></a>`;
   let html; try { html = await r[1](...args); } catch (e) { if (e.status === 401) { S.me = null; return route(); } html = gone(e); }
   if (my !== seq) return;
-  view.innerHTML = html; if (S.q.add) $('#story-ta')?.focus(); updSel(); updCounters(); initSignup(); if (!/^\/post\//.test(path) || true) { window.scrollTo(0, 0); }
+  view.innerHTML = html; document.querySelectorAll('form[data-form]').forEach(f => f.noValidate = true); if (S.q.add) $('#story-ta')?.focus(); updSel(); updCounters(); initSignup(); if (!/^\/post\//.test(path) || true) { window.scrollTo(0, 0); }
 }
 window.addEventListener('hashchange', () => { closeSheet(); route(); });
 
@@ -364,7 +389,16 @@ const A = {
   back: () => history.length > 1 ? history.back() : go('/'),
   reload: () => route(),
   auth: (d) => { if (location.hash.startsWith('#/signup/oauth')) history.replaceState(null, '', '#/'); S.authMode = d.m; route(); },
-  sns: d => { if (!S.sns?.[d.p]) return toast('아직 연결되지 않았어요. 준비되면 이용할 수 있어요.', 3500); location.href = '/api/oauth/' + d.p + '/start'; },
+  sns: d => {
+    if (S.snsBusy) return; // 연속 탭 방지
+    const label = SNS.find(x => x[0] === d.p)?.[1].replace(' 계정으로 계속하기', '') || '';
+    if (!S.sns?.[d.p]) { S.authNotice = { msg: `${label} 로그인은 아직 연결되지 않았어요. 다른 방법으로 계속해 주세요.` }; S.authMode = 'intro'; return route(); }
+    S.snsBusy = true; document.querySelectorAll('.sns-btn').forEach(b => b.disabled = true);
+    const st = $('#sns-status'); if (st) st.textContent = '안전하게 로그인 화면으로 이동하고 있어요.';
+    if (S.join) try { sessionStorage.setItem('ws_join', S.join); } catch { } // 초대 링크로 왔다면 가입 뒤 원래 초대로 돌아온다
+    location.href = '/api/oauth/' + d.p + '/start';
+  },
+  'notice-clear': () => { S.authNotice = null; route(); },
   create: () => { const b = sheet(`<h2>무엇을 만들까요?</h2><div class="menu" style="margin-top:8px"><button data-go="/new-post">${I('photo')}<span><b>새 추억 만들기</b><br><span class="cap">함께한 사람과 사진·글을 모아요</span></span></button><button data-go="/new-meetup">${I('cal')}<span><b>새 모임 만들기</b><br><span class="cap">약속을 잡고 참석 여부를 받아요</span></span></button></div>`); b.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) { closeSheet(); go(g.dataset.go); } }); },
   respond: d => act(() => api('POST', `/api/posts/${d.id}/respond`, { accept: d.v === '1' }), d.v === '1' ? '추억에 참여했어요.' : '초대를 거절했어요.'),
   'accept-friend': d => act(() => api('POST', `/api/people/${d.id}/accept`), '연결됐어요.'),
@@ -470,8 +504,8 @@ const A = {
   'group-del': async d => { if (await ask({ title: `‘${d.name}’ 그룹을 삭제할까요?`, body: '그룹만 사라지고, 연결된 추억과 모임은 삭제되지 않아요.', ok: '그룹 삭제', danger: true })) act(() => api('DELETE', `/api/groups/${d.g}`), '그룹을 삭제했어요.'); },
   rename: () => sheet(`<h2>닉네임 변경하기</h2><form data-form="rename" class="stack" style="margin-top:12px" novalidate>${nickField('rn-nick', '닉네임', S.me.name)}<p class="err" role="alert"></p><button class="btn">변경사항 저장하기</button></form>`),
   export: () => { const a = document.createElement('a'); a.href = '/api/me/export'; a.download = 'woorisai-my-data.json'; a.click(); },
-  logout: () => act(async () => { await api('POST', '/api/logout'); S.me = null; S.authMode = 'intro'; }),
-  'delete-account': () => sheet(`<h2>계정을 탈퇴할까요?</h2><p class="sub body2">탈퇴하면 로그인할 수 없고 연결·그룹·내 모임이 정리돼요. 함께 만든 추억에 남긴 사진과 글은 이름이 ‘탈퇴한 사용자’로 바뀐 채 남아요. 함께 지우려면 아래를 선택해 주세요. <b>되돌릴 수 없어요.</b></p><form data-form="delete-account" class="stack" style="margin-top:12px"><label class="row"><input type="checkbox" name="dc" style="width:20px;height:20px"><span class="body2">내가 올린 사진과 글도 모두 삭제</span></label>${S.me.has_password ? '<label class="field"><span>비밀번호 확인</span><input type="password" name="password" required autocomplete="current-password"></label>' : `<label class="field"><span>탈퇴 확인: 내 이름을 입력해 주세요</span><input type="text" name="password" required autocomplete="off" placeholder="${esc(S.me.username)}"></label>`}<p class="err" role="alert"></p><button class="btn danger">탈퇴하기</button></form>`),
+  logout: () => act(async () => { await api('POST', '/api/logout'); S.me = null; S.authMode = 'intro'; }, '우리사이에서 로그아웃했어요. 카카오·네이버·Google 계정에서는 로그아웃되지 않았어요.'),
+  'delete-account': () => sheet(`<h2>계정을 삭제할까요?</h2><p class="sub body2">계정을 삭제하면 일부 추억에 다시 접근할 수 없어요. 삭제하면 로그인할 수 없고 연결·그룹·내 모임이 정리돼요. 함께 만든 추억에 남긴 사진과 글은 이름이 ‘탈퇴한 사용자’로 바뀐 채 남아요. 함께 지우려면 아래를 선택해 주세요. <b>되돌릴 수 없어요.</b></p><form data-form="delete-account" class="stack" style="margin-top:12px"><label class="row"><input type="checkbox" name="dc" style="width:20px;height:20px"><span class="body2">내가 올린 사진과 글도 모두 삭제</span></label>${S.me.has_password ? '<label class="field"><span>비밀번호 확인</span><input type="password" name="password" required autocomplete="current-password"></label>' : `<label class="field"><span>탈퇴 확인: 내 이름을 입력해 주세요</span><input type="text" name="password" required autocomplete="off" placeholder="${esc(S.me.username)}"></label>`}<p class="err" role="alert"></p><button class="btn danger">계정 삭제하기</button></form>`),
 };
 
 function ATT_UI(m) { sheet(`<h2>실제로 함께한 사람</h2><p class="sub body2">응답과 상관없이 실제로 온 사람을 골라 주세요. 추억에 자동으로 초대되지는 않아요.</p><form data-form="attended" class="stack" style="margin-top:12px">${pick(m.participants, 'm', m.participants.filter(p => p.attended || (!m.participants.some(x => x.attended) && p.rsvp === 'yes')).map(p => p.id))}<button class="btn">확인하기</button></form>`); }
@@ -499,11 +533,12 @@ const placeOf = fd => fd.get('pcity') || fd.get('pcountry') || fd.get('pname') ?
 // ---------- 폼 ----------
 const F = {
   async login(fd) { S.me = await api('POST', '/api/login', { username: fd.get('username'), password: fd.get('password') }); },
-  async signup(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('POST', '/api/signup', { username: fd.get('username'), nickname: r.value, password: fd.get('password') }); try { sessionStorage.removeItem('ws_nick'); } catch { } },
+  async signup(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('POST', '/api/signup', { username: fd.get('username'), nickname: r.value, password: fd.get('password'), consents: { terms: fd.get('c_terms') === 'on', privacy: fd.get('c_privacy') === 'on', marketing: fd.get('c_marketing') === 'on' } }); try { sessionStorage.removeItem('ws_nick'); } catch { } },
   async note(fd, f) { await api('POST', `/api/posts/${f.dataset.id}/notes`, { kind: f.dataset.kind, text: fd.get('text') }); },
   async request(fd) { await api('POST', '/api/people/request', { username: fd.get('username') }); toast('연결 요청을 보냈어요. 상대가 수락하면 연결돼요.'); },
   async rename(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('PATCH', '/api/me', { nickname: r.value }); closeSheet(); toast('닉네임을 바꿨어요.'); },
-  async 'oauth-signup'(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('POST', '/api/signup/oauth', { token: S.q.t, nickname: r.value, username: fd.get('username') }); history.replaceState(null, '', '#/'); },
+  async 'oauth-consent'(fd) { S.oauthConsents = { terms: true, privacy: true, marketing: fd.get('c_marketing') === 'on' }; S.oauthStep = 'profile'; },
+  async 'oauth-signup'(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('POST', '/api/signup/oauth', { token: S.q.t, nickname: r.value, username: fd.get('username'), consents: S.oauthConsents }); S.oauthStep = null; history.replaceState(null, '', '#/'); },
   async 'delete-account'(fd) { await api('DELETE', '/api/me', { password: fd.get('password'), deleteContent: fd.get('dc') === 'on' }); S.me = null; S.authMode = 'intro'; closeSheet(); toast('탈퇴가 완료됐어요.'); },
   async group(fd) { const r = await api('POST', '/api/groups', { name: fd.get('name'), type_hint: fd.get('hint'), member_ids: fd.getAll('m').map(Number) }); closeSheet(); if (r.duplicateOf) toast(`같은 사람으로 만든 ‘${r.duplicateOf}’ 그룹이 이미 있어요.`, 4000); },
   async 'group-add'(fd, f) { await api('POST', `/api/groups/${f.dataset.g}/members`, { user_ids: fd.getAll('m').map(Number) }); closeSheet(); },
@@ -547,42 +582,106 @@ document.addEventListener('input', e => { if (e.target.matches?.('[data-counter]
 // (이메일처럼 '이전에 사용한 값(rejoin_available)' 상태는 두지 않는다: 탈퇴한 이름은 즉시 일반 사용 가능 상태로 돌아간다.)
 const config = { checkName: v => api('GET', '/api/username-check?u=' + encodeURIComponent(v)) };
 function initSignup() {
-  const f = $('[data-form=signup], [data-form=oauth-signup]'); if (!f || f._init) return; f._init = 1;
-  const E = n => f.elements[n], msg = (id, text, kind) => { const m = $('#' + id); m.textContent = text; m.className = 'msg' + (kind ? ' ' + kind : ''); };
+  const f = $('[data-form=signup], [data-form=oauth-signup], [data-form=oauth-consent]'); if (!f || f._init) return; f._init = 1;
+  const E = n => f.elements[n], has = n => !!E(n), msg = (id, text, kind) => { const m = $('#' + id); m.textContent = text; m.className = 'msg' + (kind ? ' ' + kind : ''); };
   const u = { status: 'idle', checked: false, token: 0, timer: 0 };
   const rules = pw => ({ len: pw.length >= 8, letter: /[A-Za-z]/.test(pw), digit: /[0-9]/.test(pw) });
   const UM = { idle: ['영문 소문자, 숫자, _ 로 3–20자예요. 로그인과 친구 찾기에 써요.', ''], invalid: ['이름은 영문 소문자, 숫자, _ 로 3–20자예요.', 'bad'], checking: ['확인하고 있어요', ''], available: ['사용할 수 있는 이름이에요.', 'ok'], unavailable: ['현재 이 이름으로 가입할 수 없어요. 다른 이름을 써 주세요.', 'bad'], error: ['지금은 확인하지 못했어요. 잠시 후 다시 시도해 주세요.', 'bad'] };
-  const setU = s => { u.status = s; u.checked = s === 'available'; msg('su-user-m', ...UM[s]); E('username').setAttribute('aria-invalid', s === 'invalid' || s === 'unavailable'); upd(); };
+  const setU = st => { u.status = st; u.checked = st === 'available'; msg('su-user-m', ...UM[st]); E('username').setAttribute('aria-invalid', st === 'invalid' || st === 'unavailable'); upd(); };
   const upd = () => {
-    const nickOk = validateNickname(E('nickname').value).ok, hasPw = !!E('password'), pw = hasPw ? E('password').value : '', r = hasPw ? rules(pw) : { len: 1, letter: 1, digit: 1 }, c = hasPw ? E('confirm').value : '';
-    f.querySelectorAll('[data-r]').forEach(li => { const ok = r[li.dataset.r]; li.classList.toggle('ok', ok); li.innerHTML = (ok ? I('check', 's') : '<i class="rdot"></i>') + li.textContent; });
-    const left = [!nickOk && '닉네임', !u.checked && '이름 확인', hasPw && !(r.len && r.letter && r.digit) && '비밀번호 조건', hasPw && !(c && c === pw) && '비밀번호 확인'].filter(Boolean);
+    const left = [];
+    if (has('nickname') && !validateNickname(E('nickname').value).ok) left.push('닉네임');
+    if (has('username') && !u.checked) left.push('이름 확인');
+    if (has('password')) {
+      const pw = E('password').value, r = rules(pw), c = E('confirm').value;
+      f.querySelectorAll('[data-r]').forEach(li => { const ok = r[li.dataset.r]; li.classList.toggle('ok', ok); li.innerHTML = (ok ? I('check', 's') : '<i class="rdot"></i>') + li.textContent; });
+      if (!(r.len && r.letter && r.digit)) left.push('비밀번호 조건');
+      if (!(c && c === pw)) left.push('비밀번호 확인');
+    }
+    if (has('c_terms') && !(E('c_terms').checked && E('c_privacy').checked)) left.push('필수 동의');
     f.querySelector('.btn.block').disabled = left.length > 0;
     $('#su-why').textContent = left.length ? `남은 항목이 ${left.length}개 있어요: ${left.join(', ')}` : '';
   };
   f._upd = upd;
-  f.addEventListener('nickchange', () => { upd(); try { sessionStorage.setItem('ws_nick', E('nickname').value); } catch { } }); // 닉네임 임시 입력만 세션에 유지 (비밀번호는 저장하지 않는다)
-  try { const d = sessionStorage.getItem('ws_nick'); if (d) { E('nickname').value = d; nst(E('nickname')).lastUser = d; nickRender(E('nickname'), false); } } catch { }
-  E('username').addEventListener('input', () => {
+  if (has('c_all')) f.addEventListener('change', e => { // 전체 동의 ↔ 개별 동의
+    const names = ['c_terms', 'c_privacy', 'c_marketing'];
+    if (e.target.name === 'c_all') names.forEach(n => E(n).checked = e.target.checked); else E('c_all').checked = names.every(n => E(n).checked);
+    upd();
+  });
+  if (has('nickname')) {
+    f.addEventListener('nickchange', () => { upd(); try { sessionStorage.setItem('ws_nick', E('nickname').value); } catch { } }); // 닉네임 임시 입력만 세션에 유지 (비밀번호는 저장하지 않는다)
+    try { const d = sessionStorage.getItem('ws_nick'); if (d && !E('nickname').value) { E('nickname').value = d; nst(E('nickname')).lastUser = d; nickRender(E('nickname'), false); } } catch { }
+  }
+  if (has('username')) E('username').addEventListener('input', () => {
     const v = E('username').value = E('username').value.toLowerCase().replace(/\s/g, ''); clearTimeout(u.timer); const tk = ++u.token;
     if (!v) return setU('idle');
     if (!/^[a-z0-9_]{3,20}$/.test(v)) return setU('invalid'); // 값이 바뀌면 확인 완료를 무효화한다
     setU('checking');
     u.timer = setTimeout(async () => { try { const r = await config.checkName(v); if (tk === u.token) setU(r.state); } catch { if (tk === u.token) setU('error'); } }, 400); // 오래된 응답은 무시
   });
-  E('password')?.addEventListener('input', () => { upd(); E('confirm').dispatchEvent(new Event('input')); });
-  const cm = final => { const pw = E('password').value, c = E('confirm').value; if (!c) return msg('su-pw2-m', ''); if (c === pw) msg('su-pw2-m', '비밀번호가 일치해요.', 'ok'); else if (pw.startsWith(c) && !final) msg('su-pw2-m', ''); else msg('su-pw2-m', '비밀번호가 일치하지 않아요.', 'bad'); upd(); };
-  E('confirm')?.addEventListener('input', () => cm(false)); E('confirm')?.addEventListener('blur', () => cm(true));
+  if (has('password')) {
+    E('password').addEventListener('input', () => { upd(); E('confirm').dispatchEvent(new Event('input')); });
+    const cm = final => { const pw = E('password').value, c = E('confirm').value; if (!c) return msg('su-pw2-m', ''); if (c === pw) msg('su-pw2-m', '비밀번호가 일치해요.', 'ok'); else if (pw.startsWith(c) && !final) msg('su-pw2-m', ''); else msg('su-pw2-m', '비밀번호가 일치하지 않아요.', 'bad'); upd(); };
+    E('confirm').addEventListener('input', () => cm(false)); E('confirm').addEventListener('blur', () => cm(true));
+  }
   upd();
 }
+// ===== 인라인 오류 =====
+// 잘못 입력하면 해당 칸 아래에 한 줄로 알리고(aria-invalid + role=alert), 첫 오류 칸으로 포커스를 옮긴다. 입력을 고치면 그 칸의 오류만 사라진다.
+const fieldBox = (f, name) => { const direct = f.querySelector(`[data-field="${name}"]`); if (direct) return [direct, direct.querySelector('input,select,textarea')]; const c = f.elements[name]; const el = c && !c.tagName ? c[0] : c; if (!el) return [null, null]; return [el.closest('[data-field], .field') || el.closest('.pick')?.parentElement || el.parentElement, el]; };
+function fieldErr(f, name, text) {
+  const [box, el] = fieldBox(f, name); if (!box) return false;
+  const live = box.querySelector('small.msg'); // 실시간 검증 메시지가 있는 칸(닉네임·이름·비밀번호 확인)은 그 자리를 쓴다
+  if (live) { live.textContent = text; live.className = 'msg bad'; }
+  else { let m = box.querySelector(':scope > small.fe'); if (!m) { m = document.createElement('small'); m.className = 'fe'; m.setAttribute('role', 'alert'); box.append(m); } m.textContent = text; }
+  el?.setAttribute('aria-invalid', 'true'); return el || true;
+}
+function clearErrors(f) { f.querySelectorAll('small.fe').forEach(m => m.remove()); f.querySelectorAll('[aria-invalid=true]').forEach(e => e.removeAttribute('aria-invalid')); }
+document.addEventListener('input', e => { const el = e.target, f = el.form; if (!f?.dataset?.form || !el.name) return; const [box] = fieldBox(f, el.name); box?.querySelector(':scope > small.fe')?.remove(); if (!box?.querySelector('small.msg')) el.removeAttribute('aria-invalid'); });
+document.addEventListener('change', e => { const el = e.target, f = el.form; if (!f?.dataset?.form || !el.name) return; const [box] = fieldBox(f, el.name); box?.querySelector(':scope > small.fe')?.remove(); });
+const need = (v, m) => String(v ?? '').trim() ? null : m;
+const pastOk = d => d && d > localDate() ? '오늘 이후 날짜는 고를 수 없어요.' : null;
+const whenOk = v => !v ? '일시를 선택해 주세요.' : isNaN(new Date(v)) ? '일시가 올바르지 않아요.' : null;
+const pickOk = m => fd => [['m', fd.getAll('m').length ? null : m]];
+const VALID = {
+  login: fd => [['username', need(fd.get('username'), '이름을 입력해 주세요.')], ['password', need(fd.get('password'), '비밀번호를 입력해 주세요.')]],
+  request: fd => { const v = String(fd.get('username') || '').trim().replace(/^@/, ''); return [['username', !v ? '연결할 이름을 입력해 주세요.' : !/^[a-z0-9_]{3,20}$/i.test(v) ? '이름은 영문, 숫자, _ 로 3–20자예요.' : null]]; },
+  note: fd => [['text', need(fd.get('text'), '내용을 입력해 주세요.')]],
+  newpost: fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['m', fd.getAll('m').length ? null : '함께한 사람을 한 명 이상 선택해 주세요.'], ['date', pastOk(fd.get('date'))], ['pcity', (fd.get('pname') || fd.get('parea')) && !fd.get('pcity') && !fd.get('pcountry') ? '도시나 국가를 입력해 주세요.' : null]],
+  newmeetup: fd => [['title', need(fd.get('title'), '모임 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
+  'meetup-edit': fd => [['title', need(fd.get('title'), '모임 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
+  'post-edit': fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['date', pastOk(fd.get('date'))]],
+  group: fd => [['name', need(fd.get('name'), '그룹 이름을 입력해 주세요.')]],
+  'group-add': pickOk('추가할 사람을 한 명 이상 선택해 주세요.'), 'post-invite': pickOk('초대할 사람을 한 명 이상 선택해 주세요.'), 'meetup-invite': pickOk('초대할 사람을 한 명 이상 선택해 주세요.'),
+  attended: () => [],
+  settle: fd => {
+    const total = Number(fd.get('total')), ms = fd.getAll('m').map(Number), custom = fd.get('method') === 'custom';
+    const sum = custom ? ms.reduce((a, m) => a + (Number(fd.get('a' + m)) || 0), 0) : total, diff = sum - total;
+    return [['title', need(fd.get('title'), '정산 항목을 입력해 주세요.')], ['total', !fd.get('total') ? '전체 금액을 입력해 주세요.' : !Number.isInteger(total) || total <= 0 ? '금액은 1원 이상의 정수로 입력해 주세요.' : null], ['m', ms.length ? null : '나누는 사람을 한 명 이상 선택해 주세요.'], ['method', custom && total > 0 && diff ? `나눈 금액의 합이 전체 금액보다 ${Math.abs(diff).toLocaleString('ko-KR')}원 ${diff > 0 ? '많아요' : '적어요'}.` : null]];
+  },
+  report: fd => [['category', fd.get('category') ? null : '신고 유형을 선택해 주세요.']],
+  privacy: fd => [['kind', fd.get('kind') ? null : '요청 종류를 선택해 주세요.']],
+  rename: fd => [['nickname', (r => r.ok ? null : r.message)(validateNickname(fd.get('nickname')))]],
+  'delete-account': fd => [['password', need(fd.get('password'), S.me?.has_password ? '비밀번호를 입력해 주세요.' : '내 이름을 입력해 주세요.')]],
+  'oauth-consent': (fd, f) => [['consent', fd.get('c_terms') && fd.get('c_privacy') ? null : '필수 동의 항목을 확인해 주세요.']],
+};
 // ---------- 이벤트 ----------
 document.addEventListener('click', e => { const t = e.target.closest('[data-act]'); if (t && A[t.dataset.act]) { e.preventDefault(); A[t.dataset.act](t.dataset, t); } });
 document.addEventListener('submit', async e => {
   const f = e.target.closest('[data-form]'); if (!f) return; e.preventDefault();
-  const btn = f.querySelector('button:not([type=button])'), err = f.querySelector('.err'); if (err) err.textContent = '';
-  const fd = new FormData(f); btn && (btn.disabled = true);
-  try { const r = await F[f.dataset.form](fd, f); if (r !== 'noroute') { if (f.dataset.form === 'login' || f.dataset.form === 'signup' || f.dataset.form === 'oauth-signup') S.authMode = 'intro'; route(); } }
-  catch (ex) { if (err) err.textContent = ex.message; else toast(ex.message); if (ex.network && btn) { btn.dataset.label ||= btn.textContent; btn.textContent = '다시 시도하기'; f.addEventListener('input', () => { btn.textContent = btn.dataset.label; }, { once: true }); } }
+  let err = f.querySelector('.err'); if (!err) { err = document.createElement('p'); err.className = 'err'; err.setAttribute('role', 'alert'); f.append(err); }
+  err.textContent = ''; clearErrors(f);
+  const btn = f.querySelector('.btn:not([type=button]):not([data-act])') || f.querySelector('button:not([type=button])');
+  const fd = new FormData(f);
+  const bad = (VALID[f.dataset.form]?.(fd, f) || []).filter(([, m]) => m);
+  if (bad.length) { const els = bad.map(([n, m]) => fieldErr(f, n, m)); (els.find(x => x && x !== true))?.focus(); return; }
+  btn && (btn.disabled = true);
+  try { const r = await F[f.dataset.form](fd, f); if (r !== 'noroute') { if (['login', 'signup', 'oauth-signup'].includes(f.dataset.form)) S.authMode = 'intro'; route(); } }
+  catch (ex) {
+    const el = ex.data?.field && fieldErr(f, ex.data.field, ex.message);
+    if (el) { if (el !== true) el.focus(); } else err.textContent = ex.message;
+    if (ex.network && btn) { btn.dataset.label ||= btn.textContent; btn.textContent = '다시 시도하기'; f.addEventListener('input', () => { btn.textContent = btn.dataset.label; }, { once: true }); }
+  }
   finally { btn && (btn.disabled = false); f._upd?.(); }
 });
 document.addEventListener('change', e => {
@@ -595,4 +694,5 @@ document.addEventListener('change', e => {
   else if (t.matches('[data-method]')) t.form.querySelectorAll('.custom').forEach(i => i.style.display = t.value === 'custom' ? '' : 'none');
 });
 
+window.addEventListener('pageshow', e => { if (e.persisted) { S.snsBusy = false; route(); } });
 route();

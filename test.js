@@ -10,6 +10,7 @@ const { server } = await import('./server.js');
 await new Promise(r => server.listen(0, r));
 const base = `http://localhost:${server.address().port}`;
 
+const CONSENT = { terms: true, privacy: true };
 const client = () => {
   let cookie = '';
   const call = async (method, url, body, raw) => {
@@ -20,7 +21,7 @@ const client = () => {
   };
   return { patch: (u, b) => call('PATCH', u, b || {}), get: u => call('GET', u), post: (u, b) => call('POST', u, b || {}), del: (u, b) => call('DELETE', u, b || {}), put: (u, raw) => call('POST', u, null, raw) };
 };
-const signup = async n => { const c = client(); const r = await c.post('/api/signup', { username: n, name: n, password: 'password123' }); c.id = r.data.id; return c; };
+const signup = async n => { const c = client(); const r = await c.post('/api/signup', { consents: CONSENT, username: n, name: n, password: 'password123' }); c.id = r.data.id; return c; };
 const friend = async (a, b, uname) => { await a.post("/api/people/request", { username: uname }); await b.post(`/api/people/${a.id}/accept`); };
 
 // 가짜 JPEG: SOI + APP1(GPS 문자열 포함) + SOS
@@ -135,9 +136,9 @@ assert.equal((await d.get('/api/me')).status, 401);
   assert.equal((await g.get('/api/username-check?u=admin')).data.state, 'unavailable', '예약어');
   assert.equal((await g.get('/api/username-check?u=A!')).data.state, 'invalid');
   assert.equal((await g.get('/api/username-check?u=deleted_9')).data.state, 'unavailable', '탈퇴 계정 접두어');
-  assert.match((await g.post('/api/signup', { username: 'weakpw1', name: 'wendy', password: 'abcdefghij' })).data.error, /숫자/, '숫자 없는 비밀번호 거절');
-  assert.match((await g.post('/api/signup', { username: 'weakpw2', name: 'wendy', password: '1234567890' })).data.error, /영문/, '영문 없는 비밀번호 거절');
-  assert.equal((await g.post('/api/signup', { username: 'admin', name: 'wendy', password: 'abc12345' })).status, 409);
+  assert.match((await g.post('/api/signup', { consents: CONSENT, username: 'weakpw1', name: 'wendy', password: 'abcdefghij' })).data.error, /숫자/, '숫자 없는 비밀번호 거절');
+  assert.match((await g.post('/api/signup', { consents: CONSENT, username: 'weakpw2', name: 'wendy', password: '1234567890' })).data.error, /영문/, '영문 없는 비밀번호 거절');
+  assert.equal((await g.post('/api/signup', { consents: CONSENT, username: 'admin', name: 'wendy', password: 'abc12345' })).status, 409);
 }
 
 
@@ -145,7 +146,7 @@ assert.equal((await d.get('/api/me')).status, 401);
 {
   const { validateNickname, graphemes, ADJECTIVES, NOUNS, suggest } = await import('./public/nickname.js');
   const g = client(); let n = 0;
-  const su = async nickname => g.post('/api/signup', { username: 'nick' + (++n) + 'x', nickname, password: 'abc12345' });
+  const su = async nickname => g.post('/api/signup', { consents: CONSENT, username: 'nick' + (++n) + 'x', nickname, password: 'abc12345' });
   const code = async nickname => (await su(nickname)).data.error_code;
   assert.equal(await code('가'), 'NICKNAME_TOO_SHORT');
   assert.equal(await code('가'.repeat(17)), 'NICKNAME_TOO_LONG', '17자 거절');
@@ -207,11 +208,11 @@ assert.equal((await d.get('/api/me')).status, 401);
   const t = new URL(loc, base).hash.split('t=')[1];
   const k = client(); const pend = (await k.get('/api/oauth/pending?t=' + t)).data;
   assert.equal(pend.label, '카카오톡'); assert.equal(pend.suggestion, '카톡유저');
-  assert.equal((await k.post('/api/signup/oauth', { token: 'nope', nickname: '카톡유저', username: 'kakaouser1' })).status, 410);
-  assert.equal((await k.post('/api/signup/oauth', { token: t, nickname: '가', username: 'kakaouser1' })).data.error_code, 'NICKNAME_TOO_SHORT');
-  const made = (await k.post('/api/signup/oauth', { token: t, nickname: '카톡유저', username: 'kakaouser1' })).data;
+  assert.equal((await k.post('/api/signup/oauth', { consents: CONSENT, token: 'nope', nickname: '카톡유저', username: 'kakaouser1' })).status, 410);
+  assert.equal((await k.post('/api/signup/oauth', { consents: CONSENT, token: t, nickname: '가', username: 'kakaouser1' })).data.error_code, 'NICKNAME_TOO_SHORT');
+  const made = (await k.post('/api/signup/oauth', { consents: CONSENT, token: t, nickname: '카톡유저', username: 'kakaouser1' })).data;
   assert.equal(made.has_password, false); assert.equal(made.name, '카톡유저');
-  assert.equal((await k.post('/api/signup/oauth', { token: t, nickname: '카톡유저', username: 'kakaouser2' })).status, 410, '토큰은 한 번만 쓸 수 있다');
+  assert.equal((await k.post('/api/signup/oauth', { consents: CONSENT, token: t, nickname: '카톡유저', username: 'kakaouser2' })).status, 410, '토큰은 한 번만 쓸 수 있다');
   // 재방문: 같은 계정으로 바로 로그인 (세션 쿠키 발급)
   const again = await flow(); assert.equal(again.headers.get('location'), '/#/');
   assert.match(again.headers.getSetCookie().join(';'), /sid=/);
@@ -220,7 +221,34 @@ assert.equal((await d.get('/api/me')).status, 401);
   assert.equal((await k.del('/api/me', { password: 'wrong' })).status, 401);
   assert.equal((await k.del('/api/me', { password: 'kakaouser1' })).status, 200);
   assert.equal((await flow()).headers.get('location').includes('signup/oauth'), true, '탈퇴 후에는 연결이 끊겨 다시 신규 가입');
+  const cancel = await get(base + '/api/oauth/kakao/callback?error=access_denied', undefined);
+  assert.match(cancel.headers.get('location'), /oauth_error=cancel&p=kakao/, '제공자 화면에서 취소하면 취소로 안내');
+  assert.match((await flow('oauth_state=wrong')).headers.get('location'), /oauth_error=fail&p=kakao/, '그 외 실패는 실패로 안내');
   fake.close();
+}
+
+
+// 간편가입 v1.0: 필수 동의, 필드별 오류, 취소/실패 구분, 초대 미리보기, 보안 이벤트
+{
+  const k = client();
+  const noC = await k.post('/api/signup', { username: 'consentless', nickname: '동의없음', password: 'abc12345' });
+  assert.equal(noC.data.error_code, 'CONSENT_REQUIRED'); assert.equal(noC.data.field, 'consent');
+  assert.equal((await k.post('/api/signup', { username: 'consentless', nickname: '동의없음', password: 'abc12345', consents: { terms: true, privacy: false } })).data.error_code, 'CONSENT_REQUIRED', '필수 동의가 하나라도 빠지면 거절');
+  const bad1 = await k.post('/api/signup', { consents: CONSENT, username: 'ab', nickname: '필드테스트', password: 'abc12345' });
+  assert.equal(bad1.data.field, 'username', '이름 오류는 이름 칸에');
+  assert.equal((await k.post('/api/signup', { consents: CONSENT, username: 'fieldtest1', nickname: '필', password: 'abc12345' })).data.field, 'nickname');
+  assert.equal((await k.post('/api/signup', { consents: CONSENT, username: 'fieldtest2', nickname: '필드테스트', password: 'abcdefgh' })).data.field, 'password');
+  assert.equal((await k.post('/api/login', { username: 'nobody', password: 'x' })).data.field, 'password');
+  assert.equal((await a.post('/api/people/request', { username: 'nobody_zz' })).data.field, 'username', '연결 오류는 이름 칸에');
+  assert.equal((await a.post('/api/people/request', { username: 'alice' })).data.field, 'username');
+  // 마케팅 동의는 선택: 없어도 가입되고, 기록은 필수·선택을 구분해 남는다
+  const ok = await k.post('/api/signup', { consents: { terms: true, privacy: true, marketing: false }, username: 'consentok', nickname: '동의함', password: 'abc12345' });
+  assert.equal(ok.status, 200);
+  // 초대 미리보기: 로그인 없이 초대한 사람 이름만 보인다
+  const lk = (await a.post('/api/invites')).data.code;
+  const pk = await fetch(base + `/api/invites/${lk}/peek`); assert.equal(pk.status, 200); assert.deepEqual(Object.keys(await pk.json()), ['from']);
+  assert.equal((await fetch(base + '/api/invites/nope-code/peek')).status, 410);
+  assert.equal((await fetch(base + `/api/invites/${lk}`, { headers: { 'x-ww': '1' } })).status, 401, '초대 상세·수락은 로그인이 필요하다');
 }
 
 console.log('✓ 모든 권한·삭제 시나리오 통과');
