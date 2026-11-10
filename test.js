@@ -125,5 +125,19 @@ assert.equal((await d.get('/api/me')).status, 401);
   assert.match(bad.data.error, /100원 적어요/, '합계 차이를 숫자로 안내');
 }
 
+
+// 회원가입 규칙: 사용자명 상태, 예약어, 약한 비밀번호
+{
+  const g = client();
+  assert.equal((await g.get('/api/username-check?u=zzz_new1')).data.state, 'available');
+  assert.equal((await g.get('/api/username-check?u=alice')).data.state, 'unavailable');
+  assert.equal((await g.get('/api/username-check?u=admin')).data.state, 'unavailable', '예약어');
+  assert.equal((await g.get('/api/username-check?u=A!')).data.state, 'invalid');
+  assert.equal((await g.get('/api/username-check?u=deleted_9')).data.state, 'unavailable', '탈퇴 계정 접두어');
+  assert.match((await g.post('/api/signup', { username: 'weakpw1', name: 'w', password: 'abcdefghij' })).data.error, /숫자/, '숫자 없는 비밀번호 거절');
+  assert.match((await g.post('/api/signup', { username: 'weakpw2', name: 'w', password: '1234567890' })).data.error, /영문/, '영문 없는 비밀번호 거절');
+  assert.equal((await g.post('/api/signup', { username: 'admin', name: 'w', password: 'abc12345' })).status, 409);
+}
+
 console.log('✓ 모든 권한·삭제 시나리오 통과');
 server.close();

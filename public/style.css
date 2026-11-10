@@ -274,3 +274,20 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
   .stickybar { bottom: 0; margin-left: -32px; margin-right: -32px; padding-left: 32px; padding-right: 32px; }
   .pill { bottom: 24px; left: calc(50% + var(--side) / 2); }
 }
+
+/* 회원가입: 입력 중 검증 메시지·비밀번호 규칙 */
+.field > label > span { display: block; font-size: .875rem; line-height: 22px; font-weight: 500; margin-bottom: 8px; }
+.msg { color: var(--sub); }
+.msg.ok { color: var(--green-d); }
+.msg.bad { color: var(--danger); }
+.field small.msg { margin-top: 4px; min-height: 18px; }
+input[aria-invalid=true] { border-color: var(--danger); }
+.pwbox { position: relative; }
+.pwbox input { padding-right: 52px; }
+.pwbox .icon-btn { position: absolute; right: 2px; top: 2px; }
+.pwbox .icon-btn[aria-pressed=true] { color: var(--green); }
+.rules { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.rules li { display: flex; align-items: center; gap: 4px; font-size: .75rem; line-height: 18px; color: var(--sub); }
+.rules li.ok { color: var(--green-d); font-weight: 500; }
+.rdot { width: 6px; height: 6px; border-radius: 50%; border: 1.5px solid currentColor; margin: 0 5px; box-sizing: border-box; }
+.btn[disabled] { background: #B9C4BC; color: #fff; }

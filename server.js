@@ -124,11 +124,19 @@ function leavePost(pid, uid, deleteMine) {
 const routes = [];
 const R = (method, pattern, fn, opt = {}) => routes.push({ method, re: new RegExp('^' + pattern.replace(/:(\w+)/g, '(?<$1>[^/]+)') + '$'), fn, opt });
 
+// 사용자명 규칙은 가입·확인 API가 같은 함수를 쓴다. 사유(탈퇴·제재 등)는 노출하지 않고 "사용할 수 없음"으로만 답한다.
+const RESERVED = ['admin', 'administrator', 'root', 'system', 'support', 'help', 'woorisai', 'official', 'staff', 'test', 'null', 'undefined'];
+const usernameState = u => !/^[a-z0-9_]{3,20}$/.test(u) ? 'invalid' : (RESERVED.includes(u) || u.startsWith('deleted_') || one('select 1 from users where username=?', u)) ? 'unavailable' : 'available';
+const pwProblem = pw => pw.length < 8 || pw.length > 100 ? '비밀번호는 8자 이상이어야 해요.' : !/[A-Za-z]/.test(pw) ? '비밀번호에 영문을 포함해 주세요.' : !/[0-9]/.test(pw) ? '비밀번호에 숫자를 포함해 주세요.' : null;
+const checks = new Map();
+function rate(key, max) { const now = Date.now(), t = (checks.get(key) || []).filter(x => now - x < 600000); if (t.length >= max) throw fail('잠시 후 다시 시도해 주세요.', 429); t.push(now); checks.set(key, t); }
+R('GET', '/api/username-check', c => { rate('uc:' + c.req.socket.remoteAddress, 60); return { state: usernameState(String(c.query.u || '').toLowerCase()) }; }, { pub: true });
 R('POST', '/api/signup', c => {
   const username = str(c.body.username, 20, 3).toLowerCase(), name = str(c.body.name, 20, 1), pw = String(c.body.password || '');
-  if (!/^[a-z0-9_]{3,20}$/.test(username)) throw fail('사용자명은 영문 소문자, 숫자, _ 로 3–20자예요.');
-  if (pw.length < 8 || pw.length > 100) throw fail('비밀번호는 8자 이상이어야 해요.');
-  if (one('select 1 from users where username=?', username)) throw fail('이미 사용 중인 사용자명이에요.', 409);
+  const us = usernameState(username);
+  if (us === 'invalid') throw fail('사용자명은 영문 소문자, 숫자, _ 로 3–20자예요.');
+  if (pwProblem(pw)) throw fail(pwProblem(pw));
+  if (us === 'unavailable') throw fail('이미 사용 중이거나 사용할 수 없는 사용자명이에요.', 409);
   const salt = crypto.randomBytes(16).toString('hex');
   const id = run('insert into users(username,name,pw,salt) values(?,?,?,?)', username, name, hashPw(pw, salt), salt).lastInsertRowid;
   startSession(c, id);
