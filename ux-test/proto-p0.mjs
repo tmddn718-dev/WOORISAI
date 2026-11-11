@@ -81,17 +81,3 @@ P0_LOGIC.push(
       pvClose: () => this.setState({ pv: null }),`],
   ["    if (this._restore) { const r = this._restore;", "    if (this._pvInit && this.state.pv) { const el = document.querySelector('[data-gal=\"pv\"]'); if (el) { el.scrollLeft = this.state.pv.i * el.clientWidth; this._pvInit = false; } }\n    if (this._restore) { const r = this._restore;"],
 );
-
-// 홈 헤더: 로고(심볼+우리사이)를 남은 공간이 아니라 화면 가로 중심축에 둔다. 좌·우 칸을 같은 1fr 로 두어 오른쪽 버튼 폭과 무관하게 중앙을 유지하고, 아바타 버튼의 크기·위치(오른쪽 끝)는 그대로다.
-P0_MARKUP.push([
-  `<div style="display:flex;align-items:center;justify-content:space-between;height:44px">
-            <span style="display:flex;align-items:center;gap:6px">
-              <img src="brand/woorisai-symbol.svg"`,
-  `<div style="display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;height:44px">
-            <span aria-hidden="true"></span>
-            <span style="display:flex;align-items:center;gap:6px;justify-self:center">
-              <img src="brand/woorisai-symbol.svg"`,
-], [
-  `            <button onClick="{{ toMe }}" aria-label="나" style="border:0;background:none;padding:0;cursor:pointer;display:flex"><x-import component-from-global-scope="${DSC}.Avatar" size="32" name="{{ meName }}"`,
-  `            <button onClick="{{ toMe }}" aria-label="나" style="justify-self:end;border:0;background:none;padding:0;cursor:pointer;display:flex"><x-import component-from-global-scope="${DSC}.Avatar" size="32" name="{{ meName }}"`,
-]);
