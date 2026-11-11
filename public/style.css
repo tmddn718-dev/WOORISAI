@@ -277,7 +277,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
   #tabs .brand { order: 0; }
   #tabs [data-k=new] { order: 1; }
   #tabs .l1 { order: 2; } #tabs [data-k=home] { order: 3; } #tabs [data-k=memories] { order: 4; }
-  #tabs .l2 { order: 5; } #tabs [data-k=meetups] { order: 6; }
+  #tabs .l2 { order: 5; } #tabs [data-k=foot] { order: 6; }
   #tabs .l3 { order: 7; } #tabs [data-k=me] { order: 8; }
   #tabs .side-user { display: flex; order: 9; margin-top: auto; min-height: 56px; padding: 8px 12px; border-top: 1px solid var(--line); border-radius: 0; gap: 12px; }
   #tabs .side-user span { display: flex; flex-direction: column; align-items: flex-start; line-height: 20px; }
@@ -468,3 +468,30 @@ input[aria-invalid=true] { border-color: var(--ws-color-border-danger); }
 .feed { grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 768px) { .feed { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); } }
 details.card.pad > summary { font-size: .875rem; line-height: 20px; font-weight: 600; color: var(--ws-color-fg-default); }
+
+/* ---------- 달력 · 발자국 (시안 04·C) ---------- */
+.cal { padding: 12px 8px 8px; }
+.cal-h { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 8px; }
+.cal-h > span { display: flex; flex-direction: column; align-items: center; }
+.cal-h b { font-size: 1.0625rem; font-weight: 600; color: var(--ws-color-fg-strong); }
+.cal-g { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; text-align: center; }
+.cal-g .w { font-size: .75rem; line-height: 16px; padding: 4px 0; color: var(--ws-color-fg-secondary); }
+.cal-g .w.su { color: var(--danger); }
+.cal-d { height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; padding: 0; background: none; cursor: pointer; font: inherit; color: var(--ws-color-fg-default); }
+.cal-d .n { width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--ws-radius-small); font-size: .875rem; font-weight: 600; }
+.cal-d.on .n { background: var(--ws-color-bg-brand); color: #fff; }
+.cal-d i { width: 5px; height: 5px; border-radius: 9999px; }
+.cal-d i.mk { background: var(--ws-color-bg-brand); }
+.cal-d.on i.mk { background: var(--ws-color-fg-brand); }
+.cal-t { font-size: 1.0625rem; font-weight: 600; margin: 16px 0 12px; }
+.foot-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.foot-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: var(--r-card); background: var(--ws-color-bg-surface); border: 1px solid var(--ws-color-border-subtle); }
+.foot-stats b { font-size: 1.375rem; line-height: 30px; font-weight: 700; color: var(--ws-color-fg-strong); }
+.foot-stats small { font-size: .875rem; font-weight: 500; color: var(--ws-color-fg-secondary); }
+.stamps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px 4px; padding: 16px 6px; border-radius: var(--r-card); background: var(--ws-color-bg-surface); border: 1px solid var(--ws-color-border-subtle); }
+.stamp { display: flex; flex-direction: column; align-items: center; gap: 5px; border: 0; background: none; padding: 0; cursor: pointer; font: inherit; min-height: 44px; }
+.stamp .sp { position: relative; width: 52px; height: 52px; border-radius: 9999px; overflow: hidden; display: grid; place-items: center; border: 1.5px dashed var(--ws-color-border-default); background: var(--ws-color-bg-surface-muted); font-size: .8125rem; font-weight: 600; color: var(--ws-color-fg-tertiary); }
+.stamp.on .sp { border: 2px solid var(--ws-color-border-brand); background: var(--ws-color-bg-brand-subtle); }
+.stamp[aria-pressed=true] .sp { outline: 2px solid var(--ws-color-bg-brand); outline-offset: 2px; }
+.stamp .sp img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.stamp .cap { min-height: 16px; font-size: .75rem; line-height: 16px; }

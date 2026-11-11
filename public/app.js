@@ -221,7 +221,7 @@ P.newPost = async () => {
 };
 
 P.memories = async () => {
-  const tab = ['list', 'map', 'today'].includes(S.q.tab) ? S.q.tab : 'list', f = S.filter;
+  const tab = ['list', 'cal', 'map', 'today'].includes(S.q.tab) ? S.q.tab : 'list', f = S.filter;
   const [pp, gg] = await Promise.all([api('GET', '/api/people'), api('GET', '/api/groups')]);
   const qs = new URLSearchParams({ people: f.people.join(','), mode: f.mode, group: f.group, year: f.year }).toString();
   const yr = new Date().getFullYear(), active = f.people.length || f.group || f.year;
@@ -239,6 +239,15 @@ P.memories = async () => {
     const { posts } = await api('GET', '/api/posts?' + qs);
     const byYear = {}; posts.forEach(p => (byYear[(p.occurred_on || '날짜 미상').slice(0, 4)] ||= []).push(p));
     body = posts.length ? `<p class="cap" style="margin:16px 0 12px">${active ? '조건에 맞는 추억 ' : '추억 '}${posts.length}개 · 최근 순</p><div class="feed">${posts.map(postCard).join('')}</div>` : (active ? empty('선택한 조건의 추억이 없어요', `선택한 조건: ${esc(sumTxt)}. 필터를 바꾸거나 해제해 보세요.`, '<button class="btn" data-act="clear-filter">필터 해제</button>') : empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>'));
+  } else if (tab === 'cal') {
+    const { posts } = await api('GET', '/api/posts?' + qs);
+    const cal = S.cal ||= { ym: (posts[0]?.occurred_on || localDate()).slice(0, 7), day: '' };
+    const [Y, M] = cal.ym.split('-').map(Number), first = new Date(Y, M - 1, 1).getDay(), days = new Date(Y, M, 0).getDate(), by = {};
+    posts.forEach(p => p.occurred_on && (by[p.occurred_on] ||= []).push(p));
+    const inMonth = posts.filter(p => (p.occurred_on || '').startsWith(cal.ym)), list = cal.day ? by[cal.day] || [] : inMonth;
+    const cells = Array.from({ length: first }, () => '<span></span>').concat(Array.from({ length: days }, (_, i) => { const d = `${cal.ym}-${String(i + 1).padStart(2, '0')}`, c = (by[d] || []).length; return `<button class="cal-d${cal.day === d ? ' on' : ''}" data-act="cal-day" data-v="${d}" aria-pressed="${cal.day === d}" aria-label="${M}월 ${i + 1}일${c ? ', 추억 ' + c + '개' : ''}"><span class="n">${i + 1}</span><i class="${c ? 'mk' : ''}"></i></button>`; }));
+    body = `<div class="card cal"><div class="cal-h"><button class="icon-btn" data-act="cal-move" data-v="-1" aria-label="이전 달">${I('back')}</button><span><b>${Y}년 ${M}월</b><span class="cap">추억 ${inMonth.length}개</span></span><button class="icon-btn" data-act="cal-move" data-v="1" aria-label="다음 달">${I('chev')}</button></div><div class="cal-g">${['일', '월', '화', '수', '목', '금', '토'].map((w, i) => `<span class="w${i === 0 ? ' su' : ''}">${w}</span>`).join('')}${cells.join('')}</div></div>
+      <h2 class="cal-t">${cal.day ? fmtDate(cal.day) : `${M}월의 추억`}</h2>${list.length ? `<div class="feed">${list.map(postCard).join('')}</div>` : '<p class="sub body2">이 날 남긴 추억이 없어요.</p>'}`;
   } else if (tab === 'map') {
     const m = await api('GET', '/api/map?' + qs);
     window._map = m;
@@ -250,7 +259,27 @@ P.memories = async () => {
       : t.items.length ? `<section class="sec"><h2 style="margin-bottom:12px">그날의 우리가 여기 있어요.</h2><p class="cap" style="margin-bottom:12px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p><div class="feed">${t.items.map(p => `<div>${postCard(p)}<div class="row" style="margin-top:8px;flex-wrap:wrap"><a class="btn sm sec2" href="#/post/${p.id}?add=1">${I('plus', 's')} 기억 더하기</a><button class="btn sm line" data-act="save" data-id="${p.id}">${p.saved ? '저장함' : '저장'}</button><button class="btn sm line" data-act="hide-post" data-id="${p.id}">다시 추천하지 않기</button></div></div>`).join('')}</div></section>`
         : empty('오늘과 연결된 추억이 없어요.', '기록은 그대로 안전하게 보관되어 있어요.');
   }
-  return `<header class="top"><h1>추억</h1><a class="btn sm sec2 only-pc" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '목록'], ['map', '지도'], ['today', '오늘']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${chipsUi}${filterUi}${hint}</div>${body}</div>${tab === 'today' ? '' : `<a class="fab" href="#/new-post">${I('plus')} 새 추억</a>`}`;
+  return `<header class="top"><h1>추억</h1><a class="btn sm sec2 only-pc" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '피드'], ['cal', '달력']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${chipsUi}${filterUi}${hint}</div>${body}</div>${tab === 'today' ? '' : `<a class="fab" href="#/new-post">${I('plus')} 새 추억</a>`}`;
+};
+
+const REGIONS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
+const regionOf = c => { const x = String(c || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, ''); return { 충청북: '충북', 충청남: '충남', 전라북: '전북', 전라남: '전남', 경상북: '경북', 경상남: '경남' }[x] || x.slice(0, 2); };
+P.foot = async () => {
+  const f = S.foot ||= { mode: 'all', people: [], region: '' };
+  const pp = await api('GET', '/api/people'), withMode = f.mode === 'with';
+  const m = await api('GET', '/api/map?' + new URLSearchParams({ people: withMode ? f.people.join(',') : '', mode: 'and' }));
+  const by = {}; m.countries.forEach(c => c.cities.forEach(ct => { const k = regionOf(ct.city); (by[k] ||= { items: [] }).items.push(...ct.items); }));
+  const n = REGIONS.filter(r => by[r]).length;
+  const stamp = r => { const it = by[r]?.items[0]; return `<button class="stamp${by[r] ? ' on' : ''}" data-act="foot-region" data-v="${r}" aria-pressed="${f.region === r}" aria-label="${r}${by[r] ? ', 추억 ' + by[r].items.length + '개' : ', 아직 기록이 없어요'}"><span class="sp">${it?.cover ? `<img loading="lazy" src="/media/${it.cover}" alt="">` : esc(r[0])}</span><span class="cap">${by[r] ? r : ''}</span></button>`; };
+  const sel = by[f.region]?.items || [];
+  return `<header class="top"><h1>우리의 발자국</h1></header><div class="page stack" style="padding-top:8px">
+    <p class="sub body2">${m.total ? `추억 ${m.total}개가 ${n}곳에 쌓였어요.` : '추억에 지역을 연결하면 발자국이 쌓여요.'}</p>
+    <div class="seg" role="tablist" aria-label="발자국 종류">${[['all', '우리의 발자국'], ['with', '함께한 발자국']].map(([k, l]) => `<button role="tab" aria-selected="${f.mode === k}" data-act="foot-mode" data-v="${k}">${l}</button>`).join('')}</div>
+    ${withMode ? `<div class="chips" aria-label="함께한 사람">${pp.friends.map(u => `<button class="chip${f.people.includes(u.id) ? ' on' : ''}" aria-pressed="${f.people.includes(u.id)}" data-act="foot-person" data-v="${u.id}">${esc(u.name)}</button>`).join('') || '<span class="cap">연결된 사람이 없어요</span>'}</div>` : ''}
+    <div class="foot-stats"><div><span class="cap">기록된 지역</span><b>${n}<small> / 17곳</small></b></div><div><span class="cap">연결된 추억</span><b>${m.total}<small>개</small></b></div></div>
+    <div class="stamps">${REGIONS.map(stamp).join('')}</div>
+    ${f.region ? `<section class="stack" aria-label="${f.region}의 추억"><h2>${f.region}의 추억</h2>${sel.length ? sel.map(p => `<a class="mrow" href="#/post/${p.id}"><span class="th">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)}${p.label ? ' · ' + esc(p.label) : ''}</span></span>${I('chev', 's')}</a>`).join('') : '<p class="sub body2">아직 이 지역에 남긴 추억이 없어요.</p>'}</section>` : ''}
+    <p class="cap">발자국은 추억을 볼 수 있는 사람에게만 보여요.</p></div>`;
 };
 
 P.meetups = async () => {
@@ -339,7 +368,7 @@ P.join = async code => {
 };
 
 // ---------- 라우터 ----------
-const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, 'home'], [/^\/new-post$/, P.newPost, 'home'], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
+const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/foot$/, P.foot, 'foot'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, 'home'], [/^\/new-post$/, P.newPost, 'home'], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
 let seq = 0;
 async function route() {
   const my = ++seq, view = $('#view');
@@ -359,7 +388,7 @@ async function route() {
   if (S.join) { const j = S.join; S.join = null; S.joinFrom = undefined; try { sessionStorage.removeItem('ws_join'); } catch { } if (path !== j) return go(j); }
   const r = routes.find(x => x[0].test(path)) || routes[0], args = r[0].exec(path).slice(1);
   const tabs = $('#tabs'); tabs.hidden = false;
-  const T = [['home', '홈', 'home', '#/'], ['meetups', '약속', 'cal', '#/meetups'], ['new', '만들기', 'plus'], ['memories', '추억', 'photo', '#/memories'], ['me', '나', 'user', '#/me']];
+  const T = [['home', '홈', 'home', '#/'], ['memories', '추억', 'photo', '#/memories'], ['new', '만들기', 'plus'], ['foot', '발자국', 'pin', '#/foot'], ['me', '나', 'user', '#/me']];
   $('#app').classList.add('authed');
   tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i, h]) => k === 'new' ? `<button data-act="create" data-k="new" aria-label="만들기"><span class="mk">${I('plus')}</span>${l}</button>` : `<a href="${h}" data-k="${k}" ${r[2] === k ? 'aria-current="page"' : ''}><span class="nv-ic">${I(i)}</span>${l}</a>`).join('') + '<div class="side-label l1">둘러보기</div><div class="side-label l2">함께하기</div><div class="side-label l3">내 공간</div>' + `<a class="side-user" href="#/me" data-k="user">${av(S.me.name, 's')}<span><b>${esc(S.me.name)}</b><span class="cap">@${esc(S.me.username)}</span></span></a>`;
   let html; try { html = await r[1](...args); } catch (e) { if (e.status === 401) { S.me = null; return route(); } html = gone(e); }
@@ -455,6 +484,11 @@ const A = {
   'mode': d => { S.filter.mode = d.v; route(); },
   'clear-filter': () => { S.filter = { people: [], mode: 'and', group: '', year: '' }; route(); },
   tab: d => go('/memories?tab=' + d.v),
+  'cal-move': d => { const [y, m] = S.cal.ym.split('-').map(Number), x = new Date(y, m - 1 + +d.v, 1); S.cal = { ym: `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`, day: '' }; route(); },
+  'cal-day': d => { S.cal.day = S.cal.day === d.v ? '' : d.v; route(); },
+  'foot-mode': d => { S.foot.mode = d.v; route(); },
+  'foot-person': d => { const id = +d.v, p = S.foot.people; S.foot.people = p.includes(id) ? p.filter(x => x !== id) : [...p, id]; route(); },
+  'foot-region': d => { S.foot.region = S.foot.region === d.v ? '' : d.v; route(); },
   mem: d => act(async () => { S.me = await api('PATCH', '/api/me', { mem_enabled: d.v === '1' }); }, d.v === '1' ? '켰어요. 언제든 끌 수 있어요.' : '껐어요. 기록은 그대로 보관돼요.'),
   'hide-post': d => act(() => api('POST', '/api/hides', { type: 'post', id: +d.id }), '숨긴 추억은 다시 추천하지 않아요. 설정에서 언제든 바꿀 수 있어요.'),
   unhide: d => act(() => api('DELETE', `/api/hides/${d.t}/${d.id}`)),

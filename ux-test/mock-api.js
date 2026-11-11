@@ -129,10 +129,11 @@ R('DELETE', '/api/invites/([^/]+)', c => { S.links = S.links.filter(l => l.code 
 const posts = () => [...S.posts].sort((a, b) => (b.occurred_on || '').localeCompare(a.occurred_on || '') || b.id - a.id); // 서버와 같은 순서: 날짜 최신순, 같으면 나중에 만든 것 먼저
 R('GET', '/api/home', () => { settle(); return ok({ postInvites: [], friendRequests: [], meetupInvites: [], upcoming: [], posts: posts().map(card) }); });
 R('GET', '/api/today', () => ok({ enabled: !!S.user && S.user.mem_enabled, items: [] }));
-R('GET', '/api/posts', () => ok({ posts: posts().map(card) }));
-R('GET', '/api/map', () => {
+const filt = q => { const ids = (q.get('people') || '').split(',').filter(Boolean).map(Number), or = q.get('mode') === 'or', y = q.get('year'), acc = p => p.accepted || p.members || []; return p => (!y || (p.occurred_on || '').startsWith(y)) && (!ids.length || (or ? ids.some(i => acc(p).includes(i)) : ids.every(i => acc(p).includes(i)))); };
+R('GET', '/api/posts', c => ok({ posts: posts().filter(filt(c.q)).map(card) }));
+R('GET', '/api/map', c => {
   const tree = {}; let total = 0;
-  for (const p of posts()) { const pv = placeView(p); if (!pv) continue; total++; (((tree[pv.country] ||= {})[pv.city] ||= []).push({ id: p.id, title: p.title, occurred_on: p.occurred_on, label: pv.label, cover: cover(p), count: 1 })); }
+  for (const p of posts().filter(filt(c.q))) { const pv = placeView(p); if (!pv) continue; total++; (((tree[pv.country] ||= {})[pv.city] ||= []).push({ id: p.id, title: p.title, occurred_on: p.occurred_on, label: pv.label, cover: cover(p), count: 1 })); }
   return ok({ total, countries: Object.entries(tree).map(([country, cities]) => ({ country, count: Object.values(cities).flat().length, cities: Object.entries(cities).map(([city, items]) => ({ city, count: items.length, items })) })) });
 });
 R('POST', '/api/posts', c => {
