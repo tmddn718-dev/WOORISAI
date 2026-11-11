@@ -1,0 +1,15 @@
+# UX 테스트 배포(정적)에는 서버 코드와 데이터가 필요 없다. Vercel 이 server.js 를 서버 함수로 실행하지 않게 제외한다.
+# 빌드(node ux-test/build.mjs)는 mobile-prototype-review-checklist/project 의 원본 파일을 읽으므로 그 폴더는 올린다(무거운 exports·uploads 만 제외).
+server.js
+test.js
+data
+backup
+docs
+public
+mobile-prototype-review-checklist/project/exports
+mobile-prototype-review-checklist/project/uploads
+*.md
+!ux-test/README.md
+*.fig
+*.zip
+.claude

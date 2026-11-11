@@ -1,0 +1,25 @@
+/* UX 테스트 전용 오버레이(스플래시·온보딩·완료·동의). 기존 앱의 토큰(--green 등)과 .btn 클래스를 그대로 쓴다. */
+#uxt { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; justify-content: center; }
+#uxt .uxt-in { width: 100%; max-width: 480px; min-height: 100dvh; display: flex; flex-direction: column; padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); box-shadow: 0 0 0 1px var(--line); }
+#uxt .uxt-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 16px; }
+#uxt .uxt-mark { width: 96px; height: 96px; }
+#uxt .uxt-icon { width: 160px; height: 160px; border-radius: 50%; background: var(--sage); color: var(--green); display: grid; place-items: center; }
+#uxt .uxt-icon svg { width: 72px; height: 72px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+#uxt h1 { font-size: 1.5rem; font-weight: 600; line-height: 32px; letter-spacing: -.02em; text-wrap: pretty; }
+#uxt p { text-wrap: pretty; }
+#uxt .uxt-dots { display: flex; justify-content: center; gap: 8px; margin: 16px 0; }
+#uxt .uxt-dots i { width: 8px; height: 8px; border-radius: 9999px; background: var(--line); }
+#uxt .uxt-dots i.on { width: 24px; background: var(--green); }
+#uxt .uxt-actions { display: flex; flex-direction: column; gap: 8px; }
+#uxt .uxt-skip { align-self: flex-end; background: none; border: 0; min-height: 44px; padding: 0 12px; color: var(--sub); font: inherit; cursor: pointer; }
+#uxt .uxt-note { padding: 12px 14px; border-radius: var(--r-ctl); background: var(--sage); color: var(--ink); font-size: .875rem; line-height: 1.5; text-align: left; }
+#uxt .uxt-cap { font-size: .75rem; color: var(--sub); }
+#uxt :focus-visible, #uxt-consent :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+#uxt-consent { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1100; display: flex; justify-content: center; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); }
+#uxt-consent .uxt-box { width: 100%; max-width: 456px; background: var(--white); border: 1px solid var(--line); border-radius: var(--r-card); padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 24px rgba(36,38,34,.12); }
+#uxt-consent p { font-size: .875rem; line-height: 1.5; }
+#uxt-consent .row { display: flex; gap: 8px; }
+#uxt-consent .row .btn { flex: 1; }
+
+/* 테스트 배포에는 로그인 서버가 없어 소셜 로그인(카카오·네이버·Google)이 작동하지 않는다. 누르면 오류만 나므로 숨긴다. */
+.hero [aria-label="간편 로그인"], .hero .or { display: none; }
