@@ -51,7 +51,7 @@
 |---|---|---|
 | `page_view` | 화면 전환 | `page_path`, `page_location`, `page_title` |
 | `onboarding_complete` | 온보딩 마지막 "시작하기" 또는 "건너뛰기" | `method` = `finish` / `skip` |
-| `experience_start` | 체험 선택 화면에서 방식을 고를 때(진행자 주소 `?mode=demo`는 제외) | `mode` = `new` / `demo` |
+| `experience_start` | 체험 선택 화면에서 방식을 고를 때(진행자 주소 `?mode=demo`는 제외) | `mode` = `new` / `demo` / `guest` |
 | `sign_up_start` | 가입 폼이 화면에 나타날 때 | - |
 | `sign_up` | 모의 서버가 가입을 성공시켰을 때(실패 시 없음) | `method` = `username` |
 | `friend_add_start` | 친구 이름 입력을 시작할 때 | - |

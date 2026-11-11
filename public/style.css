@@ -522,3 +522,37 @@ details.card.pad > summary { font-size: .875rem; line-height: 20px; font-weight:
 .pe-ic { width: 44px; height: 44px; flex: none; border-radius: 9999px; display: grid; place-items: center; background: var(--ws-color-bg-brand-subtle); color: var(--ws-color-fg-brand); }
 .pe-ic.s { width: 36px; height: 36px; background: var(--ws-color-bg-recall-subtle); }
 .nudge { padding: 12px 4px; min-height: 44px; }
+
+/* ---------- 사진 뷰어 (시안 D) ---------- */
+#viewer { position: fixed; inset: 0; z-index: 300; background: #141513; color: #fff; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top); }
+.v-top { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 6px 0 20px; min-height: 56px; }
+.v-top > span { display: flex; flex-direction: column; min-width: 0; }
+.v-t { font-size: .875rem; line-height: 20px; font-weight: 600; }
+.v-s { font-size: .75rem; line-height: 16px; color: rgba(255,255,255,.72); }
+.v-x { width: 48px; height: 48px; border: 0; background: none; color: #fff; display: grid; place-items: center; cursor: pointer; }
+.v-x svg { width: 24px; height: 24px; }
+.v-g { flex: 1; min-height: 0; display: flex; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior: contain; }
+.v-g::-webkit-scrollbar { display: none; }
+.v-g.z { overflow-x: hidden; touch-action: none; cursor: grab; }
+.v-p { flex: 0 0 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; overflow: hidden; display: grid; place-items: center; }
+.v-p img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; -webkit-user-select: none; transition: transform .2s ease; }
+.v-bar { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px calc(20px + env(safe-area-inset-bottom)) 20px; }
+.v-h { font-size: .75rem; line-height: 16px; color: rgba(255,255,255,.72); }
+.v-b { display: flex; gap: 4px; flex: none; }
+.v-b button { min-height: 44px; padding: 0 12px; border: 0; border-radius: var(--r-ctl); background: rgba(255,255,255,.12); color: #fff; font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
+@media (max-width: 380px) { .v-h { display: none; } }
+/* ---------- 비로그인 둘러보기 (시안 A) ---------- */
+.gbar { display: flex; align-items: center; gap: 12px; margin: 12px 16px 0; padding: 8px 8px 8px 14px; border-radius: var(--r-ctl); background: var(--ws-color-bg-recall-subtle); }
+.gbar > span { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.gbar b { font-size: .875rem; line-height: 20px; font-weight: 600; color: var(--ws-color-fg-strong); }
+.g-h { margin: 0 0 4px; font-size: 1.375rem; line-height: 30px; font-weight: 700; color: var(--ws-color-fg-strong); text-wrap: pretty; }
+.g-hero .ph { position: relative; aspect-ratio: 16 / 10; overflow: hidden; background: var(--ws-color-bg-recall-subtle); }
+.g-hero .ph > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.g-hero .meta { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px 16px; }
+.g-th { display: flex; gap: 4px; margin-top: 6px; }
+.g-th span { position: relative; flex: 1; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: var(--ws-color-bg-recall-subtle); }
+.g-th img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.g-th i { position: absolute; left: 4px; bottom: 4px; padding: 1px 6px; border-radius: 9999px; background: rgba(36,38,34,.64); color: #fff; font-size: .6875rem; line-height: 14px; font-style: normal; }
+.g-step { display: flex; align-items: flex-start; gap: 12px; }
+.g-step > span:last-child { display: flex; flex-direction: column; gap: 2px; }
+.g-step b { font-size: 1rem; line-height: 22px; font-weight: 600; color: var(--ws-color-fg-strong); }

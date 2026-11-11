@@ -48,10 +48,11 @@ function finishIntro(method) {
 function choice() {
   const r = render(`<div class="uxt-center"><h1>어떻게 체험해 볼까요?</h1><p class="sub">둘 중 하나를 골라 주세요. 나중에 다시 선택할 수도 있어요.</p></div>
     <div class="uxt-actions"><button type="button" class="btn block" data-a="new">처음 사용자로 시작하기</button><p class="uxt-cap" style="text-align:center;margin:-2px 0 8px">가입부터 친구 추가, 첫 추억 만들기까지 직접 해 봐요.</p>
-    <button type="button" class="btn line block" data-a="demo">기존 사용자로 둘러보기</button><p class="uxt-cap" style="text-align:center;margin-top:-2px">샘플 추억이 있는 계정으로 바로 들어가요. 로그아웃해도 이름 demo 로 다시 로그인할 수 있어요.</p></div>`);
+    <button type="button" class="btn line block" data-a="demo">기존 사용자로 둘러보기</button><p class="uxt-cap" style="text-align:center;margin-top:-2px">샘플 추억이 있는 계정으로 바로 들어가요. 로그아웃해도 이름 demo 로 다시 로그인할 수 있어요.</p><button type="button" class="btn line block" data-a="guest">로그인 없이 둘러보기</button><p class="uxt-cap" style="text-align:center;margin-top:-2px">예시 추억으로 먼저 둘러보고, 추억을 남길 때 로그인해요.</p></div>`);
   r.addEventListener('click', e => {
     const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
-    track('experience_start', { mode: a === 'demo' ? 'demo' : 'new' });
+    track('experience_start', { mode: a === 'demo' ? 'demo' : a === 'guest' ? 'guest' : 'new' });
+    if (a === 'guest') { try { sessionStorage.setItem('ws_guest', '1'); } catch { } location.hash = '#/'; window.dispatchEvent(new HashChangeEvent('hashchange')); }
     if (a === 'demo') { startDemo(); location.hash = '#/'; window.dispatchEvent(new HashChangeEvent('hashchange')); }
     close();
   }, { once: true });

@@ -1,6 +1,7 @@
 import { validateNickname, graphemes, suggest, NICK_MAX, NICK_HINT } from './nickname.js';
 // 우리사이 웹 앱 — 바닐라 JS SPA. 권한은 서버가 판단하고, 여기서는 그 결과만 보여준다.
 const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, draft: null, authMode: 'intro', filter: { people: [], mode: 'and', group: '', year: '' }, join: null };
 
@@ -137,6 +138,7 @@ const introView = () => {
     <div class="stack" role="group" aria-label="간편 로그인">${SNS.map(([k, label, bg]) => `<button class="btn block sns-btn" style="background:${bg}" data-act="sns" data-p="${k}" ${S.sns?.[k] ? '' : 'aria-disabled="true"'}>${label}</button>`).join('')}<p id="sns-status" class="cap" aria-live="polite">계속하면 서비스 이용에 필요한 안내를 확인할 수 있어요.${SNS.some(x => !S.sns?.[x[0]]) ? ' 흐리게 보이는 로그인은 아직 준비 중이에요.' : ''}</p></div>
     <div class="or"><span>또는</span></div>
     <div class="row"><button class="btn line grow" data-act="auth" data-m="signup">이름으로 가입하기</button><button class="btn line grow" data-act="auth" data-m="login">이름으로 로그인하기</button></div>
+    <button class="btn line block" data-act="guest-start">로그인 없이 둘러보기</button>
     <p class="cap row" style="flex-wrap:wrap;gap:4px 16px"><a href="#/terms">이용약관</a><a href="#/privacy-policy">개인정보처리방침</a><a href="#/help">로그인 도움말</a></p></div>
     <div class="hero-art demo" aria-hidden="true"><div class="card"><div class="ph">${KNOT}</div><div class="meta"><h2>성수동 브런치</h2><p class="cap">2025년 11월 9일 · 성수동, 서울 · 3명</p><div class="who"><span class="av s">지</span><span class="av s">민</span><span class="av s">하</span><span class="cap">사진 12장 · 이야기 4개</span></div></div></div></div></div>`;
 };
@@ -154,6 +156,35 @@ function authView() {
       <button class="btn block">로그인하기</button>
       <button type="button" class="btn line block" data-act="auth" data-m="signup">새로 시작하기</button>
     </form></div>`;
+}
+
+
+// ---------- 비로그인 둘러보기 (시안 A): 예시 추억으로 둘러보고, 행동할 때만 로그인 ----------
+const GU = '/ux-test/images/unsplash/';
+const GATE = { create: ['첫 추억을 남겨볼까요?', '로그인하면 사진과 이야기를 안전하게 보관하고, 함께한 사람을 초대할 수 있어요.', '로그인하고 추억 남기기'], memories: ['내 추억을 보려면 로그인이 필요해요', '로그인하면 함께 남긴 추억을 모아 볼 수 있어요.', '로그인하고 보기'], me: ['내 정보를 보려면 로그인이 필요해요', '로그인하면 함께한 사람과 내 기록을 관리할 수 있어요.', '로그인하기'], foot: ['우리의 발자국을 함께 모아볼까요?', '로그인하면 친구와 함께 남긴 지역별 추억을 연결할 수 있어요.', '로그인하고 연결하기'] };
+function gate(k) {
+  const [t, b, c] = GATE[k], el = sheet(`<h2>${t}</h2><p class="sub body2" style="margin:8px 0 16px">${b}</p><div class="actions"><button class="btn" data-a="go">${c}</button><button class="btn line" data-a="x">계속 둘러보기</button></div>`);
+  el.addEventListener('click', e => { const x = e.target.closest('[data-a]')?.dataset.a; if (!x) return; closeSheet(); if (x === 'go') leaveGuest(k); });
+}
+function leaveGuest(k) { S.guest = false; S.intent = k === 'create' ? 'create' : null; try { sessionStorage.removeItem('ws_guest'); } catch { } S.authMode = 'intro'; go('/'); }
+const guestBar = '<div class="gbar"><span><b>우리사이 미리보기</b><span class="cap">예시 추억으로 둘러보고 있어요.</span></span><button class="btn sm" data-act="guest-login">시작하기</button></div>';
+const GUEST_STEPS = [['users', '함께한 사람을 초대해요', '초대를 수락한 사람만 볼 수 있어요.'], ['photo', '각자의 사진과 이야기를 더해요', '한 추억 안에 모두의 기록이 쌓여요.'], ['pin', '다녀온 지역에 발자국이 남아요', '전국 17개 시·도를 함께 채워요.']];
+const guestHome = () => `${guestBar}<header class="top home-top"><div class="small-logo"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div></header><div class="page stack" style="gap:28px;padding-top:0">
+  <section class="stack" style="gap:12px"><div><h2 class="g-h">함께 다녀온 날을,<br>한 곳에 같이 모아요</h2><p class="sub body2">각자 찍은 사진과 이야기가 하나의 추억이 돼요.</p></div>
+    <div class="card g-hero"><div class="ph"><img src="${GU}jeju-fall.jpg" alt=""><span class="ph-badge">예시 추억</span></div><div class="meta"><h2>제주 2박 3일, 비 그친 뒤의 오름</h2><p class="cap">4명이 남긴 사진 38장 · 이야기 6개</p><div class="g-th">${[['jeju-sea', '친구 A'], ['jeju-flower', '친구 B'], ['jeju-house', '친구 C'], ['jeju-cliff', '나']].map(([f, by]) => `<span><img loading="lazy" src="${GU}${f}.jpg" alt=""><i>${by}</i></span>`).join('')}</div></div></div></section>
+  <section class="stack" style="gap:14px">${GUEST_STEPS.map(([ic_, t, b]) => `<div class="g-step"><span class="pe-ic s" style="background:var(--ws-color-bg-brand-subtle)">${I(ic_, 's')}</span><span><b>${t}</b><span class="cap">${b}</span></span></div>`).join('')}</section>
+  <button class="btn block" data-act="guest-gate" data-k="create">나도 추억 남기기</button></div>`;
+const GUEST_FOOT = { 서울: ['mem-han', 2], 제주: ['mem-jeju', 1], 강원: ['mem-anmok', 1], 부산: ['mem-gwangan', 1] };
+const guestFoot = () => `${guestBar}<header class="top"><h1>우리의 발자국</h1></header><div class="page stack" style="padding-top:8px">
+  <p class="sub body2">예시 발자국이에요. 추억에 지역을 연결하면 내 발자국이 쌓여요.</p>
+  <div class="foot-stats"><div><span class="cap">기록된 지역</span><b>4<small> / 17곳</small></b></div><div><span class="cap">연결된 추억</span><b>5<small>개</small></b></div></div>
+  <div class="stamps">${REGIONS.map(r => `<button class="stamp${GUEST_FOOT[r] ? ' on' : ''}" data-act="guest-gate" data-k="foot" aria-label="${r}${GUEST_FOOT[r] ? ', 예시 추억 ' + GUEST_FOOT[r][1] + '개' : ', 아직 기록이 없어요'}"><span class="sp">${GUEST_FOOT[r] ? `<img loading="lazy" src="${GU}${GUEST_FOOT[r][0]}.jpg" alt="">` : esc(r[0])}</span><span class="cap">${GUEST_FOOT[r] ? r : ''}</span></button>`).join('')}</div>
+  <button class="btn block" data-act="guest-login">로그인하고 모으기</button></div>`;
+function guestRoute(path, view) {
+  const tabs = $('#tabs'), foot = path === '/foot', T = [['home', '홈', 'home'], ['memories', '추억', 'photo'], ['new', '만들기', 'plus'], ['foot', '발자국', 'pin'], ['me', '나', 'user']];
+  $('#app').classList.add('authed'); tabs.hidden = false;
+  tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i]) => k === 'new' ? `<button data-act="guest-gate" data-k="create" data-kk="new" aria-label="만들기"><span class="mk">${I('plus')}</span>${l}</button>` : k === 'home' || k === 'foot' ? `<a href="${k === 'home' ? '#/' : '#/foot'}" data-k="${k}" ${(k === 'foot') === foot ? 'aria-current="page"' : ''}><span class="nv-ic">${I(i)}</span>${l}</a>` : `<a href="#/" data-act="guest-gate" data-k="${k}" data-kk="${k}"><span class="nv-ic">${I(i)}</span>${l}</a>`).join('') + '<div class="side-label l1">둘러보기</div><div class="side-label l2">함께하기</div><div class="side-label l3">내 정보</div>';
+  view.innerHTML = foot ? guestFoot() : guestHome(); window.scrollTo(0, 0);
 }
 
 // ---------- 페이지 ----------
@@ -376,6 +407,7 @@ async function route() {
   const my = ++seq, view = $('#view');
   if (!S.me) { try { S.me = await api('GET', '/api/me'); } catch { } }
   const [path, qs] = (location.hash.slice(1) || '/').split('?'); S.q = Object.fromEntries(new URLSearchParams(qs || ''));
+  if (!S.me && !DOCS[path] && (S.guest ??= (() => { try { return sessionStorage.getItem('ws_guest') === '1'; } catch { return false; } })())) return guestRoute(path, view);
   if (!S.me) {
     if (DOCS[path]) { $('#app').classList.remove('authed'); $('#tabs').hidden = true; view.innerHTML = docPage(path); window.scrollTo(0, 0); return; }
     if (/^\/join\//.test(path)) { S.join = path; try { sessionStorage.setItem('ws_join', path); } catch { } }
@@ -387,6 +419,7 @@ async function route() {
     if (S.q.oauth_error) { S.authNotice = { msg: S.q.oauth_error === 'cancel' ? '로그인을 취소했어요.' : '지금은 해당 계정으로 로그인하기 어려워요.', retry: S.sns?.[S.q.p] ? S.q.p : null }; S.snsBusy = false; history.replaceState(null, '', '#/'); }
     $('#app').classList.remove('authed'); view.innerHTML = authView(); initSignup(); return;
   }
+  if (S.intent) { const k = S.intent; S.intent = null; if (k === 'create') return go('/new-post'); }
   if (S.join) { const j = S.join; S.join = null; S.joinFrom = undefined; try { sessionStorage.removeItem('ws_join'); } catch { } if (path !== j) return go(j); }
   const r = routes.find(x => x[0].test(path)) || routes[0], args = r[0].exec(path).slice(1);
   const tabs = $('#tabs'); tabs.hidden = false;
@@ -439,14 +472,32 @@ const A = {
   'del-note': async d => { if (await ask({ title: '내 글을 삭제할까요?', body: '삭제하면 모두에게서 사라지고 되돌릴 수 없어요.', ok: '삭제하기', danger: true })) act(() => api('DELETE', `/api/notes/${d.id}`), '삭제했어요.'); },
   report: d => REPORT_UI(d.t, d.id),
   photo: d => {
-    const b = sheet(`<div class="lb"><img src="/media/${d.id}" alt="함께 남긴 사진"></div><div class="actions"><button class="btn sec2" data-a="cover">대표 사진으로 정하기</button>${d.mine === '1' ? '<button class="btn dline" data-a="del">내 사진 삭제하기</button>' : '<button class="btn line" data-a="rep">신고하기</button>'}<button class="btn line" data-a="x">닫기</button></div>`);
-    b.addEventListener('click', async e => {
-      const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
-      closeSheet(); const pid = $('[data-post]')?.dataset.post;
-      if (a === 'cover') act(() => api('POST', `/api/posts/${pid}/cover`, { media_id: +d.id }), '대표 사진을 바꿨어요.');
-      if (a === 'rep') REPORT_UI('media', d.id);
-      if (a === 'del' && await ask({ title: '사진을 삭제할까요?', body: '내가 올린 사진이 이 추억과 지도, 회상에서 모두 사라져요. 되돌릴 수 없어요.', ok: '삭제하기', danger: true })) act(() => api('DELETE', `/api/media/${d.id}`), '사진을 삭제했어요.');
+    const btns = [...document.querySelectorAll('[data-act=photo]')], list = btns.map(b => ({ id: b.dataset.id, mine: b.dataset.mine === '1' })), pid = $('[data-post]')?.dataset.post;
+    let i = Math.max(0, list.findIndex(x => x.id === d.id)), zoom = false, tx = 0, ty = 0, last = 0;
+    const ov = document.createElement('div'); ov.id = 'viewer'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', '사진 크게 보기');
+    ov.innerHTML = `<div class="v-top"><span><b class="v-t"></b><span class="v-s" aria-live="polite"></span></span><button class="v-x" data-v="x" aria-label="닫기">${I('x')}</button></div><div class="v-g">${list.map(p => `<div class="v-p"><img src="/media/${p.id}" alt="함께 남긴 사진" draggable="false"></div>`).join('')}</div><div class="v-bar"><span class="v-h">두 번 탭하면 확대해요</span><span class="v-b"><button data-v="cover">대표 사진으로</button><button data-v="more"></button><button data-v="zoom"></button></span></div>`;
+    document.body.append(ov); document.body.style.overflow = 'hidden';
+    const g = $('.v-g', ov), cur = () => $$('.v-p img', ov)[i], apply = () => { $$('.v-p img', ov).forEach(im => { im.style.transform = ''; }); if (cur()) cur().style.transform = zoom ? `translate(${tx}px,${ty}px) scale(2.2)` : ''; };
+    const upd = () => { $('.v-t', ov).textContent = list[i].mine ? '내가 올린 사진' : '함께 남긴 사진'; $('.v-s', ov).textContent = `${i + 1} / ${list.length}`; $('[data-v=more]', ov).textContent = list[i].mine ? '삭제' : '신고'; $('[data-v=zoom]', ov).textContent = zoom ? '원래대로' : '확대'; g.classList.toggle('z', zoom); apply(); };
+    const setZoom = z => { zoom = z; tx = ty = 0; upd(); };
+    const close = () => { document.removeEventListener('keydown', key); document.body.style.overflow = ''; ov.remove(); btns[i]?.scrollIntoView({ block: 'nearest' }); btns[i]?.focus(); };
+    const key = e => { if (e.key === 'Escape') close(); else if (!zoom && e.key === 'ArrowRight') g.scrollBy({ left: g.clientWidth }); else if (!zoom && e.key === 'ArrowLeft') g.scrollBy({ left: -g.clientWidth }); };
+    document.addEventListener('keydown', key);
+    g.addEventListener('scroll', () => { const n = Math.round(g.scrollLeft / g.clientWidth); if (n !== i && n >= 0 && n < list.length) { i = n; upd(); } }, { passive: true });
+    g.addEventListener('click', e => { if (!e.target.closest('.v-p')) return; const t = Date.now(); if (t - last < 320) { setZoom(!zoom); last = 0; } else last = t; });
+    let drag = null;
+    g.addEventListener('pointerdown', e => { if (zoom) { drag = { x: e.clientX - tx, y: e.clientY - ty }; g.setPointerCapture(e.pointerId); } });
+    g.addEventListener('pointermove', e => { if (!drag) return; const lx = g.clientWidth * .55, ly = g.clientHeight * .4; tx = Math.max(-lx, Math.min(lx, e.clientX - drag.x)); ty = Math.max(-ly, Math.min(ly, e.clientY - drag.y)); apply(); });
+    g.addEventListener('pointerup', () => { drag = null; });
+    ov.addEventListener('click', async e => {
+      const a = e.target.closest('[data-v]')?.dataset.v; if (!a) return; const cp = list[i];
+      if (a === 'zoom') return setZoom(!zoom);
+      close();
+      if (a === 'cover') act(() => api('POST', `/api/posts/${pid}/cover`, { media_id: +cp.id }), '대표 사진을 바꿨어요.');
+      if (a === 'more' && !cp.mine) REPORT_UI('media', cp.id);
+      if (a === 'more' && cp.mine && await ask({ title: '사진을 삭제할까요?', body: '내가 올린 사진이 이 추억과 지도, 회상에서 모두 사라져요. 되돌릴 수 없어요.', ok: '삭제하기', danger: true })) act(() => api('DELETE', `/api/media/${cp.id}`), '사진을 삭제했어요.');
     });
+    upd(); $('.v-x', ov).focus(); requestAnimationFrame(() => { g.scrollLeft = i * g.clientWidth; });
   },
   'post-menu': async d => {
     const p = await api('GET', '/api/posts/' + d.id), admin = p.me.role === 'admin';
@@ -486,6 +537,9 @@ const A = {
   'mode': d => { S.filter.mode = d.v; route(); },
   'clear-filter': () => { S.filter = { people: [], mode: 'and', group: '', year: '' }; route(); },
   tab: d => go('/memories?tab=' + d.v),
+  'guest-start': () => { S.guest = true; try { sessionStorage.setItem('ws_guest', '1'); } catch { } go('/'); route(); },
+  'guest-login': () => leaveGuest(null),
+  'guest-gate': d => gate(d.k),
   'cal-move': d => { const [y, m] = S.cal.ym.split('-').map(Number), x = new Date(y, m - 1 + +d.v, 1); S.cal = { ym: `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`, day: '' }; route(); },
   'cal-day': d => { S.cal.day = S.cal.day === d.v ? '' : d.v; route(); },
   'foot-mode': d => { S.foot.mode = d.v; route(); },
