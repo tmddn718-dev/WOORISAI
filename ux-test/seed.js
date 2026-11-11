@@ -701,3 +701,16 @@ export const DEMO_POSTS = [
     "notes": []
   }
 ];
+
+// 체험용 샘플 약속(시안의 약속 6개). 날짜는 접속 시점 기준 상대값이라 항상 '다가오는/지난' 구분이 유지된다. 참여자 id 는 FRIEND_POOL, 나는 ME_ID.
+export const demoPlans = (now = Date.now()) => {
+  const at = (d, h, m = 0) => { const x = new Date(now); x.setDate(x.getDate() + d); x.setHours(h, m, 0, 0); return x.toISOString(); };
+  return [
+    { id: 901, title: '민지 이사 축하 저녁', starts_at: at(3, 19, 30), place: '망원동 작은 식당', descr: '집들이 선물은 각자 작은 걸로!', organizer_id: 104, status: 'active', parts: { [ME_ID]: 'yes', 103: 'yes', 105: 'maybe', 104: 'yes' }, changed: '장소가 합정에서 망원동 작은 식당으로 바뀌었어요 · 민지님이 어제 수정', post_ids: [] },
+    { id: 902, title: '하은이네 김장 돕기', starts_at: at(5, 11), place: '', descr: '앞치마랑 고무장갑 챙겨 오기', organizer_id: 103, status: 'active', parts: { [ME_ID]: 'invited', 107: 'yes', 104: 'invited', 103: 'yes' }, post_ids: [] },
+    { id: 903, title: '부산 당일치기', starts_at: at(12, 8), place: '부산역', descr: '', organizer_id: 105, status: 'cancelled', parts: { [ME_ID]: 'yes', 106: 'yes', 108: 'yes', 105: 'yes' }, post_ids: [] },
+    { id: 904, title: '연말 홈파티 장보기', starts_at: at(24, 18), place: '', descr: '', organizer_id: ME_ID, status: 'active', parts: { [ME_ID]: 'yes', 104: 'yes', 105: 'maybe', 107: 'invited', 108: 'no' }, post_ids: [] },
+    { id: 905, title: '망원 보드게임 카페', starts_at: at(-10, 15), place: '망원동 보드게임 카페', descr: '지는 사람이 음료 사기', organizer_id: ME_ID, status: 'active', parts: { [ME_ID]: 'yes', 104: 'yes', 105: 'yes', 106: 'no' }, post_ids: [] },
+    { id: 906, title: '한강 노을 피크닉', starts_at: new Date('2026-11-08T17:00:00+09:00').toISOString(), place: '망원한강공원', descr: '', organizer_id: 103, status: 'active', parts: { [ME_ID]: 'yes', 104: 'yes', 105: 'yes', 103: 'yes' }, post_ids: [324] }
+  ];
+};

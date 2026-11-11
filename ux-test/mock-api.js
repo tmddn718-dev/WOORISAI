@@ -4,11 +4,11 @@
  * - 비밀번호는 저장하지 않는다. 로그인은 가입해 둔 이름만 확인한다.
  * - 실제 서버의 권한 정책(초대 수락자만 열람 등)을 구현한 것이 아니다.
  */
-import { FRIEND_POOL, TAKEN, ME_ID, DEMO_USER, DEMO_FRIENDS, DEMO_POSTS, SEED_MEDIA } from './seed.js';
+import { FRIEND_POOL, TAKEN, ME_ID, DEMO_USER, DEMO_FRIENDS, DEMO_POSTS, SEED_MEDIA, demoPlans } from './seed.js';
 
 const KEY = 'wsux_state', DRAFT = 'ws_draft';
 const emit = (name, params) => window.dispatchEvent(new CustomEvent('ux:event', { detail: { name, params: params || {} } }));
-const fresh = () => ({ mode: 'fresh', stash: null, user: null, loggedIn: false, friends: [], outgoing: [], links: [], posts: [], media: [], saves: [], seq: 200, completed: false });
+const fresh = () => ({ mode: 'fresh', stash: null, user: null, loggedIn: false, friends: [], outgoing: [], links: [], posts: [], media: [], saves: [], meetups: [], seq: 200, completed: false });
 let S;
 const load = () => { try { S = JSON.parse(sessionStorage.getItem(KEY)) || fresh(); } catch { S = fresh(); } };
 const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(S)); } catch { /* 저장 불가해도 메모리 상태로 동작 */ } };
@@ -30,7 +30,7 @@ export const markCompleted = () => { S.completed = true; save(); };
 const strip = st => { const { stash, ...rest } = st; return rest; };
 function demoState(prev) {
   const d = fresh();
-  Object.assign(d, { mode: 'demo', user: { ...DEMO_USER }, loggedIn: true, friends: [...DEMO_FRIENDS], seq: 500, posts: JSON.parse(JSON.stringify(DEMO_POSTS)).map(p => ({ ...p, seed: true, cover: null, reactions: false })) });
+  Object.assign(d, { mode: 'demo', user: { ...DEMO_USER }, loggedIn: true, friends: [...DEMO_FRIENDS], seq: 500, meetups: demoPlans(), posts: JSON.parse(JSON.stringify(DEMO_POSTS)).map(p => ({ ...p, seed: true, cover: null, reactions: false })) });
   if (prev && prev.user) d.stash = strip(prev);
   return d;
 }
@@ -127,7 +127,7 @@ R('DELETE', '/api/invites/([^/]+)', c => { S.links = S.links.filter(l => l.code 
 
 // ----- 추억 -----
 const posts = () => [...S.posts].sort((a, b) => (b.occurred_on || '').localeCompare(a.occurred_on || '') || b.id - a.id); // 서버와 같은 순서: 날짜 최신순, 같으면 나중에 만든 것 먼저
-R('GET', '/api/home', () => { settle(); return ok({ postInvites: [], friendRequests: [], meetupInvites: [], upcoming: [], posts: posts().map(card) }); });
+R('GET', '/api/home', () => { settle(); return ok({ postInvites: [], friendRequests: [], meetupInvites: [], upcoming: upcoming(), pastNudge: pastNudge(), posts: posts().map(card) }); });
 R('GET', '/api/today', () => ok({ enabled: !!S.user && S.user.mem_enabled, items: [] }));
 const filt = q => { const ids = (q.get('people') || '').split(',').filter(Boolean).map(Number), or = q.get('mode') === 'or', y = q.get('year'), acc = p => p.accepted || p.members || []; return p => (!y || (p.occurred_on || '').startsWith(y)) && (!ids.length || (or ? ids.some(i => acc(p).includes(i)) : ids.every(i => acc(p).includes(i)))); };
 R('GET', '/api/posts', c => ok({ posts: posts().filter(filt(c.q)).map(card) }));
@@ -143,7 +143,9 @@ R('POST', '/api/posts', c => {
   if (!ids.length) return fail('함께한 사람을 한 명 이상 선택해 주세요.');
   const p = { id: ++S.seq, title, occurred_on: c.b.occurred_on || null, place: c.b.place || null, members: ids, notes: [], media: [], cover: null, reactions: false };
   if (String(c.b.text || '').trim()) p.notes.push({ id: ++S.seq, kind: 'story', text: String(c.b.text).trim().slice(0, 2000), at: new Date().toISOString() });
-  S.posts.push(p); save();
+  S.posts.push(p);
+  if (c.b.meetup_id) { const mm = MS().find(x => x.id === +c.b.meetup_id); if (mm) (mm.post_ids ||= []).push(p.id); }
+  save();
   emit('post_create_complete', { member_count: ids.length + 1, has_text: !!p.notes.length, has_place: !!(p.place && (p.place.name || p.place.area || p.place.city)) });
   return ok({ id: p.id });
 });
@@ -158,7 +160,7 @@ R('GET', '/api/posts/(\\d+)', c => {
     members: [{ id: ME_ID, name: S.user.name, role: 'admin', access: 'accepted' }, ...p.members.map(id => ({ id, name: person(id).name, role: 'member', access: (p.accepted || []).includes(id) ? 'accepted' : 'invited' }))],
     media: p.media.map(id => ({ id, mine: !p.seed, restricted: false })),
     notes: p.notes.map(n => ({ id: n.id, kind: n.kind, author: n.by || S.user.name, created_at: n.at || '2026-10-26T09:00:00.000Z', mine: !n.by, restricted: false, text: n.text })),
-    saved: S.saves.includes(p.id), reactions: { count: p.reactions ? 1 : 0, mine: !!p.reactions }, groups: [], meetup: null
+    saved: S.saves.includes(p.id), reactions: { count: p.reactions ? 1 : 0, mine: !!p.reactions }, groups: [], meetup: (m => m ? { id: m.id, title: m.title } : null)(MS().find(x => (x.post_ids || []).includes(p.id)))
   });
 });
 R('POST', '/api/posts/(\\d+)/notes', c => {
@@ -182,7 +184,44 @@ R('GET', '/api/saves', () => ok({ posts: posts().filter(p => S.saves.includes(p.
 
 // ----- 테스트 범위 밖: 빈 목록으로 답해 화면이 깨지지 않게 한다 -----
 R('GET', '/api/groups', () => ok({ groups: [] }));
-R('GET', '/api/meetups', () => ok({ meetups: [] }));
+// ----- 약속(시안의 '약속'): 목록·상세·만들기·응답·수정·취소 -----
+const MS = () => (S.meetups ||= []);
+const nameOf = id => id === S.user.id ? S.user.name : person(id)?.name || '알 수 없음';
+const mine = m => m.parts[S.user.id] || null;
+const mrow = m => { const yes = Object.entries(m.parts).filter(([, v]) => v === 'yes').map(([i]) => +i); return { id: m.id, title: m.title, starts_at: m.starts_at, tz: 'Asia/Seoul', place: m.place || '', status: m.status, rsvp: mine(m) || 'invited', organizer: nameOf(m.organizer_id), yes: yes.length, going: yes.filter(i => i !== S.user.id).slice(0, 3).map(nameOf), changed: m.changed || '', post_id: (m.post_ids || [])[0] || null }; };
+const mine_ = () => MS().filter(m => mine(m));
+const upcoming = () => mine_().filter(m => m.status === 'active' && Date.parse(m.starts_at) > Date.now()).sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 3).map(mrow);
+const pastNudge = () => { const m = mine_().filter(m => m.status === 'active' && Date.parse(m.starts_at) < Date.now() && mine(m) === 'yes' && !(m.post_ids || []).length).sort((a, b) => b.starts_at.localeCompare(a.starts_at))[0]; return m ? mrow(m) : null; };
+const mget = id => MS().find(m => m.id === +id);
+const MISS = () => fail('이 약속은 볼 수 없어요.', 404);
+R('GET', '/api/meetups', () => ok({ meetups: mine_().sort((a, b) => b.starts_at.localeCompare(a.starts_at)).map(mrow) }));
+R('POST', '/api/meetups', c => {
+  const title = String(c.b.title || '').trim(); if (!title) return fail('약속 이름을 입력해 주세요.', 400, 'title');
+  if (!c.b.starts_at || isNaN(Date.parse(c.b.starts_at))) return fail('날짜와 시간을 입력해 주세요.', 400, 'when');
+  const ids = (c.b.user_ids || []).map(Number).filter(i => S.friends.includes(i));
+  const m = { id: ++S.seq, title: title.slice(0, 40), starts_at: new Date(c.b.starts_at).toISOString(), place: String(c.b.place || '').trim().slice(0, 60), descr: String(c.b.descr || '').trim().slice(0, 500), organizer_id: S.user.id, status: 'active', parts: { [S.user.id]: 'yes', ...Object.fromEntries(ids.map(i => [i, 'invited'])) }, post_ids: [] };
+  MS().push(m); save(); return ok({ id: m.id });
+});
+R('GET', '/api/meetups/(\\d+)', c => {
+  const m = mget(c.m[1]); if (!m || !mine(m)) return MISS();
+  return ok({ ...mrow(m), tz: 'Asia/Seoul', descr: m.descr || '', organizer_id: m.organizer_id, mine: { rsvp: mine(m) },
+    participants: Object.entries(m.parts).map(([id, rsvp]) => ({ id: +id, name: nameOf(+id), rsvp, attended: false })), settlements: [],
+    posts: (m.post_ids || []).map(id => S.posts.find(p => p.id === id)).filter(Boolean).map(card) });
+});
+R('PATCH', '/api/meetups/(\\d+)', c => {
+  const m = mget(c.m[1]); if (!m || m.organizer_id !== S.user.id) return MISS();
+  const title = String(c.b.title || '').trim(); if (!title) return fail('약속 이름을 입력해 주세요.', 400, 'title');
+  const at = c.b.starts_at ? new Date(c.b.starts_at).toISOString() : m.starts_at, place = String(c.b.place ?? m.place).trim(), notes = [];
+  if (place !== m.place) notes.push(`장소가 ${m.place || '미정'}에서 ${place || '미정'}(으)로 바뀌었어요`);
+  if (at !== m.starts_at) notes.push('날짜나 시간이 바뀌었어요');
+  Object.assign(m, { title: title.slice(0, 40), starts_at: at, place, descr: String(c.b.descr ?? m.descr).trim() });
+  if (notes.length) { m.changed = notes.join(' · ') + ' · ' + S.user.name + '님이 방금 수정'; for (const k of Object.keys(m.parts)) if (+k !== S.user.id && m.parts[k] !== 'invited') m.parts[k] = 'invited'; }
+  save(); return ok();
+});
+R('POST', '/api/meetups/(\\d+)/rsvp', c => { const m = mget(c.m[1]); if (!m || !mine(m)) return MISS(); if (!['yes', 'maybe', 'no'].includes(c.b.rsvp)) return fail('응답을 선택해 주세요.'); m.parts[S.user.id] = c.b.rsvp; save(); return ok(); });
+R('POST', '/api/meetups/(\\d+)/cancel', c => { const m = mget(c.m[1]); if (!m || m.organizer_id !== S.user.id) return MISS(); m.status = 'cancelled'; save(); return ok(); });
+R('POST', '/api/meetups/(\\d+)/invite', c => { const m = mget(c.m[1]); if (!m || m.organizer_id !== S.user.id) return MISS(); for (const i of (c.b.user_ids || []).map(Number)) if (S.friends.includes(i) && !m.parts[i]) m.parts[i] = 'invited'; save(); return ok(); });
+R('POST', '/api/meetups/(\\d+)/attended', () => ok());
 R('GET', '/api/blocks', () => ok({ blocks: [] }));
 R('GET', '/api/hides', () => ok({ posts: [], users: [] }));
 R('GET', '/api/reports', () => ok({ reports: [] }));

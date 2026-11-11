@@ -158,13 +158,15 @@ function authView() {
 
 // ---------- 페이지 ----------
 const P = {};
+const RSL = { yes: '참석', maybe: '미정', no: '불참', invited: '응답 대기' };
+const planCard = m => { const d = new Date(m.starts_at), off = m.status === 'cancelled'; return `<a class="plan${off ? ' off' : ''}" href="#/meetup/${m.id}" aria-label="${esc(m.title)}, ${off ? '취소됨' : RSL[m.rsvp] || ''}"><span class="pd"><span>${d.getMonth() + 1}월</span><b>${d.getDate()}</b></span><span class="pb"><b>${esc(m.title)}</b><span class="cap">${d.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })} · ${m.place ? esc(m.place) : '장소 미정'}</span><span class="going">${m.going?.length ? `<span class="avs">${m.going.map(n => av(n, 's')).join('')}</span>` : ''}<span class="cap">${m.yes ? m.yes + '명 참석' : '아직 응답이 없어요'}</span></span></span><span class="pr"><span class="rs ${off ? 'x' : m.rsvp}">${off ? '취소됨' : RSL[m.rsvp] || ''}</span>${m.changed && !off ? '<span class="chg">변경됨</span>' : ''}</span></a>`; };
 
 P.home = async () => {
   const [d, today] = await Promise.all([api('GET', '/api/home'), api('GET', '/api/today?date=' + localDate())]);
   const news = d.postInvites.length + d.friendRequests.length + d.meetupInvites.length;
   return `<header class="top home-top"><div class="small-logo"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div><a class="home-av" href="#/me" aria-label="나">${av(S.me.name, 's')}</a></header><div class="page">
   <p class="cap" style="margin-bottom:8px">${new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</p>
-  <div class="chips" style="margin:12px 0 24px" aria-label="빠른 시작"><a class="chip" href="#/new-meetup">${I('cal', 's')} 모임 만들기</a><a class="chip" href="#/people">${I('users', 's')} 사람 초대하기</a><a class="chip" href="#/saved">${I('bookmark', 's')} 저장한 추억</a><a class="chip" href="#/memories?tab=map">${I('pin', 's')} 추억 지도</a></div>
+  <div class="chips" style="margin:12px 0 24px" aria-label="빠른 시작"><a class="chip" href="#/new-meetup">${I('cal', 's')} 약속 만들기</a><a class="chip" href="#/people">${I('users', 's')} 사람 초대하기</a><a class="chip" href="#/saved">${I('bookmark', 's')} 저장한 추억</a><a class="chip" href="#/memories?tab=map">${I('pin', 's')} 추억 지도</a></div>
   ${news ? `<section aria-label="새 소식"><div class="hd row between"><h2>새 소식</h2></div><div class="card list">
     ${d.postInvites.map(x => `<a href="#/post/${x.id}">${av(x.inviter)}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${esc(x.inviter)}${x.inviter_username ? ` (@${esc(x.inviter_username)})` : ''}님이 추억에 초대했어요</span></span>${I('chev', 's')}</a>`).join('')}
     ${d.friendRequests.map(x => `<div>${av(x.name)}<span class="grow"><b>${esc(x.name)}</b><br><span class="cap">연결을 요청했어요</span></span><button class="btn sm" data-act="accept-friend" data-id="${x.id}">수락</button><button class="btn sm line" data-act="decline-friend" data-id="${x.id}">거절</button></div>`).join('')}
@@ -172,7 +174,7 @@ P.home = async () => {
   ${d.posts.length ? `<section class="home-sec sec" aria-label="최근 함께한 추억"><h2>최근 함께한 추억</h2><div class="hero-card">${postCard(d.posts[0])}</div>${d.posts.slice(1, 3).map(p => `<a class="mrow" href="#/post/${p.id}"><span class="th">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)} · ${p.count}명${p.place ? ' · ' + esc(p.place.label) : ''}</span></span>${I('chev', 's')}</a>`).join('')}${d.posts.length > 3 ? `<a class="btn sm line" style="align-self:flex-start" href="#/memories">추억 모두 보기 (${d.posts.length})</a>` : ''}</section>
   <div class="cta-card sec"><span class="ic">${I('plus')}</span><span class="tx"><b>함께한 순간을 남겨볼까요?</b><span>사진과 이야기를 하나의 추억으로 모아보세요.</span><a class="btn sm" href="#/new-post">${I('plus', 's')} 새 추억 만들기</a></span></div>` : `<section class="sec" aria-label="우리의 추억"><div class="hd"><h2>우리의 추억</h2></div>${empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>')}</section>`}
   ${today.items.length ? `<section class="moment" aria-label="1년 전 오늘"><h2>그날의 우리가 여기 있어요</h2><p class="cap" style="margin:4px 0 16px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p>${postCard(today.items[0])}<div class="row" style="margin-top:12px;flex-wrap:wrap"><a class="btn sm line" href="#/post/${today.items[0].id}?add=1">${I('plus', 's')} 기억 더하기</a><button class="btn sm line" data-act="hide-post" data-id="${today.items[0].id}">다시 추천하지 않기</button></div></section>` : ''}
-  ${d.upcoming.length ? `<section class="sec"><div class="hd"><h2>다가오는 약속</h2><a class="body2" style="color:var(--green)" href="#/meetups">모두 보기</a></div><div class="card list">${d.upcoming.map(m => `<a href="#/meetup/${m.id}"><span class="grow"><b>${esc(m.title)}</b><br><span class="cap">${fmtDT(m.starts_at, m.tz)}${m.place ? ' · ' + esc(m.place) : ''}</span></span><span class="tag">${{ yes: '참석', no: '불참', maybe: '미정', invited: '응답 대기' }[m.rsvp]}</span></a>`).join('')}</div></section>` : ''}
+  <section class="sec" aria-label="다가오는 약속"><div class="hd"><h2>다가오는 약속</h2><a class="btn sm line" href="#/new-meetup">${I('plus', 's')} 새 약속 만들기</a></div><div class="stack" style="gap:12px">${d.upcoming.length ? d.upcoming.map(planCard).join('') : `<div class="plan-empty"><span class="pe-ic">${I('cal')}</span><span><b>다가오는 약속이 없어요</b><span class="cap">만날 날을 정해 두면, 그날을 추억으로 이어 남길 수 있어요.</span></span></div>`}${d.pastNudge ? `<a class="nudge" href="#/meetup/${d.pastNudge.id}"><span class="pe-ic s">${I('photo', 's')}</span><span><b>지난 약속을 추억으로 남길까요?</b><span class="cap">${esc(d.pastNudge.title)} · ${new Date(d.pastNudge.starts_at).getMonth() + 1}월 ${new Date(d.pastNudge.starts_at).getDate()}일</span></span>${I('chev', 's')}</a>` : ''}${d.upcoming.length ? '<a class="body2" style="color:var(--green)" href="#/meetups">약속 모두 보기</a>' : ''}</div></section>
 </div>`;
 };
 
@@ -187,7 +189,7 @@ P.post = async id => {
   <div class="page stack" style="padding-top:8px" data-post="${p.id}">
     ${(() => { const cv = p.media.find(m => m.id === p.cover && !m.restricted)?.id ?? p.media.find(m => !m.restricted)?.id; return cv ? `<div class="cover"><img src="/media/${cv}" alt="대표 사진"></div>` : ''; })()}
     <div><h1>${esc(p.title)}</h1><p class="sub body2">${fmtDate(p.occurred_on)}${p.place ? ` · <span title="${p.place.precision === 'exact' ? '정확한 장소' : p.place.precision === 'area' ? '동네까지만 표시' : '도시까지만 표시'}">${I('pin', 's')} ${esc(p.place.label)}</span>` : ''}${p.status === 'closed' ? ' · <span class="tag warn">종료됨</span>' : ''}</p>
-      ${p.meetup ? `<a class="tag" href="#/meetup/${p.meetup.id}">${esc(p.meetup.title)} 모임에서</a>` : ''}${p.groups.map(g => `<span class="tag">${esc(g.name)}</span>`).join(' ')}</div>
+      ${p.meetup ? `<a class="tag" href="#/meetup/${p.meetup.id}">${esc(p.meetup.title)} 약속에서</a>` : ''}${p.groups.map(g => `<span class="tag">${esc(g.name)}</span>`).join(' ')}</div>
     ${open ? `<button class="btn block" data-act="add-more">${I('plus')} 사진 또는 기억 더하기</button><input type="file" accept="image/*" multiple hidden data-upload="${p.id}" id="pf">` : ''}
     <div class="split"><div class="stack"><section class="card pad" aria-label="볼 수 있는 사람"><div class="row between"><h3>함께한 사람 ${acc.length}명</h3><span class="cap">${I('lock', 's')} 초대된 사람만 볼 수 있어요</span></div>
       <div class="row" style="flex-wrap:wrap;margin-top:12px;gap:8px">${acc.map(m => `<span class="row" style="gap:8px">${av(m.name, 's')}<span class="body2"><i class="dot" title="수락함"></i> ${esc(m.name)}${m.role === 'admin' ? ' <span class="tag">관리자</span>' : ''}</span></span>`).join('')}${inv.map(m => `<span class="tag"><i class="dot hollow"></i> ${esc(m.name)} · 초대 중</span>`).join('')}</div></section>
@@ -285,23 +287,22 @@ P.foot = async () => {
 P.meetups = async () => {
   const { meetups } = await api('GET', '/api/meetups'), now = new Date().toISOString();
   const up = meetups.filter(m => m.starts_at >= now && m.status === 'active').reverse(), past = meetups.filter(m => !(m.starts_at >= now && m.status === 'active'));
-  const row = m => `<a href="#/meetup/${m.id}"><span class="grow"><b>${esc(m.title)}</b>${m.status === 'cancelled' ? ' <span class="tag warn">취소됨</span>' : ''}<br><span class="cap">${fmtDT(m.starts_at, m.tz)}${m.place ? ' · ' + esc(m.place) : ''}</span></span><span class="tag">${{ yes: '참석', no: '불참', maybe: '미정', invited: '응답 대기' }[m.rsvp]}</span></a>`;
-  return `<header class="top"><h1>약속</h1><a class="btn sm" href="#/new-meetup">${I('plus', 's')} 새 모임</a></header><div class="page">
-    <section><h2 style="margin-bottom:12px">다가오는 약속</h2>${up.length ? `<div class="card list">${up.map(row).join('')}</div>` : empty('예정된 약속이 없어요', '함께할 사람을 초대해 약속을 잡아 보세요.', '<a class="btn" href="#/new-meetup">새 모임 만들기</a>')}</section>
-    ${past.length ? `<section class="sec"><h2 style="margin-bottom:12px">지난 약속</h2><div class="card list">${past.map(row).join('')}</div></section>` : ''}</div>`;
+  return `${top('약속', { right: `<a class="btn sm" href="#/new-meetup">${I('plus', 's')} 새 약속</a>` })}<div class="page">
+    <section><h2 style="margin-bottom:12px">다가오는 약속</h2>${up.length ? `<div class="stack" style="gap:12px">${up.map(planCard).join('')}</div>` : empty('예정된 약속이 없어요', '함께할 사람을 초대해 약속을 잡아 보세요.', '<a class="btn" href="#/new-meetup">새 약속 만들기</a>')}</section>
+    ${past.length ? `<section class="sec"><h2 style="margin-bottom:12px">지난 약속</h2><div class="stack" style="gap:12px">${past.map(planCard).join('')}</div></section>` : ''}</div>`;
 };
 
 P.newMeetup = async () => {
   const [pp, gg] = await Promise.all([api('GET', '/api/people'), api('GET', '/api/groups')]); window._groups = gg.groups;
-  if (!pp.friends.length) return `${top('새 모임')}${empty('함께할 사람을 먼저 연결해 주세요', '연결된 사람을 모임에 초대할 수 있어요.', '<a class="btn" href="#/people">사람 연결하기</a>')}`;
-  return `${top('새 모임 만들기')}<form class="page stack" data-form="newmeetup">
-    <label class="field"><span>모임 이름</span><input type="text" name="title" maxlength="40" required></label>
+  if (!pp.friends.length) return `${top('새 약속')}${empty('함께할 사람을 먼저 연결해 주세요', '연결된 사람을 약속에 초대할 수 있어요.', '<a class="btn" href="#/people">사람 연결하기</a>')}`;
+  return `${top('새 약속 만들기')}<form class="page stack" data-form="newmeetup">
+    <label class="field"><span>약속 이름</span><input type="text" name="title" maxlength="40" required></label>
     <label class="field"><span>일시</span><input type="datetime-local" name="when" required><small>${esc(localTz)} 기준으로 저장하고, 보는 사람의 시간대에 맞춰 보여줘요.</small></label>
     <label class="field"><span>장소 (선택)</span><input type="text" name="place" maxlength="60"></label>
     <label class="field"><span>설명 (선택)</span><textarea name="descr" maxlength="500"></textarea></label>
     <div class="field"><span>누구를 초대할까요?</span>${pick(pp.friends, 'm')}
       ${gg.groups.length ? `<label class="field" style="margin-top:12px"><span class="cap">그룹으로 빠르게 고르기 (선택)</span><select name="group" data-fillgroup><option value="">그룹 없이 사람만 고를게요</option>${gg.groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select><small>초대 시점의 그룹 멤버만 초대돼요. 이후 멤버가 바뀌어도 초대는 바뀌지 않아요.</small></label>` : ''}</div>
-    <p class="err" role="alert"></p><button class="btn block">모임 만들기</button></form>`;
+    <p class="err" role="alert"></p><button class="btn block">약속 만들기</button></form>`;
 };
 
 const RS = { yes: I('check', 's') + ' 참석', no: I('x', 's') + ' 불참', maybe: I('help', 's') + ' 미정', invited: I('clock', 's') + ' 응답 대기' };
@@ -309,12 +310,13 @@ P.meetup = async id => {
   const m = await api('GET', '/api/meetups/' + id), isOrg = m.organizer_id === S.me.id, started = Date.parse(m.starts_at) <= Date.now(), cancelled = m.status === 'cancelled';
   window._m = m;
   const rs = m.mine.rsvp;
-  return `${top('모임', { right: isOrg && !cancelled ? `<button class="icon-btn" data-act="meetup-menu" aria-label="더 보기">${I('more')}</button>` : '' })}<div class="page stack" style="padding-top:8px">
-    <div><h1>${esc(m.title)}</h1>${cancelled ? '<span class="tag warn">취소된 모임</span>' : ''}<p class="sub body2">${I('clock', 's')} ${fmtDT(m.starts_at, m.tz)}${m.place ? `<br>${I('pin', 's')} ${esc(m.place)}` : ''}<br>주최 ${esc(m.organizer)}</p>${m.descr ? `<p style="margin-top:8px;white-space:pre-wrap">${esc(m.descr)}</p>` : ''}</div>
-    ${isOrg && started && !cancelled ? `<div class="note stack"><span>모임이 끝났어요. 실제로 함께한 사람을 확인하면 추억을 만들 때 바로 고를 수 있어요.</span><button class="btn" data-act="att-open">실제 함께한 사람 확인하기</button></div>` : ''}
-    ${!cancelled && !isOrg ? `<section><h3 style="margin-bottom:12px">참석할 수 있나요?</h3>${rs === 'invited' ? '<p class="cap" style="margin-bottom:12px">일정이 새로 정해졌거나 바뀌었어요. 다시 응답해 주세요.</p>' : ''}<div class="rsvp">${[['yes', '참석'], ['maybe', '미정'], ['no', '불참']].map(([k, l]) => `<button data-act="rsvp" data-v="${k}" aria-pressed="${rs === k}">${l}</button>`).join('')}</div></section>` : ''}
-    <section><h2 style="margin-bottom:12px">함께하는 사람 ${m.participants.length}명</h2><div class="card list">${m.participants.map(p => `<div>${av(p.name)}<span class="grow">${esc(p.name)}${p.id === m.organizer_id ? ' <span class="tag">주최</span>' : ''}</span>${started ? `<span class="tag">${p.attended ? '실제 참석 확인' : '참석 미확인'}</span>` : ''}<span class="body2">${RS[p.rsvp]}</span></div>`).join('')}</div><p class="cap" style="margin-top:8px">응답은 약속이고, 실제 참석은 모임 뒤에 주최자가 확인해요.</p></section>
-    <section><div class="row between" style="margin-bottom:12px"><h2>이 모임의 추억</h2></div>${m.posts.length ? `<div class="feed">${m.posts.map(postCard).join('')}</div>` : '<p class="sub body2" style="margin-bottom:12px">아직 남긴 추억이 없어요.</p>'}<button class="btn sec2 block" data-act="meetup-post" style="margin-top:8px">${I('photo', 's')} 추억 만들기</button><p class="cap" style="margin-top:8px">추억은 직접 고른 사람에게만 초대가 가요. 모임에 초대된 것만으로 볼 수 있지 않아요.</p></section>
+  return `${top('약속', { right: isOrg && !cancelled ? `<button class="icon-btn" data-act="meetup-menu" aria-label="더 보기">${I('more')}</button>` : '' })}<div class="page stack" style="padding-top:8px">
+    <div><h1${cancelled ? ' style="text-decoration:line-through"' : ''}>${esc(m.title)}</h1>${cancelled ? '<span class="tag warn">취소된 약속</span>' : ''}<p class="sub body2">${I('clock', 's')} ${fmtDT(m.starts_at, m.tz)}<br>${I('pin', 's')} ${m.place ? esc(m.place) : '장소 미정'}<br>주최 ${esc(m.organizer)}</p>${m.descr ? `<p style="margin-top:8px;white-space:pre-wrap">${esc(m.descr)}</p>` : ''}</div>
+    ${m.changed && !cancelled ? `<div class="note">${esc(m.changed)}</div>` : ''}
+    ${isOrg && started && !cancelled ? `<div class="note stack"><span>약속이 끝났어요. 실제로 함께한 사람을 확인하면 추억을 만들 때 바로 고를 수 있어요.</span><button class="btn" data-act="att-open">실제 함께한 사람 확인하기</button></div>` : ''}
+    ${!cancelled && !isOrg && !started ? `<section><h3 style="margin-bottom:12px">참석할 수 있나요?</h3>${rs === 'invited' ? '<p class="cap" style="margin-bottom:12px">일정이 새로 정해졌거나 바뀌었어요. 다시 응답해 주세요.</p>' : ''}<div class="rsvp">${[['yes', '참석'], ['maybe', '미정'], ['no', '불참']].map(([k, l]) => `<button data-act="rsvp" data-v="${k}" aria-pressed="${rs === k}">${l}</button>`).join('')}</div></section>` : ''}
+    <section><h2 style="margin-bottom:12px">함께하는 사람 ${m.participants.length}명</h2><div class="card list">${m.participants.map(p => `<div>${av(p.name)}<span class="grow">${esc(p.name)}${p.id === m.organizer_id ? ' <span class="tag">주최</span>' : ''}</span>${started ? `<span class="tag">${p.attended ? '실제 참석 확인' : '참석 미확인'}</span>` : ''}<span class="body2">${RS[p.rsvp]}</span></div>`).join('')}</div><p class="cap" style="margin-top:8px">응답은 약속이고, 실제 참석은 약속 뒤에 주최자가 확인해요.</p></section>
+    ${cancelled || (!m.posts.length && !started) ? '' : `<section><h2 style="margin-bottom:12px">${m.posts.length ? '함께한 추억' : '이 약속의 추억'}</h2>${m.posts.length ? `<div class="feed">${m.posts.map(postCard).join('')}</div><a class="btn block" style="margin-top:12px" href="#/post/${m.posts[0].id}">함께한 추억 보기</a>` : `<p class="sub body2" style="margin-bottom:12px">아직 남긴 추억이 없어요.</p><button class="btn block" data-act="meetup-post">${I('photo', 's')} 이 약속을 추억으로 남기기</button>`}<p class="cap" style="margin-top:8px">추억은 직접 고른 사람에게만 초대가 가요. 약속에 초대된 것만으로 볼 수 있지 않아요.</p></section>`}
     <section><div class="row between" style="margin-bottom:12px"><h2>정산</h2>${cancelled ? '' : `<button class="btn sm sec2" data-act="settle-new">${I('plus', 's')} 정산 만들기</button>`}</div>
       ${m.settlements.length ? m.settlements.map(s => { const done = s.shares.filter(x => x.confirmed).length, mineS = s.shares.find(x => x.id === S.me.id);
         return `<div class="card pad stack" style="margin-bottom:12px"><div class="row between"><b>${esc(s.title)}</b><span class="tag ${s.status === 'done' ? '' : 'warn'}">${s.status === 'done' ? '모두 확인함' : `${done}/${s.shares.length}명 확인`}</span></div><p class="cap">${esc(s.payer)}님이 ${won(s.total)}을 냈어요</p><div class="bar" aria-hidden="true"><i style="width:${done / s.shares.length * 100}%"></i></div>
@@ -429,7 +431,7 @@ const A = {
     location.href = '/api/oauth/' + d.p + '/start';
   },
   'notice-clear': () => { S.authNotice = null; route(); },
-  create: () => { const b = sheet(`<h2>무엇을 만들까요?</h2><div class="menu" style="margin-top:8px"><button data-go="/new-post">${I('photo')}<span><b>새 추억 만들기</b><br><span class="cap">함께한 사람과 사진·글을 모아요</span></span></button><button data-go="/new-meetup">${I('cal')}<span><b>새 모임 만들기</b><br><span class="cap">약속을 잡고 참석 여부를 받아요</span></span></button></div>`); b.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) { closeSheet(); go(g.dataset.go); } }); },
+  create: () => { const b = sheet(`<h2>무엇을 만들까요?</h2><div class="menu" style="margin-top:8px"><button data-go="/new-post">${I('photo')}<span><b>새 추억 만들기</b><br><span class="cap">함께한 사람과 사진·글을 모아요</span></span></button><button data-go="/new-meetup">${I('cal')}<span><b>새 약속 만들기</b><br><span class="cap">약속을 잡고 참석 여부를 받아요</span></span></button></div>`); b.addEventListener('click', e => { const g = e.target.closest('[data-go]'); if (g) { closeSheet(); go(g.dataset.go); } }); },
   respond: d => act(() => api('POST', `/api/posts/${d.id}/respond`, { accept: d.v === '1' }), d.v === '1' ? '추억에 참여했어요.' : '초대를 거절했어요.'),
   'accept-friend': d => act(() => api('POST', `/api/people/${d.id}/accept`), '연결됐어요.'),
   'decline-friend': d => act(() => api('DELETE', `/api/people/${d.id}`)),
@@ -499,13 +501,13 @@ const A = {
   },
   'meetup-menu': () => {
     const m = window._m, started = Date.parse(m.starts_at) <= Date.now();
-    const b = sheet(`<div class="menu"><button data-a="edit">${I('cal')}일정 수정하기</button><button data-a="invite">${I('users')}사람 초대하기</button>${started ? `<button data-a="att">${I('star')}실제 참석자 확인하기</button>` : ''}<button data-a="cancel" class="d">${I('block')}모임 취소하기</button></div>`);
+    const b = sheet(`<div class="menu"><button data-a="edit">${I('cal')}일정 수정하기</button><button data-a="invite">${I('users')}사람 초대하기</button>${started ? `<button data-a="att">${I('star')}실제 참석자 확인하기</button>` : ''}<button data-a="cancel" class="d">${I('block')}약속 취소하기</button></div>`);
     b.addEventListener('click', async e => {
       const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; closeSheet();
-      if (a === 'edit') sheet(`<h2>일정 수정하기</h2><form data-form="meetup-edit" class="stack" style="margin-top:12px"><label class="field"><span>모임 이름</span><input type="text" name="title" maxlength="40" required value="${esc(m.title)}"></label><label class="field"><span>일시</span><input type="datetime-local" name="when" required value="${new Date(m.starts_at).toLocaleString('sv').slice(0, 16).replace(' ', 'T')}"></label><label class="field"><span>장소</span><input type="text" name="place" maxlength="60" value="${esc(m.place || '')}"></label><p class="cap">일시나 장소를 바꾸면 참석자들에게 다시 응답을 요청해요.</p><p class="err" role="alert"></p><button class="btn">저장하기</button></form>`);
+      if (a === 'edit') sheet(`<h2>일정 수정하기</h2><form data-form="meetup-edit" class="stack" style="margin-top:12px"><label class="field"><span>약속 이름</span><input type="text" name="title" maxlength="40" required value="${esc(m.title)}"></label><label class="field"><span>일시</span><input type="datetime-local" name="when" required value="${new Date(m.starts_at).toLocaleString('sv').slice(0, 16).replace(' ', 'T')}"></label><label class="field"><span>장소</span><input type="text" name="place" maxlength="60" value="${esc(m.place || '')}"></label><p class="cap">일시나 장소를 바꾸면 참석자들에게 다시 응답을 요청해요.</p><p class="err" role="alert"></p><button class="btn">저장하기</button></form>`);
       if (a === 'invite') { const pp = await api('GET', '/api/people'), cur = m.participants.map(p => p.id); sheet(`<h2>사람 초대하기</h2><form data-form="meetup-invite" class="stack" style="margin-top:12px">${pick(pp.friends.filter(f => !cur.includes(f.id)), 'm') || ''}<p class="err" role="alert"></p><button class="btn">초대하기</button></form>`); }
       if (a === 'att') ATT_UI(m);
-      if (a === 'cancel' && await ask({ title: '모임을 취소할까요?', body: '참석자들에게 취소된 모임으로 표시돼요. 이미 만든 추억과 정산은 그대로 남아요.', ok: '모임 취소하기', danger: true })) act(() => api('POST', `/api/meetups/${m.id}/cancel`), '모임을 취소했어요.');
+      if (a === 'cancel' && await ask({ title: '약속을 취소할까요?', body: '참석자들에게 취소된 약속으로 표시돼요. 이미 만든 추억과 정산은 그대로 남아요.', ok: '약속 취소하기', danger: true })) act(() => api('POST', `/api/meetups/${m.id}/cancel`), '약속을 취소했어요.');
     });
   },
   'settle-new': () => {
@@ -536,11 +538,11 @@ const A = {
   'group-add': async d => { const [pp, gg] = await Promise.all([api('GET', '/api/people'), api('GET', '/api/groups')]); const cur = gg.groups.find(g => g.id === +d.g).members.map(m => m.id); sheet(`<h2>사람 추가</h2><form data-form="group-add" data-g="${d.g}" class="stack" style="margin-top:12px">${pick(pp.friends.filter(f => !cur.includes(f.id)), 'm')}<p class="err" role="alert"></p><button class="btn">추가하기</button></form>`); },
   'group-kick': d => act(() => api('DELETE', `/api/groups/${d.g}/members/${d.u}`)),
   'group-leave': async d => { if (await ask({ title: '그룹에서 나갈까요?', body: '이미 함께한 추억에는 영향이 없어요.', ok: '나가기', danger: true })) act(() => api('DELETE', `/api/groups/${d.g}/members/${S.me.id}`)); },
-  'group-del': async d => { if (await ask({ title: `‘${d.name}’ 그룹을 삭제할까요?`, body: '그룹만 사라지고, 연결된 추억과 모임은 삭제되지 않아요.', ok: '그룹 삭제', danger: true })) act(() => api('DELETE', `/api/groups/${d.g}`), '그룹을 삭제했어요.'); },
+  'group-del': async d => { if (await ask({ title: `‘${d.name}’ 그룹을 삭제할까요?`, body: '그룹만 사라지고, 연결된 추억과 약속은 삭제되지 않아요.', ok: '그룹 삭제', danger: true })) act(() => api('DELETE', `/api/groups/${d.g}`), '그룹을 삭제했어요.'); },
   rename: () => sheet(`<h2>닉네임 변경하기</h2><form data-form="rename" class="stack" style="margin-top:12px" novalidate>${nickField('rn-nick', '닉네임', S.me.name)}<p class="err" role="alert"></p><button class="btn">변경사항 저장하기</button></form>`),
   export: () => { const a = document.createElement('a'); a.href = '/api/me/export'; a.download = 'woorisai-my-data.json'; a.click(); },
   logout: () => act(async () => { await api('POST', '/api/logout'); S.me = null; S.authMode = 'intro'; }, '우리사이에서 로그아웃했어요. 카카오·네이버·Google 계정에서는 로그아웃되지 않았어요.'),
-  'delete-account': () => sheet(`<h2>계정을 삭제할까요?</h2><p class="sub body2">계정을 삭제하면 일부 추억에 다시 접근할 수 없어요. 삭제하면 로그인할 수 없고 연결·그룹·내 모임이 정리돼요. 함께 만든 추억에 남긴 사진과 글은 이름이 ‘탈퇴한 사용자’로 바뀐 채 남아요. 함께 지우려면 아래를 선택해 주세요. <b>되돌릴 수 없어요.</b></p><form data-form="delete-account" class="stack" style="margin-top:12px"><label class="row"><input type="checkbox" name="dc" style="width:20px;height:20px"><span class="body2">내가 올린 사진과 글도 모두 삭제</span></label>${S.me.has_password ? '<label class="field"><span>비밀번호 확인</span><input type="password" name="password" required autocomplete="current-password"></label>' : `<label class="field"><span>탈퇴 확인: 내 이름을 입력해 주세요</span><input type="text" name="password" required autocomplete="off" placeholder="${esc(S.me.username)}"></label>`}<p class="err" role="alert"></p><button class="btn danger">계정 삭제하기</button></form>`),
+  'delete-account': () => sheet(`<h2>계정을 삭제할까요?</h2><p class="sub body2">계정을 삭제하면 일부 추억에 다시 접근할 수 없어요. 삭제하면 로그인할 수 없고 연결·그룹·내 약속이 정리돼요. 함께 만든 추억에 남긴 사진과 글은 이름이 ‘탈퇴한 사용자’로 바뀐 채 남아요. 함께 지우려면 아래를 선택해 주세요. <b>되돌릴 수 없어요.</b></p><form data-form="delete-account" class="stack" style="margin-top:12px"><label class="row"><input type="checkbox" name="dc" style="width:20px;height:20px"><span class="body2">내가 올린 사진과 글도 모두 삭제</span></label>${S.me.has_password ? '<label class="field"><span>비밀번호 확인</span><input type="password" name="password" required autocomplete="current-password"></label>' : `<label class="field"><span>탈퇴 확인: 내 이름을 입력해 주세요</span><input type="text" name="password" required autocomplete="off" placeholder="${esc(S.me.username)}"></label>`}<p class="err" role="alert"></p><button class="btn danger">계정 삭제하기</button></form>`),
 };
 
 function ATT_UI(m) { sheet(`<h2>실제로 함께한 사람</h2><p class="sub body2">응답과 상관없이 실제로 온 사람을 골라 주세요. 추억에 자동으로 초대되지는 않아요.</p><form data-form="attended" class="stack" style="margin-top:12px">${pick(m.participants, 'm', m.participants.filter(p => p.attended || (!m.participants.some(x => x.attended) && p.rsvp === 'yes')).map(p => p.id))}<button class="btn">확인하기</button></form>`); }
@@ -683,8 +685,8 @@ const VALID = {
   request: fd => { const v = String(fd.get('username') || '').trim().replace(/^@/, ''); return [['username', !v ? '연결할 이름을 입력해 주세요.' : !/^[a-z0-9_]{3,20}$/i.test(v) ? '이름은 영문, 숫자, _ 로 3–20자예요.' : null]]; },
   note: fd => [['text', need(fd.get('text'), '내용을 입력해 주세요.')]],
   newpost: fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['m', fd.getAll('m').length ? null : '함께한 사람을 한 명 이상 선택해 주세요.'], ['date', pastOk(fd.get('date'))], ['pcity', (fd.get('pname') || fd.get('parea')) && !fd.get('pcity') && !fd.get('pcountry') ? '도시나 국가를 입력해 주세요.' : null]],
-  newmeetup: fd => [['title', need(fd.get('title'), '모임 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
-  'meetup-edit': fd => [['title', need(fd.get('title'), '모임 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
+  newmeetup: fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
+  'meetup-edit': fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
   'post-edit': fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['date', pastOk(fd.get('date'))]],
   group: fd => [['name', need(fd.get('name'), '그룹 이름을 입력해 주세요.')]],
   'group-add': pickOk('추가할 사람을 한 명 이상 선택해 주세요.'), 'post-invite': pickOk('초대할 사람을 한 명 이상 선택해 주세요.'), 'meetup-invite': pickOk('초대할 사람을 한 명 이상 선택해 주세요.'),
