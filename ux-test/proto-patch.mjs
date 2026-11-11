@@ -77,6 +77,12 @@ rep("this.say(fs.length + '장을 가져왔어요. 위치 정보(EXIF)는 저장
 rep("withShort: people.length === 1 ? wa(people[0]) + ' 함께' : people[0] + ' 외 ' + (people.length - 1) + '명',", "withShort: people.length === 0 ? '혼자 남긴 추억' : people.length === 1 ? wa(people[0]) + ' 함께' : people[0] + ' 외 ' + (people.length - 1) + '명',");
 rep("withFull: wa(people.join(', ')) + ' 함께',", "withFull: people.length === 0 ? '혼자 남긴 추억' : wa(people.join(', ')) + ' 함께',");
 
+
+// CTA 버튼은 텍스트 문구만(아이콘 없음): 버튼(Button)에 넘기는 아이콘만 비운다. 칩·배지·아이콘 버튼(뒤로·닫기·더보기)·탭바 아이콘은 그대로.
+rep("create: LI('square-pen', 20), planAdd: LI('calendar-plus', 20), edit: LI('pencil', 20), cancelPlan: LI('calendar-x', 20),", "create: undefined, planAdd: undefined, edit: undefined, cancelPlan: undefined,");
+rep("invite: LI('user-round-plus', 20), users: LI('users-round', 20), reset: LI('rotate-ccw', 20), login: LI('log-in', 20) },", "invite: undefined, users: undefined, reset: undefined, login: undefined },");
+rep("barIcon: bar && bar.icon,", "barIcon: undefined,");
+
 /** @returns {string} 패치한 .dc.html 전체. markup(스크립트 앞)은 원본과 바이트 단위로 같다. */
 export function patchProto(src) {
   const marker = '<script type="text/x-dc" data-dc-script';
