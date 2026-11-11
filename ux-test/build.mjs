@@ -48,6 +48,8 @@ for (const name of COPY) for (const f of (fs.statSync(path.join(src, name)).isDi
   if (sha(f) !== sha(path.join(out, path.relative(src, f)))) throw new Error('원본과 달라요: ' + path.relative(src, f));
   n++;
 }
+// 심볼 중앙 보정: 원본 SVG 는 글리프(매듭+원)가 타일 중심(60,60)보다 3 위(cy=57)에 있어, y 좌표만 +3 한 파일로 바꾼다. 형태·비율·색은 그대로. (검사 1 은 원본 복사본으로 이미 통과한 뒤에 덮어쓴다)
+for (const f of fs.readdirSync(path.join(root, 'ux-test', 'brand'))) fs.copyFileSync(path.join(root, 'ux-test', 'brand', f), path.join(out, 'brand', f));
 // 검사 2: app.html 의 화면(마크업) 부분이 원본과 같은지. 허용한 마크업 패치(MARKUP)를 되돌리고 </head> 앞 GA 태그를 빼면 원본과 바이트 단위로 같아야 한다.
 const mk = '<script type="text/x-dc" data-dc-script';
 let appHtml = fs.readFileSync(path.join(out, 'app.html'), 'utf8').replace(inject, '</head>');
@@ -56,4 +58,4 @@ if (appHtml.slice(0, appHtml.indexOf(mk)) !== original.slice(0, original.indexOf
 const need = ['index.html', 'app.html', 'support.js', 'lucide-icon.js', PROTO, 'ux-test/analytics.js', 'ux-test/app-ga.js', 'ux-test/entry/entry.js', 'ux-test/entry/entry.css', 'ux-test/original-consent.css'];
 const miss = need.filter(f => !fs.existsSync(path.join(out, f)));
 if (miss.length) throw new Error('산출물에 빠진 파일: ' + miss.join(', '));
-console.log(`dist-ux-test 생성 완료: 원본 ${n}개 파일 sha256 일치, app.html 화면(마크업)은 허용 패치(갤러리·접근 대상 확인 시트·우리 공간 화면·약속 시간/장소·사진 확대 미리보기) 외 원본과 동일, 진입 영역 index.html (GA4: ${gaId ? '측정 ID 설정됨' : '미설정, 전송 없음'})`);
+console.log(`dist-ux-test 생성 완료: 원본 ${n}개 파일 sha256 일치, app.html 화면(마크업)은 허용 패치(갤러리·접근 대상 확인 시트·우리 공간 화면·약속 시간/장소·사진 확대 미리보기) 외 원본과 동일(심볼 SVG 2개는 중앙 보정본), 진입 영역 index.html (GA4: ${gaId ? '측정 ID 설정됨' : '미설정, 전송 없음'})`);
