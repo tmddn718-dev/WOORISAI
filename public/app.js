@@ -3,7 +3,7 @@ import { validateNickname, graphemes, suggest, NICK_MAX, NICK_HINT } from './nic
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const S = { me: null, draft: null, authMode: 'intro', filter: { people: [], mode: 'and', group: '', year: '' }, join: null };
+const S = { me: null, draft: null, authMode: 'intro', filter: { people: [], mode: 'and', group: '', year: '', month: '', region: '', dim: 'all' }, join: null };
 
 const ic = {
   home: '<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>',
@@ -273,32 +273,46 @@ P.newPost = async () => {
 
 P.memories = async () => {
   const tab = ['list', 'cal', 'map', 'today'].includes(S.q.tab) ? S.q.tab : 'list', f = S.filter;
-  const [pp, gg] = await Promise.all([api('GET', '/api/people'), api('GET', '/api/groups')]);
+  const [pp, gg, allp] = await Promise.all([api('GET', '/api/people'), api('GET', '/api/groups'), api('GET', '/api/posts').then(r => r.posts)]);
   const qs = new URLSearchParams({ people: f.people.join(','), mode: f.mode, group: f.group, year: f.year }).toString();
-  const yr = new Date().getFullYear(), active = f.people.length || f.group || f.year;
-  const filterUi = tab === 'today' ? '' : `<details class="card pad" ${active ? 'open' : ''}><summary style="cursor:pointer;font-weight:500">필터${active ? ' · 적용 중' : ''}</summary><div class="stack" style="margin-top:12px">
+  const flt = ps => ps.filter(p => (!f.month || (p.occurred_on || '').startsWith(f.month)) && (!f.region || regionOf(p.place?.city) === f.region));
+  const yr = new Date().getFullYear(), active = f.people.length || f.group || f.month || f.region;
+  const months = [...new Set(allp.map(p => (p.occurred_on || '').slice(0, 7)).filter(Boolean))].sort().reverse(), regs = REGIONS.filter(r => allp.some(p => p.place && regionOf(p.place.city) === r));
+  const dimOpts = { people: pp.friends.map(u => [u.id, u.name, f.people.includes(u.id)]), month: months.map(m => [m, `${m.slice(0, 4)}년 ${+m.slice(5)}월`, f.month === m]), region: regs.map(r => [r, r, f.region === r]), group: gg.groups.map(g => [String(g.id), g.name, String(f.group) === String(g.id)]) };
+  const dimLabel = { people: f.people.length ? `사람 · ${f.people.length}` : '사람', month: f.month ? `${+f.month.slice(5)}월` : '기간', region: f.region || '지역', group: f.group ? gg.groups.find(g => g.id === +f.group)?.name || '그룹' : '그룹' };
+  const dimSel = { people: f.people.length, month: f.month, region: f.region, group: f.group };
+  const dims = ['people', 'month', 'region', ...(gg.groups.length ? ['group'] : [])], dim = f.dim || 'all', opts = dimOpts[dim] || [];
+  const feedFilter = tab === 'today' ? '' : `<div class="stack" style="gap:8px"><div class="chips" aria-label="필터"><button class="chip${!active && dim === 'all' ? ' on' : ''}" aria-pressed="${!active && dim === 'all'}" data-act="f-dim" data-v="all">전체</button>${dims.map(k => `<button class="chip${dim === k || dimSel[k] ? ' on' : ''}" aria-pressed="${dim === k || !!dimSel[k]}" data-act="f-dim" data-v="${k}">${esc(dimLabel[k])}</button>`).join('')}</div>
+    ${dim !== 'all' && opts.length ? `<div class="fpanel"><div class="chips" style="flex-wrap:wrap;overflow:visible">${opts.map(([v, l, on]) => `<button class="chip${on ? ' on' : ''}" aria-pressed="${!!on}" data-act="f-pick" data-k="${dim}" data-v="${v}">${esc(l)}</button>`).join('')}</div>${dim === 'people' && f.people.length > 1 ? `<div class="seg" role="tablist" aria-label="여러 사람 조건"><button role="tab" aria-selected="${f.mode === 'and'}" data-act="mode" data-v="and">모두 함께한 추억</button><button role="tab" aria-selected="${f.mode === 'or'}" data-act="mode" data-v="or">누구든 함께한 추억</button></div>` : ''}</div>` : ''}
+    ${active ? '<div><button class="btn sm line" data-act="clear-filter">필터 초기화</button></div>' : ''}</div>`;
+  const filterUi0 = tab === 'today' ? '' : `<details class="card pad" ${active ? 'open' : ''}><summary style="cursor:pointer;font-weight:500">필터${active ? ' · 적용 중' : ''}</summary><div class="stack" style="margin-top:12px">
     <div><span class="cap">함께한 사람</span><div class="pick" style="margin-top:8px">${pp.friends.map(u => `<label><input type="checkbox" data-filter="people" value="${u.id}" ${f.people.includes(u.id) ? 'checked' : ''}><span>${esc(u.name)}</span></label>`).join('') || '<span class="cap">연결된 사람이 없어요</span>'}</div>
       ${f.people.length > 1 ? `<div class="seg" role="tablist" style="margin-top:8px"><button role="tab" aria-selected="${f.mode === 'and'}" data-act="mode" data-v="and">모두 함께한 추억</button><button role="tab" aria-selected="${f.mode === 'or'}" data-act="mode" data-v="or">누구든 함께한 추억</button></div>` : ''}</div>
     <label class="field"><span class="cap">그룹</span><select data-filter="group"><option value="">전체</option>${gg.groups.map(g => `<option value="${g.id}" ${+f.group === g.id ? 'selected' : ''}>${esc(g.name)}</option>`).join('')}</select><small>그룹에 연결한 추억만 보여요. 그룹 멤버라는 이유만으로 함께한 사람으로 보지 않아요.</small></label>
     <label class="field"><span class="cap">연도</span><select data-filter="year"><option value="">전체</option>${Array.from({ length: 12 }, (_, i) => yr - i).map(y => `<option ${+f.year === y ? 'selected' : ''}>${y}</option>`).join('')}</select></label>
     ${active ? '<button class="btn sm line" data-act="clear-filter">필터 해제</button>' : ''}</div></details>`;
-  const sumTxt = [f.people.length && pp.friends.filter(u => f.people.includes(u.id)).map(u => u.name).join(', '), f.group && gg.groups.find(g => g.id === +f.group)?.name, f.year && f.year + '년'].filter(Boolean).join(' · ');
+  const sumTxt = [f.people.length && pp.friends.filter(u => f.people.includes(u.id)).map(u => u.name).join(', '), f.group && gg.groups.find(g => g.id === +f.group)?.name, f.month && `${f.month.slice(0, 4)}년 ${+f.month.slice(5)}월`, f.region].filter(Boolean).join(' · ');
   const chipsUi = tab !== 'today' && active ? `<div class="chips" aria-label="적용 중인 필터">${f.people.map(id => `<button class="chip on" data-act="rm-filter" data-k="people" data-v="${id}">${esc(pp.friends.find(u => u.id === id)?.name || '')} ${I('x', 's')}</button>`).join('')}${f.group ? `<button class="chip on" data-act="rm-filter" data-k="group">${esc(gg.groups.find(g => g.id === +f.group)?.name || '')} ${I('x', 's')}</button>` : ''}${f.year ? `<button class="chip on" data-act="rm-filter" data-k="year">${f.year}년 ${I('x', 's')}</button>` : ''}</div>` : '';
   const hint = f.people.length > 1 ? `<p class="cap">${f.mode === 'and' ? '선택한 사람이 모두 함께한 추억만 보여줘요.' : '선택한 사람 중 누구든 함께한 추억을 보여줘요.'}</p>` : '';
   let body = '';
   if (tab === 'list') {
-    const { posts } = await api('GET', '/api/posts?' + qs);
+    const posts = flt((await api('GET', '/api/posts?' + qs)).posts);
     const byYear = {}; posts.forEach(p => (byYear[(p.occurred_on || '날짜 미상').slice(0, 4)] ||= []).push(p));
     body = posts.length ? `<p class="cap" style="margin:16px 0 12px">${active ? '조건에 맞는 추억 ' : '추억 '}${posts.length}개 · 최근 순</p><div class="feed">${posts.map(postCard).join('')}</div>` : (active ? empty('선택한 조건의 추억이 없어요', `선택한 조건: ${esc(sumTxt)}. 필터를 바꾸거나 해제해 보세요.`, '<button class="btn" data-act="clear-filter">필터 해제</button>') : empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>'));
   } else if (tab === 'cal') {
-    const { posts } = await api('GET', '/api/posts?' + qs);
-    const cal = S.cal ||= { ym: (posts[0]?.occurred_on || localDate()).slice(0, 7), day: '' };
-    const [Y, M] = cal.ym.split('-').map(Number), first = new Date(Y, M - 1, 1).getDay(), days = new Date(Y, M, 0).getDate(), by = {};
-    posts.forEach(p => p.occurred_on && (by[p.occurred_on] ||= []).push(p));
-    const inMonth = posts.filter(p => (p.occurred_on || '').startsWith(cal.ym)), list = cal.day ? by[cal.day] || [] : inMonth;
-    const cells = Array.from({ length: first }, () => '<span></span>').concat(Array.from({ length: days }, (_, i) => { const d = `${cal.ym}-${String(i + 1).padStart(2, '0')}`, c = (by[d] || []).length; return `<button class="cal-d${cal.day === d ? ' on' : ''}" data-act="cal-day" data-v="${d}" aria-pressed="${cal.day === d}" aria-label="${M}월 ${i + 1}일${c ? ', 추억 ' + c + '개' : ''}"><span class="n">${i + 1}</span><i class="${c ? 'mk' : ''}"></i></button>`; }));
-    body = `<div class="card cal"><div class="cal-h"><button class="icon-btn" data-act="cal-move" data-v="-1" aria-label="이전 달">${I('back')}</button><span><b>${Y}년 ${M}월</b><span class="cap">추억 ${inMonth.length}개</span></span><button class="icon-btn" data-act="cal-move" data-v="1" aria-label="다음 달">${I('chev')}</button></div><div class="cal-g">${['일', '월', '화', '수', '목', '금', '토'].map((w, i) => `<span class="w${i === 0 ? ' su' : ''}">${w}</span>`).join('')}${cells.join('')}</div></div>
-      <h2 class="cal-t">${cal.day ? fmtDate(cal.day) : `${M}월의 추억`}</h2>${list.length ? `<div class="feed">${list.map(postCard).join('')}</div>` : '<p class="sub body2">이 날 남긴 추억이 없어요.</p>'}`;
+    const posts = flt((await api('GET', '/api/posts?' + qs)).posts), { meetups } = await api('GET', '/api/meetups').catch(() => ({ meetups: [] }));
+    const cal = S.cal ||= { ym: (posts[0]?.occurred_on || localDate()).slice(0, 7), day: '', f: 'all' }; cal.f ||= 'all';
+    const showM = cal.f !== 'plan', showP = cal.f !== 'mem', ld = iso => new Date(iso).toLocaleDateString('sv');
+    const [Y, M] = cal.ym.split('-').map(Number), first = new Date(Y, M - 1, 1).getDay(), days = new Date(Y, M, 0).getDate(), by = {}, pby = {};
+    posts.forEach(p => p.occurred_on && (by[p.occurred_on] ||= []).push(p)); meetups.forEach(m => (pby[ld(m.starts_at)] ||= []).push(m));
+    const inMonth = posts.filter(p => (p.occurred_on || '').startsWith(cal.ym)), planMonth = meetups.filter(m => ld(m.starts_at).startsWith(cal.ym)).sort((x, y) => x.starts_at.localeCompare(y.starts_at));
+    const lm = showM ? (cal.day ? by[cal.day] || [] : inMonth) : [], lp = showP ? (cal.day ? pby[cal.day] || [] : planMonth) : [];
+    const cells = Array.from({ length: first }, () => '<span></span>').concat(Array.from({ length: days }, (_, i) => { const d = `${cal.ym}-${String(i + 1).padStart(2, '0')}`, c = showM ? (by[d] || []).length : 0, pc = showP ? (pby[d] || []).length : 0; return `<button class="cal-d${cal.day === d ? ' on' : ''}" data-act="cal-day" data-v="${d}" aria-pressed="${cal.day === d}" aria-label="${M}월 ${i + 1}일${c ? ', 추억 ' + c + '개' : ''}${pc ? ', 약속 ' + pc + '개' : ''}"><span class="n">${i + 1}</span><span class="dots"><i class="${c ? 'mk' : ''}"></i><i class="${pc ? 'pk' : ''}"></i></span></button>`; }));
+    body = `<div class="row between" style="margin-top:12px;gap:8px;flex-wrap:wrap"><div class="chips">${[['all', '전체'], ['plan', '약속'], ['mem', '추억']].map(([k, l]) => `<button class="chip${cal.f === k ? ' on' : ''}" aria-pressed="${cal.f === k}" data-act="cal-f" data-v="${k}">${l}</button>`).join('')}</div><span class="cal-lg"><span><i class="mk"></i>추억</span><span><i class="pk"></i>약속</span></span></div>
+      <div class="card cal"><div class="cal-h"><button class="icon-btn" data-act="cal-move" data-v="-1" aria-label="이전 달">${I('back')}</button><span><b>${Y}년 ${M}월</b><span class="cap">${showM ? `추억 ${inMonth.length}개` : ''}${showM && showP ? ' · ' : ''}${showP ? `약속 ${planMonth.length}개` : ''}</span></span><button class="icon-btn" data-act="cal-move" data-v="1" aria-label="다음 달">${I('chev')}</button></div><div class="cal-g">${['일', '월', '화', '수', '목', '금', '토'].map((w, i) => `<span class="w${i === 0 ? ' su' : ''}">${w}</span>`).join('')}${cells.join('')}</div></div>
+      <h2 class="cal-t">${cal.day ? fmtDate(cal.day) : `${M}월`}</h2>
+      ${lp.length ? `<div class="stack" style="gap:12px;margin-bottom:12px">${lp.map(m => planCard(m).replace('class="plan', 'class="plan dash')).join('')}</div>` : ''}
+      ${lm.length ? `<div class="feed">${lm.map(postCard).join('')}</div>` : ''}${lp.length || lm.length ? '' : '<p class="sub body2">이 날의 약속이나 추억이 없어요.</p>'}`;
   } else if (tab === 'map') {
     const m = await api('GET', '/api/map?' + qs);
     window._map = m;
@@ -310,7 +324,7 @@ P.memories = async () => {
       : t.items.length ? `<section class="sec"><h2 style="margin-bottom:12px">그날의 우리가 여기 있어요.</h2><p class="cap" style="margin-bottom:12px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p><div class="feed">${t.items.map(p => `<div>${postCard(p)}<div class="row" style="margin-top:8px;flex-wrap:wrap"><a class="btn sm sec2" href="#/post/${p.id}?add=1">${I('plus', 's')} 기억 더하기</a><button class="btn sm line" data-act="save" data-id="${p.id}">${p.saved ? '저장함' : '저장'}</button><button class="btn sm line" data-act="hide-post" data-id="${p.id}">다시 추천하지 않기</button></div></div>`).join('')}</div></section>`
         : empty('오늘과 연결된 추억이 없어요.', '기록은 그대로 안전하게 보관되어 있어요.');
   }
-  return `<header class="top"><h1>추억</h1><a class="btn sm sec2 only-pc" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '피드'], ['cal', '달력']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${chipsUi}${filterUi}${hint}</div>${body}</div>${tab === 'today' ? '' : `<a class="fab" href="#/new-post">${I('plus')} 새 추억</a>`}`;
+  return `<header class="top"><h1>추억</h1><a class="btn sm sec2 only-pc" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '피드'], ['cal', '달력']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${feedFilter}${hint}</div>${body}</div>${tab === 'today' ? '' : `<a class="fab" href="#/new-post">${I('plus')} 새 추억</a>`}`;
 };
 
 const REGIONS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
@@ -559,7 +573,10 @@ const A = {
   'nick-restore': d => { const el = $('#' + d.for), s = nst(el); el.value = s.lastUser; s.suggested = false; nickRender(el, false); },
   'pw-toggle': (d, t) => { const show = t.getAttribute('aria-pressed') !== 'true'; t.setAttribute('aria-pressed', show); t.textContent = show ? '숨기기' : '보기'; document.querySelectorAll('#su-pw, #su-pw2').forEach(i => i.type = show ? 'text' : 'password'); },
   'mode': d => { S.filter.mode = d.v; route(); },
-  'clear-filter': () => { S.filter = { people: [], mode: 'and', group: '', year: '' }; route(); },
+  'clear-filter': () => { S.filter = { people: [], mode: 'and', group: '', year: '', month: '', region: '', dim: 'all' }; route(); },
+  'f-dim': d => { if (d.v === 'all') S.filter = { people: [], mode: S.filter.mode, group: '', year: '', month: '', region: '', dim: 'all' }; else S.filter.dim = S.filter.dim === d.v ? 'all' : d.v; route(); },
+  'f-pick': d => { const f = S.filter; if (d.k === 'people') { const id = +d.v; f.people = f.people.includes(id) ? f.people.filter(x => x !== id) : [...f.people, id]; } else f[d.k] = f[d.k] === d.v ? '' : d.v; route(); },
+  'cal-f': d => { S.cal.f = d.v; route(); },
   tab: d => go('/memories?tab=' + d.v),
   'pp-rm': d => { PP.urls.splice(+d.i, 1).forEach(u => URL.revokeObjectURL(u)); PP.files.splice(+d.i, 1); ppRender(); },
   'guest-start': () => { S.guest = true; try { sessionStorage.setItem('ws_guest', '1'); } catch { } go('/'); route(); },

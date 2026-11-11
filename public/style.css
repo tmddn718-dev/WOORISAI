@@ -480,9 +480,15 @@ details.card.pad > summary { font-size: .875rem; line-height: 20px; font-weight:
 .cal-d { height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; padding: 0; background: none; cursor: pointer; font: inherit; color: var(--ws-color-fg-default); }
 .cal-d .n { width: 34px; height: 34px; display: grid; place-items: center; border-radius: var(--ws-radius-small); font-size: .875rem; font-weight: 600; }
 .cal-d.on .n { background: var(--ws-color-bg-brand); color: #fff; }
-.cal-d i { width: 5px; height: 5px; border-radius: 9999px; }
-.cal-d i.mk { background: var(--ws-color-bg-brand); }
+.cal-d .dots { display: flex; gap: 3px; height: 6px; align-items: center; }
+.cal-d i, .cal-lg i { display: inline-block; width: 5px; height: 5px; border-radius: 9999px; }
+.cal-d i.mk, .cal-lg i.mk { background: var(--ws-color-bg-brand); }
 .cal-d.on i.mk { background: var(--ws-color-fg-brand); }
+.cal-d i.pk, .cal-lg i.pk { width: 6px; height: 6px; border: 1.5px solid var(--ws-color-fg-brand); background: none; }
+.cal-lg { display: flex; align-items: center; gap: 10px; font-size: .75rem; line-height: 16px; color: var(--ws-color-fg-secondary); }
+.cal-lg > span { display: flex; align-items: center; gap: 4px; }
+.plan.dash { border-style: dashed; border-color: var(--ws-color-border-brand); }
+.fpanel { display: flex; flex-direction: column; gap: 10px; padding: 12px; border-radius: var(--r-ctl); background: var(--ws-color-bg-surface-muted); }
 .cal-t { font-size: 1.0625rem; font-weight: 600; margin: 16px 0 12px; }
 .foot-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .foot-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: var(--r-card); background: var(--ws-color-bg-surface); border: 1px solid var(--ws-color-border-subtle); }
