@@ -1,0 +1,8 @@
+/* GA4 동의 배너 전용(#uxt-consent 안에서만). 원본 디자인 시스템 토큰만 사용하고, 배너 밖에는 영향을 주지 않는다. */
+#uxt-consent { position: fixed; left: 0; right: 0; bottom: 0; z-index: 1100; display: flex; justify-content: center; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); font-family: var(--ws-font-product); }
+#uxt-consent .uxt-box { width: 100%; max-width: 351px; background: var(--ws-color-bg-surface); border: 1px solid var(--ws-color-border-subtle); border-radius: var(--ws-radius-card); padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--ws-elevation-2); color: var(--ws-color-fg-default); }
+#uxt-consent p { margin: 0; font: var(--type-label-1-read); }
+#uxt-consent .row { display: flex; gap: 8px; }
+#uxt-consent .btn { flex: 1; min-height: 44px; border-radius: var(--ws-radius-control); border: 1px solid var(--ws-color-border-brand); background: var(--ws-color-bg-brand); color: var(--ws-color-fg-on-brand); font: var(--type-label-1); cursor: pointer; }
+#uxt-consent .btn.line { background: var(--ws-color-bg-surface); color: var(--ws-color-fg-strong); border-color: var(--ws-color-border-default); }
+#uxt-consent :focus-visible { outline: 2px solid var(--ws-color-border-focus); outline-offset: 2px; }

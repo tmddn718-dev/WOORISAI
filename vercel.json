@@ -4,12 +4,23 @@
   "buildCommand": "node ux-test/build.mjs",
   "outputDirectory": "dist-ux-test",
   "installCommand": "",
-  "rewrites": [{ "source": "/media/:id", "destination": "/ux-test/media/seed-1.svg" }],
   "headers": [
-    { "source": "/(.*)", "headers": [
-      { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
-      { "key": "X-Content-Type-Options", "value": "nosniff" },
-      { "key": "Referrer-Policy", "value": "no-referrer" }
-    ] }
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "no-referrer"
+        }
+      ]
+    }
   ]
 }
