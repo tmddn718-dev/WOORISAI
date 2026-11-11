@@ -24,25 +24,23 @@ const close = () => document.getElementById('uxt')?.remove();
 const render = html => { const r = root(); r.innerHTML = `<div class="uxt-in" role="dialog" aria-modal="true">${html}</div>`; r.querySelector('button')?.focus(); return r; };
 
 function splash() {
-  track('ux_splash_view');
   const r = render(`<button type="button" class="uxt-center" data-a="skip" aria-label="시작하기" style="background:none;border:0;font:inherit;color:inherit;cursor:pointer"><img class="uxt-mark" src="/logo.svg" alt=""><span class="wordmark" style="font-size:2rem;line-height:36px;color:var(--green)">우리사이</span><span class="sub">함께한 순간을, 우리만의 이야기로</span><span class="uxt-cap">사용성 테스트용 프로토타입</span></button>`);
   const t = setTimeout(() => onboarding(0), 1800);
   r.addEventListener('click', e => { if (e.target.closest('[data-a="skip"]')) { clearTimeout(t); onboarding(0); } }, { once: true });
 }
 function onboarding(i) {
-  track('ux_onboarding_step', { step: i + 1 });
   const s = SLIDES[i], last = i === SLIDES.length - 1;
   const r = render(`<button type="button" class="uxt-skip" data-a="done">건너뛰기</button>
     <div class="uxt-center"><span class="uxt-icon">${ICON[s.icon]}</span><h1>${s.title}</h1><p class="sub">${s.body}</p>${s.note ? `<p class="uxt-note">${s.note}</p>` : ''}</div>
     <div class="uxt-dots" role="group" aria-label="소개 ${i + 1} / ${SLIDES.length}">${SLIDES.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
     <div class="uxt-actions"><button type="button" class="btn block" data-a="${last ? 'done' : 'next'}">${last ? '시작하기' : '다음'}</button></div>`);
-  r.addEventListener('click', e => { const a = e.target.closest('[data-a]')?.dataset.a; if (a === 'next') onboarding(i + 1); else if (a === 'done') finishIntro(); }, { once: true });
+  r.addEventListener('click', e => { const a = e.target.closest('[data-a]')?.dataset.a; if (a === 'next') onboarding(i + 1); else if (a === 'done') finishIntro(e.target.closest('.uxt-skip') ? 'skip' : 'finish'); }, { once: true });
 }
-function finishIntro() { try { sessionStorage.setItem(SEEN, '1'); } catch { } close(); askConsent(); }
+function finishIntro(method) { try { sessionStorage.setItem(SEEN, '1'); } catch { } close(); track('onboarding_complete', { method }); }
 
 function complete() {
   if (document.getElementById('uxt')) return;
-  markCompleted(); track('ux_test_complete');
+  markCompleted(); track('test_complete');
   const r = render(`<div class="uxt-center"><span class="uxt-icon">${ICON.check}</span><h1>테스트가 끝났어요</h1><p class="sub">참여해 주셔서 고마워요. 가입, 친구 추가, 첫 추억 만들기까지 마쳤어요.</p><p class="uxt-note">입력한 내용은 이 브라우저 안의 가상 데이터예요. 아래에서 지우면 완전히 사라져요.</p></div>
     <div class="uxt-actions"><button type="button" class="btn block" data-a="keep">내가 만든 추억 둘러보기</button><button type="button" class="btn line block" data-a="again">처음부터 다시 해 보기</button><button type="button" class="btn line block" data-a="wipe">데이터 지우고 끝내기</button></div>`);
   r.addEventListener('click', e => {
@@ -59,18 +57,26 @@ function onRoute() {
   const path = (location.hash.slice(1) || '/').split('?')[0];
   const hit = NAMES.find(n => n[0].test(path)), screen = state().loggedIn ? (hit ? hit[1] : 'other') : 'auth';
   if (screen === lastScreen) return; lastScreen = screen;
-  track('ux_screen_view', { screen });
-  if (screen === 'new_post') track('ux_post_create_start');
+  track('page_view', { page_path: '/' + screen, page_location: location.origin + '/' + screen, page_title: screen });
 }
 window.addEventListener('hashchange', onRoute);
 window.addEventListener('ux:event', e => {
-  const { name, params } = e.detail; track('ux_' + name, params);
+  const { name, params } = e.detail; track(name, params);
   if (name === 'post_create_complete') setTimeout(complete, 900); // 앱이 새 추억 화면으로 이동한 뒤에 띄운다
 });
 
+// 시작 행동 감지: 화면이 실제로 나타났을 때(가입 폼, 새 추억 폼)와 친구 이름 입력을 시작할 때
+function watchStarts() {
+  new MutationObserver(() => {
+    if (document.querySelector('form[data-form="signup"]')) track('sign_up_start');
+    if (document.querySelector('form[data-form="newpost"]')) track('post_create_start');
+  }).observe(document.body, { childList: true, subtree: true });
+  const friendStart = e => { if (e.target.matches?.('form[data-form="request"] input[name="username"]')) track('friend_add_start'); };
+  document.addEventListener('focusin', friendStart); document.addEventListener('input', friendStart);
+}
 function start() {
-  onRoute();
+  askConsent(); watchStarts(); onRoute();
   let seen = false; try { seen = !!sessionStorage.getItem(SEEN); } catch { }
-  if (!seen && !state().loggedIn) splash(); else askConsent();
+  if (!seen && !state().loggedIn) splash();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();

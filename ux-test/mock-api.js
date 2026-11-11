@@ -20,7 +20,7 @@ export const mediaUrl = id => BLOBS.get(+id) || '/ux-test/media/seed-' + ((+id %
 
 export function resetAll() {
   S = fresh(); BLOBS.clear(); save();
-  try { localStorage.removeItem(DRAFT); sessionStorage.removeItem('ws_join'); } catch { /* 무시 */ }
+  try { localStorage.removeItem(DRAFT); for (const k of ['ws_join', 'wsux_sent', 'wsux_run']) sessionStorage.removeItem(k); } catch { /* 무시 */ }
 }
 export const state = () => S;
 export const markCompleted = () => { S.completed = true; save(); };
@@ -70,7 +70,7 @@ R('POST', '/api/signup', c => {
   if (!c.b.consents || !c.b.consents.terms || !c.b.consents.privacy) return fail('필수 항목에 동의해 주세요.', 400);
   // 비밀번호는 받지도 저장하지도 않는다.
   S.user = { id: ME_ID, name, username, mem_enabled: true }; S.loggedIn = true; save();
-  emit('signup_complete', { marketing_consent: !!c.b.consents.marketing });
+  emit('sign_up', { method: 'username' });
   return ok(meView(S.user));
 }, true);
 R('POST', '/api/login', c => {
@@ -97,7 +97,6 @@ R('GET', '/api/people', () => {
 });
 R('POST', '/api/people/request', c => {
   const un = String(c.b.username || '').trim().toLowerCase().replace(/^@/, '');
-  emit('friend_search', { found: !!FRIEND_POOL.find(f => f.username === un) });
   const t = FRIEND_POOL.find(f => f.username === un);
   if (!t) return fail('사용자를 찾을 수 없어요.', 404, 'username');
   if (S.friends.includes(t.id)) return fail('이미 연결된 사람이에요.', 409, 'username');
@@ -112,7 +111,7 @@ R('DELETE', '/api/invites/([^/]+)', c => { S.links = S.links.filter(l => l.code 
 
 // ----- 추억 -----
 const posts = () => [...S.posts].sort((a, b) => b.id - a.id);
-R('GET', '/api/home', () => { settle(); if (!S.posts.length && !S.friends.length) emit('empty_home_view'); return ok({ postInvites: [], friendRequests: [], meetupInvites: [], upcoming: [], posts: posts().map(card) }); });
+R('GET', '/api/home', () => { settle(); return ok({ postInvites: [], friendRequests: [], meetupInvites: [], upcoming: [], posts: posts().map(card) }); });
 R('GET', '/api/today', () => ok({ enabled: !!S.user && S.user.mem_enabled, items: [] }));
 R('GET', '/api/posts', () => ok({ posts: posts().map(card) }));
 R('GET', '/api/map', () => {
@@ -128,7 +127,7 @@ R('POST', '/api/posts', c => {
   const p = { id: ++S.seq, title, occurred_on: c.b.occurred_on || null, place: c.b.place || null, members: ids, notes: [], media: [], cover: null, reactions: false };
   if (String(c.b.text || '').trim()) p.notes.push({ id: ++S.seq, kind: 'story', text: String(c.b.text).trim().slice(0, 2000), at: new Date().toISOString() });
   S.posts.push(p); save();
-  emit('post_create_complete', { member_count: ids.length + 1, has_text: !!p.notes.length, has_place: !!placeView(p) });
+  emit('post_create_complete', { member_count: ids.length + 1, has_text: !!p.notes.length, has_place: !!(p.place && (p.place.name || p.place.area || p.place.city)) });
   return ok({ id: p.id });
 });
 const findPost = id => S.posts.find(p => p.id === +id);
@@ -183,7 +182,6 @@ window.fetch = async (input, init = {}) => {
   let res;
   if (!h) res = method === 'GET' ? fail('찾을 수 없어요.', 404) : fail('이 기능은 이번 테스트 범위에 없어요.', 501);
   else { const m = h.re.exec(u.pathname); res = (!h.pub && needLogin()) || h.fn({ m, q: u.searchParams, b }); }
-  if (res.status === 501 || res.status >= 500) emit('error_view', { status: res.status });
   return new Response(JSON.stringify(res.body), { status: res.status, headers: { 'content-type': 'application/json' } });
 };
 

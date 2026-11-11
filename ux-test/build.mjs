@@ -1,6 +1,6 @@
 // UX 테스트용 정적 산출물 생성: public/ 을 dist-ux-test/ 로 복사하고 테스트 스크립트를 끼워 넣는다.
 // public/ 과 server.js 는 수정하지 않는다. 외부 의존성 없음. 사용: node ux-test/build.mjs
-// 선택: UX_GA_ID=G-XXXXXXXXXX 를 주면 GA4 측정 ID 를 넣는다(비어 있으면 아무것도 전송하지 않음).
+// GA4: 기본 측정 ID 를 쓰고, UX_GA_ID 환경변수로 바꾸거나(빈 값이면 끔) 덮어쓸 수 있다.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,7 +11,9 @@ fs.rmSync(out, { recursive: true, force: true });
 fs.cpSync(path.join(root, 'public'), out, { recursive: true });
 fs.cpSync(path.join(root, 'ux-test'), path.join(out, 'ux-test'), { recursive: true, filter: s => !/(build\.mjs|README\.md)$/.test(s) });
 
-const gaId = (process.env.UX_GA_ID || '').trim();
+// 측정 ID는 공개 값이라 기본값을 코드에 둔다. 환경변수 UX_GA_ID 가 있으면 그 값이 우선하고, 빈 문자열이면 GA4를 끈다.
+const DEFAULT_GA_ID = 'G-1L7TN9K6GM';
+const gaId = (process.env.UX_GA_ID === undefined ? DEFAULT_GA_ID : process.env.UX_GA_ID).trim();
 if (gaId && !/^G-[A-Z0-9]{4,}$/.test(gaId)) throw new Error('UX_GA_ID 형식이 올바르지 않아요: G-XXXXXXXXXX');
 
 const file = path.join(out, 'index.html');

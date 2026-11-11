@@ -29,11 +29,36 @@
 - 간편가입(카카오·네이버·Google), 모임, 그룹, 정산, 신고는 테스트 범위 밖이다(빈 목록이거나 "이번 테스트 범위에 없어요").
 - 초대한 친구는 수락 전(`초대 중`) 상태로 남는다.
 
-## GA4 (준비만 됨)
-- 측정 ID가 비어 있으면 스크립트도 배너도 없다. ID를 받으면 빌드 환경변수 `UX_GA_ID=G-XXXXXXXXXX`로 넣는다.
-- 동의를 받기 전에는 GA 스크립트를 불러오지 않는다(동의 문구는 임시, 법률 검토 필요: 국외 이전 고지 등).
-- 보내는 이벤트는 `analytics.js`의 허용 목록만: `ux_splash_view`, `ux_onboarding_step`, `ux_screen_view`, `ux_signup_complete`, `ux_empty_home_view`, `ux_friend_search`, `ux_friend_add_complete`, `ux_post_create_start`, `ux_post_create_complete`, `ux_test_complete`, `ux_error_view`.
-- 이름·닉네임·제목·본문·사진 등 자유 입력과 식별 정보는 보내지 않는다. 광고 신호·광고 개인화는 끈다.
+## GA4
+- 측정 ID는 `ux-test/build.mjs`의 기본값(`G-1L7TN9K6GM`)이고, Vercel 환경변수 `UX_GA_ID`가 있으면 그 값이 우선한다. 빈 값(`UX_GA_ID=`)이면 GA4가 꺼진다.
+- **동의:** 화면 아래 동의 배너에서 "동의해요"를 눌러야 GA 스크립트를 불러온다. 선택 전 이벤트는 대기열에만 있다가 동의하면 전송되고, 거부하면 버려진다. 거부해도 테스트는 정상 진행된다. 동의 문구는 임시이며 법률 검토가 필요하다(국외 이전 고지 등). 광고 신호·광고 개인화는 끈다.
+- **page_view:** 자동 수집은 끄고(`send_page_view:false`) 화면 전환 때 한 번씩 수동 전송한다. `page_path`는 화면 이름(`/home`, `/post`)이며 추억 id는 넣지 않는다.
+  - **GA4 관리자 설정 필요:** 데이터 스트림 → 향상된 측정 → 설정 → "브라우저 기록 이벤트를 기반으로 한 페이지 변경"을 **꺼야** 해시 이동마다 page_view 가 중복되지 않는다.
+- **환경 구분:** 모든 이벤트에 `environment`(`production` = woorisai-ux-test.vercel.app, `preview` = 그 외 *.vercel.app, `other`)와 임의 값 `test_run`이 붙는다. `localhost`에서는 GA로 보내지 않고 `window.__uxGaLog`에만 기록한다.
+- **진행자 제외:** 주소 뒤에 `?dev=1`을 붙이면 그 브라우저는 `traffic_type=internal`로 표시되고 `debug_mode`가 켜진다(`?dev=0`으로 해제). GA4 관리자 → 데이터 설정 → 데이터 필터에서 "내부 트래픽" 필터를 만들어 활성화해야 보고서에서 빠진다.
+- **중복 방지:** 단계 이벤트는 세션(탭)당 한 번만 보낸다. 데이터 초기화(`?reset=1`, "데이터 지우고 끝내기")하면 기록도 지워져 새 참가자로 다시 센다.
+- 이름·닉네임·비밀번호·제목·본문·사진 등 자유 입력과 식별 정보는 허용 목록에 없어 보내지 않는다.
+
+| 이벤트 | 발생 시점 | 파라미터 |
+|---|---|---|
+| `page_view` | 화면 전환 | `page_path`, `page_location`, `page_title` |
+| `onboarding_complete` | 온보딩 마지막 "시작하기" 또는 "건너뛰기" | `method` = `finish` / `skip` |
+| `sign_up_start` | 가입 폼이 화면에 나타날 때 | - |
+| `sign_up` | 모의 서버가 가입을 성공시켰을 때(실패 시 없음) | `method` = `username` |
+| `friend_add_start` | 친구 이름 입력을 시작할 때 | - |
+| `friend_add_complete` | 상대가 수락해 친구가 됐을 때 | `friend_count` |
+| `post_create_start` | 추억 작성 폼이 나타날 때(친구 0명 안내 화면은 제외) | - |
+| `post_create_complete` | 모의 서버가 저장을 성공시켰을 때 | `member_count`, `has_text`, `has_place` |
+| `test_complete` | 테스트 완료 화면이 표시될 때 | - |
+
+공통 파라미터: `environment`, `test_run`, (진행자만) `traffic_type=internal`.
+GA4에서 보고서에 쓰려면 위 파라미터를 맞춤 측정기준(이벤트 범위)으로 등록해야 한다.
+
+### DebugView 로 확인하기
+1. 배포 주소 뒤에 `?dev=1`을 붙여 연다(`debug_mode`가 켜진다). 동의 배너에서 "동의해요"를 누른다.
+2. GA4 → 관리 → 데이터 표시 → **DebugView**에서 기기를 선택한다.
+3. 온보딩 → 가입 → 친구 추가 → 추억 작성 순서로 진행하며 위 표의 이벤트가 한 번씩 뜨는지, 가입 실패(사용 중인 이름)에서는 `sign_up`이 안 뜨는지, `page_view`가 화면 전환마다 한 번씩만 뜨는지 본다.
+4. 파라미터에 닉네임·글·이름이 없는지 확인한다.
 
 ## 배포 (Vercel Hobby)
 - Framework Preset: **Other**. `vercel.json`이 빌드 명령(`node ux-test/build.mjs`)과 출력 폴더(`dist-ux-test`)를 지정한다. Production Branch를 `ux-test-vercel`로 두거나 Preview로 쓴다.
