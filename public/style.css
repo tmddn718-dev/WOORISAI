@@ -59,7 +59,8 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
 .icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; border-radius: var(--r-ctl); cursor: pointer; transition: background-color var(--t) var(--ease); }
 .icon-btn:hover { background: var(--sage); }
 svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -4px; }
-svg.i.s { width: 16px; height: 16px; vertical-align: -3px; }
+svg.i.s { width: 20px; height: 20px; vertical-align: -4px; }
+svg.i.xs { width: 16px; height: 16px; vertical-align: -3px; }
 
 /* 카드·칩·입력 */
 .card { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-card); overflow: hidden; }
@@ -410,7 +411,7 @@ input[aria-invalid=true] { border-color: var(--ws-color-border-danger); }
 .post .meta h2 { margin: 0; }
 .post .meta .cap { margin: 0; font-size: .875rem; line-height: 22px; font-weight: 500; color: var(--ws-color-fg-secondary); }
 .post .ph .ph-badge { position: absolute; left: 12px; top: 12px; display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 0 8px; border-radius: 9999px; background: var(--ws-badge-neutral-bg); border: 1px solid var(--ws-badge-neutral-border); color: var(--ws-badge-neutral-fg); font-size: .75rem; line-height: 16px; font-weight: 600; }
-.post .ph .ph-badge svg.i { width: 14px; height: 14px; vertical-align: 0; }
+.post .ph .ph-badge svg.i { width: 16px; height: 16px; vertical-align: 0; }
 .post .who { display: flex; align-items: center; gap: 8px; margin-top: 6px; min-width: 0; }
 .post .avs { display: flex; flex: none; }
 .post .avs .av { width: 28px; height: 28px; font-size: .75rem; border: 2px solid var(--ws-avatar-ring); margin-left: -8px; }
@@ -595,3 +596,16 @@ details.card.pad > summary { font-size: .875rem; line-height: 20px; font-weight:
 .me-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .me-stats > div { display: flex; flex-direction: column; gap: 2px; padding: 14px 12px; border-radius: var(--r-card); background: var(--ws-color-bg-surface); border: 1px solid var(--ws-color-border-subtle); }
 .me-stats b { font-size: 1.25rem; line-height: 28px; font-weight: 700; color: var(--ws-color-fg-strong); }
+
+/* ---------- 아이콘: 시안(lucide-icon) 크기·선 굵기 ---------- */
+svg.i { stroke-width: 1.75; }
+.icon-btn svg.i, .v-x svg.i { width: 24px; height: 24px; }
+.empty-ic .i { width: 32px; height: 32px; }
+#tabs [aria-current=page] svg.i { stroke-width: 2; }
+.rsvp button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 56px; }
+.pl-lines { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; font-size: 1rem; line-height: 24px; color: var(--ws-color-fg-default); }
+.pl-lines span { display: flex; align-items: center; gap: 8px; }
+.pl-lines svg.i { vertical-align: 0; }
+.pl-lines .muted { color: var(--ws-color-fg-tertiary); }
+.v-b button { display: flex; align-items: center; gap: 6px; }
+.v-b button svg.i { width: 20px; height: 20px; vertical-align: 0; }

@@ -1,3 +1,4 @@
+import { LUCIDE } from './lucide.js';
 import { validateNickname, graphemes, suggest, NICK_MAX, NICK_HINT } from './nickname.js';
 // 우리사이 웹 앱 — 바닐라 JS SPA. 권한은 서버가 판단하고, 여기서는 그 결과만 보여준다.
 const $ = (s, r = document) => r.querySelector(s);
@@ -5,29 +6,11 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const S = { me: null, draft: null, authMode: 'intro', filter: { people: [], mode: 'and', group: '', year: '', month: '', region: '', dim: 'all' }, join: null };
 
-const ic = {
-  home: '<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/>',
-  cal: '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/>',
-  plus: '<path d="M12 5v14M5 12h14"/>',
-  photo: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/>',
-  user: '<circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/>',
-  back: '<path d="M15 5l-7 7 7 7"/>', more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
-  chev: '<path d="M9 5l7 7-7 7"/>', lock: '<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
-  heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
-  pin: '<path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/>',
-  users: '<circle cx="9" cy="9" r="3.5"/><path d="M3 19c.7-3.2 3-5 6-5s5.3 1.8 6 5"/><path d="M16 6a3.5 3.5 0 0 1 0 7M18 14.5c1.7.6 2.7 2 3 4.5"/>',
-  clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>', block: '<circle cx="12" cy="12" r="8"/><path d="M6.3 6.3l11.4 11.4"/>',
-  eye: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.5"/>', flag: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
-  down: '<path d="M12 4v11M7 11l5 5 5-5M5 20h14"/>', out: '<path d="M9 4H5v16h4M16 8l4 4-4 4M20 12H9"/>', link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
-  coin: '<circle cx="12" cy="12" r="8"/><path d="M12 7v10M9.5 9.5c.5-1 1.500-1.500 2.500-1.500 1.500 0 2.500.8 2.500 2s-1 1.800-2.500 2-2.500.8-2.500 2 1 2 2.500 2c1 0 2-.5 2.500-1.500"/>',
-  check: '<path d="M5 12l5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>', help: '<circle cx="12" cy="12" r="8"/><path d="M9.5 9.500a2.500 2.500 0 1 1 3.500 2.300c-.700.400-1 .900-1 1.700M12 16.500v.01"/>',
-  list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
-  bookmark: '<path d="M7 4h10v16l-5-4-5 4z"/>',
-  pen: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
-  star: '<path d="M12 4l2.400 5 5.600.7-4 3.900 1 5.500-5-2.700-5 2.700 1-5.500-4-3.900 5.600-.7z"/>',
-};
+// 아이콘은 모두 Lucide 0.469.0 원본이다(public/lucide.js). 이름 매핑은 시안(Claude Design)이 쓰는 이름을 그대로 따른다.
+const ICN = { home: 'house', photo: 'images', create: 'square-pen', pinned: 'map-pinned', user: 'user-round', back: 'chevron-left', chev: 'chevron-right', more: 'ellipsis', x: 'x', plus: 'plus', lock: 'lock-keyhole', users: 'users-round', invite: 'user-round-plus', cal: 'calendar-days', calplus: 'calendar-plus', cchk: 'calendar-check', cc: 'circle-check', cd: 'circle-dot', cx: 'circle-x', clock: 'clock', pin: 'map-pin', imgplus: 'image-plus', pen: 'message-square-plus', searchx: 'search-x', zin: 'zoom-in', zout: 'zoom-out', trash: 'trash-2', check: 'check',
+  /* 시안에 없는 앱 전용 기능(좋아요·숨기기·신고 등)은 같은 Lucide 라이브러리의 대응 아이콘 */ heart: 'heart', eye: 'eye', flag: 'flag', down: 'download', out: 'log-out', link: 'link', list: 'list', bookmark: 'bookmark', block: 'ban', help: 'circle-dot', star: 'pencil' };
 const KNOT = '<svg class="knot" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 41 C32 30 44 25 53 33 L60 40 L67 33 C76 25 88 30 88 41 V74 C88 85 76 90 67 82 L60 75 L53 82 C44 90 32 85 32 74Z" fill="#fff" opacity=".85"/><circle cx="60" cy="57" r="9" fill="#D3DBD1"/></svg>';
-const I = (n, c = '') => `<svg class="i ${c}" viewBox="0 0 24 24" aria-hidden="true">${ic[n]}</svg>`;
+const I = (n, c = '') => `<svg class="i ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${LUCIDE[ICN[n]] || ''}</svg>`;
 
 // ---------- 공통 ----------
 const netFail = () => { const e = new Error('저장하지 못했어요. 연결을 확인하고 다시 시도해 주세요.'); e.network = true; return e; };
@@ -64,11 +47,11 @@ const fmtDT = (iso, tz) => new Date(iso).toLocaleString('ko-KR', { timeZone: tz 
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const won = n => Number(n).toLocaleString('ko-KR') + '원';
 const top = (title, o = {}) => `<header class="top">${o.back === false ? '' : `<button class="icon-btn" data-act="back" aria-label="뒤로 가기">${I('back')}</button>`}<h1>${esc(title)}</h1>${o.right || ''}</header>`;
-const empty = (t, d, btn, icon = 'photo') => `<div class="empty"><span class="empty-ic">${I(icon)}</span><h2>${t}</h2><p>${d}</p>${btn || ''}</div>`;
+const empty = (t, d, btn, icon = /조건/.test(t) ? 'searchx' : 'photo') => `<div class="empty"><span class="empty-ic">${I(icon)}</span><h2>${t}</h2><p>${d}</p>${btn || ''}</div>`;
 const av = (n, c = '') => `<span class="av ${c}" aria-hidden="true">${esc([...(n || '?')][0])}</span>`;
 const pick = (list, name = 'm', on = []) => { const dup = list.reduce((m, u) => (m[u.name] = (m[u.name] || 0) + 1, m), {}); return `<div class="pick">${list.map(u => `<label><input type="checkbox" name="${name}" value="${u.id}" ${on.includes(u.id) ? 'checked' : ''}><span>${esc(u.name)}${u.username && dup[u.name] > 1 ? ` <i class="uid">@${esc(u.username)}</i>` : ''}</span></label>`).join('')}</div>`; };
 const tile = p => `<a class="tile" href="#/post/${p.id}"><span class="t-ph">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)}${p.place ? ' · ' + esc(p.place.label) : ''} · ${p.count}명</span></a>`;
-const postCard = p => `<a class="card post" href="#/post/${p.id}"><div class="ph">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}<span class="ph-badge">${I('lock', 's')}초대된 사람만</span></div><div class="meta"><h2>${esc(p.title)}</h2><p class="cap">${fmtDate(p.occurred_on)}${p.place ? ' · ' + esc(p.place.label) : ''}${p.status === 'closed' ? ' · 종료됨' : ''}${p.years_ago ? ` · ${p.years_ago}년 전 오늘` : ''}</p><div class="who"><span class="avs">${(p.names || []).map(n => av(n, 's')).join('')}</span><span><b>${p.count}명이 함께</b></span></div></div></a>`;
+const postCard = p => `<a class="card post" href="#/post/${p.id}"><div class="ph">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}<span class="ph-badge">${I('lock', 'xs')}초대된 사람만</span></div><div class="meta"><h2>${esc(p.title)}</h2><p class="cap">${fmtDate(p.occurred_on)}${p.place ? ' · ' + esc(p.place.label) : ''}${p.status === 'closed' ? ' · 종료됨' : ''}${p.years_ago ? ` · ${p.years_ago}년 전 오늘` : ''}</p><div class="who"><span class="avs">${(p.names || []).map(n => av(n, 's')).join('')}</span><span><b>${p.count}명이 함께</b></span></div></div></a>`;
 const gone = e => e.status === 403 || e.status === 404
   ? `${top('추억', { back: false })}${empty(e.status === 404 ? '이 기록은 삭제되었어요' : '이 추억은 더 이상 공유되지 않아요', '다른 추억을 둘러보세요.', '<a class="btn" href="#/">다른 추억 보기</a>')}`
   : `${top('앗', { back: false })}${empty('불러오지 못했어요', esc(e.message), '<button class="btn" data-act="reload">다시 시도하기</button>')}`;
@@ -169,7 +152,7 @@ function gate(k) {
 }
 function leaveGuest(k) { S.guest = false; S.intent = k === 'create' ? 'create' : null; try { sessionStorage.removeItem('ws_guest'); } catch { } S.authMode = 'intro'; go('/'); }
 const guestBar = '<div class="gbar"><span><b>우리사이 미리보기</b><span class="cap">예시 추억으로 둘러보고 있어요.</span></span><button class="btn sm" data-act="guest-login">시작하기</button></div>';
-const GUEST_STEPS = [['users', '함께한 사람을 초대해요', '초대를 수락한 사람만 볼 수 있어요.'], ['photo', '각자의 사진과 이야기를 더해요', '한 추억 안에 모두의 기록이 쌓여요.'], ['pin', '다녀온 지역에 발자국이 남아요', '전국 17개 시·도를 함께 채워요.']];
+const GUEST_STEPS = [['users', '함께한 사람을 초대해요', '초대를 수락한 사람만 볼 수 있어요.'], ['photo', '각자의 사진과 이야기를 더해요', '한 추억 안에 모두의 기록이 쌓여요.'], ['pinned', '다녀온 지역에 발자국이 남아요', '전국 17개 시·도를 함께 채워요.']];
 const guestHome = () => `${guestBar}<header class="top home-top"><div class="small-logo"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div></header><div class="page stack" style="gap:28px;padding-top:0">
   <section class="stack" style="gap:12px"><div><h2 class="g-h">함께 다녀온 날을,<br>한 곳에 같이 모아요</h2><p class="sub body2">각자 찍은 사진과 이야기가 하나의 추억이 돼요.</p></div>
     <div class="card g-hero"><div class="ph"><img src="${GU}jeju-fall.jpg" alt=""><span class="ph-badge">예시 추억</span></div><div class="meta"><h2>제주 2박 3일, 비 그친 뒤의 오름</h2><p class="cap">4명이 남긴 사진 38장 · 이야기 6개</p><div class="g-th">${[['jeju-sea', '친구 A'], ['jeju-flower', '친구 B'], ['jeju-house', '친구 C'], ['jeju-cliff', '나']].map(([f, by]) => `<span><img loading="lazy" src="${GU}${f}.jpg" alt=""><i>${by}</i></span>`).join('')}</div></div></div></section>
@@ -182,9 +165,9 @@ const guestFoot = () => `${guestBar}<header class="top"><h1>우리의 발자국<
   <div class="stamps">${REGIONS.map(r => `<button class="stamp${GUEST_FOOT[r] ? ' on' : ''}" data-act="guest-gate" data-k="foot" aria-label="${r}${GUEST_FOOT[r] ? ', 예시 추억 ' + GUEST_FOOT[r][1] + '개' : ', 아직 기록이 없어요'}"><span class="sp">${GUEST_FOOT[r] ? `<img loading="lazy" src="${GU}${GUEST_FOOT[r][0]}.jpg" alt="">` : esc(r[0])}</span><span class="cap">${GUEST_FOOT[r] ? r : ''}</span></button>`).join('')}</div>
   <button class="btn block" data-act="guest-login">로그인하고 모으기</button></div>`;
 function guestRoute(path, view) {
-  const tabs = $('#tabs'), foot = path === '/foot', T = [['home', '홈', 'home'], ['memories', '추억', 'photo'], ['new', '만들기', 'plus'], ['foot', '발자국', 'pin'], ['me', '나', 'user']];
+  const tabs = $('#tabs'), foot = path === '/foot', T = [['home', '홈', 'home'], ['memories', '추억', 'photo'], ['new', '만들기', 'create'], ['foot', '발자국', 'pinned'], ['me', '나', 'user']];
   $('#app').classList.add('authed'); tabs.hidden = false;
-  tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i]) => k === 'new' ? `<button data-act="guest-gate" data-k="create" data-kk="new" aria-label="만들기"><span class="mk">${I('plus')}</span>${l}</button>` : k === 'home' || k === 'foot' ? `<a href="${k === 'home' ? '#/' : '#/foot'}" data-k="${k}" ${(k === 'foot') === foot ? 'aria-current="page"' : ''}><span class="nv-ic">${I(i)}</span>${l}</a>` : `<a href="#/" data-act="guest-gate" data-k="${k}" data-kk="${k}"><span class="nv-ic">${I(i)}</span>${l}</a>`).join('') + '<div class="side-label l1">둘러보기</div><div class="side-label l2">함께하기</div><div class="side-label l3">내 정보</div>';
+  tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i]) => k === 'new' ? `<button data-act="guest-gate" data-k="create" data-kk="new" aria-label="만들기"><span class="mk">${I('create')}</span>${l}</button>` : k === 'home' || k === 'foot' ? `<a href="${k === 'home' ? '#/' : '#/foot'}" data-k="${k}" ${(k === 'foot') === foot ? 'aria-current="page"' : ''}><span class="nv-ic">${I(i)}</span>${l}</a>` : `<a href="#/" data-act="guest-gate" data-k="${k}" data-kk="${k}"><span class="nv-ic">${I(i)}</span>${l}</a>`).join('') + '<div class="side-label l1">둘러보기</div><div class="side-label l2">함께하기</div><div class="side-label l3">내 정보</div>';
   view.innerHTML = foot ? guestFoot() : guestHome(); window.scrollTo(0, 0);
 }
 
@@ -212,9 +195,9 @@ P.home = async () => {
     ${d.friendRequests.map(x => `<div>${av(x.name)}<span class="grow"><b>${esc(x.name)}</b><br><span class="cap">연결을 요청했어요</span></span><button class="btn sm" data-act="accept-friend" data-id="${x.id}">수락</button><button class="btn sm line" data-act="decline-friend" data-id="${x.id}">거절</button></div>`).join('')}
     ${d.meetupInvites.map(x => `<a href="#/meetup/${x.id}">${av('약')}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${fmtDT(x.starts_at, x.tz)} · 참석 여부를 알려 주세요</span></span>${I('chev', 's')}</a>`).join('')}</div></section>` : ''}
   ${d.posts.length ? `<section class="home-sec sec" aria-label="최근 함께한 추억"><h2>최근 함께한 추억</h2><div class="hero-card">${postCard(d.posts[0])}</div>${d.posts.slice(1, 3).map(p => `<a class="mrow" href="#/post/${p.id}"><span class="th">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)} · ${p.count}명${p.place ? ' · ' + esc(p.place.label) : ''}</span></span>${I('chev', 's')}</a>`).join('')}${d.posts.length > 3 ? `<a class="btn sm line" style="align-self:flex-start" href="#/memories">추억 모두 보기 (${d.posts.length})</a>` : ''}</section>
-  <div class="cta-card sec"><span class="ic">${I('plus')}</span><span class="tx"><b>함께한 순간을 남겨볼까요?</b><span>사진과 이야기를 하나의 추억으로 모아보세요.</span><a class="btn sm" href="#/new-post">${I('plus', 's')} 새 추억 만들기</a></span></div>` : `<section class="sec" aria-label="우리의 추억"><div class="hd"><h2>우리의 추억</h2></div>${empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>')}</section>`}
+  <div class="cta-card sec"><span class="ic">${I('create')}</span><span class="tx"><b>함께한 순간을 남겨볼까요?</b><span>사진과 이야기를 하나의 추억으로 모아보세요.</span><a class="btn sm" href="#/new-post">${I('create', 's')} 새 추억 만들기</a></span></div>` : `<section class="sec" aria-label="우리의 추억"><div class="hd"><h2>우리의 추억</h2></div>${empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>')}</section>`}
   ${today.items.length ? `<section class="moment" aria-label="1년 전 오늘"><h2>그날의 우리가 여기 있어요</h2><p class="cap" style="margin:4px 0 16px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p>${postCard(today.items[0])}<div class="row" style="margin-top:12px;flex-wrap:wrap"><a class="btn sm line" href="#/post/${today.items[0].id}?add=1">${I('plus', 's')} 기억 더하기</a><button class="btn sm line" data-act="hide-post" data-id="${today.items[0].id}">다시 추천하지 않기</button></div></section>` : ''}
-  <section class="sec" aria-label="다가오는 약속"><div class="hd"><h2>다가오는 약속</h2><a class="btn sm line" href="#/new-meetup">${I('plus', 's')} 새 약속 만들기</a></div><div class="stack" style="gap:12px">${d.upcoming.length ? d.upcoming.map(planCard).join('') : `<div class="plan-empty"><span class="pe-ic">${I('cal')}</span><span><b>다가오는 약속이 없어요</b><span class="cap">만날 날을 정해 두면, 그날을 추억으로 이어 남길 수 있어요.</span></span></div>`}${d.pastNudge ? `<a class="nudge" href="#/meetup/${d.pastNudge.id}"><span class="pe-ic s">${I('photo', 's')}</span><span><b>지난 약속을 추억으로 남길까요?</b><span class="cap">${esc(d.pastNudge.title)} · ${new Date(d.pastNudge.starts_at).getMonth() + 1}월 ${new Date(d.pastNudge.starts_at).getDate()}일</span></span>${I('chev', 's')}</a>` : ''}${d.upcoming.length ? '<a class="body2" style="color:var(--green)" href="#/meetups">약속 모두 보기</a>' : ''}</div></section>
+  <section class="sec" aria-label="다가오는 약속"><div class="hd"><h2>다가오는 약속</h2><a class="btn sm line" href="#/new-meetup">${I('calplus', 's')} 새 약속 만들기</a></div><div class="stack" style="gap:12px">${d.upcoming.length ? d.upcoming.map(planCard).join('') : `<div class="plan-empty"><span class="pe-ic">${I('cal')}</span><span><b>다가오는 약속이 없어요</b><span class="cap">만날 날을 정해 두면, 그날을 추억으로 이어 남길 수 있어요.</span></span></div>`}${d.pastNudge ? `<a class="nudge" href="#/meetup/${d.pastNudge.id}"><span class="pe-ic s">${I('photo', 's')}</span><span><b>지난 약속을 추억으로 남길까요?</b><span class="cap">${esc(d.pastNudge.title)} · ${new Date(d.pastNudge.starts_at).getMonth() + 1}월 ${new Date(d.pastNudge.starts_at).getDate()}일</span></span>${I('chev', 's')}</a>` : ''}${d.upcoming.length ? '<a class="body2" style="color:var(--green)" href="#/meetups">약속 모두 보기</a>' : ''}</div></section>
   <section class="sec" aria-label="우리의 발자국"><div class="hd"><h2>우리의 발자국</h2></div><a class="foot-card" href="#/foot"><span class="fc-h"><span class="cap">${fr.length ? `${fr.length}개 지역 · 추억 ${fm.total}개` : '추억에 지역을 연결하면 발자국이 쌓여요.'}</span>${I('chev', 's')}</span>${fr.length ? `<span class="fc-m">${fr.slice(0, 5).map(r => `<span><span class="sp">${fby[r][0].cover ? `<img loading="lazy" src="/media/${fby[r][0].cover}" alt="">` : esc(r[0])}</span><span class="cap">${r}</span></span>`).join('')}</span>` : ''}</a></section>
 </div>`;
 };
@@ -229,10 +212,10 @@ P.post = async id => {
   return `<nav class="crumb" aria-label="현재 위치"><a href="#/">홈</a> › <a href="#/memories">추억</a> › ${esc(p.title)}</nav>${top('', { right: `<button class="icon-btn" data-act="post-menu" data-id="${p.id}" aria-label="더 보기">${I('more')}</button>` })}
   <div class="page stack" style="padding-top:8px" data-post="${p.id}">
     ${(() => { const cv = p.media.find(m => m.id === p.cover && !m.restricted)?.id ?? p.media.find(m => !m.restricted)?.id; return cv ? `<div class="cover"><img src="/media/${cv}" alt="대표 사진"></div>` : ''; })()}
-    <div><h1>${esc(p.title)}</h1><p class="sub body2">${fmtDate(p.occurred_on)}${p.place ? ` · <span title="${p.place.precision === 'exact' ? '정확한 장소' : p.place.precision === 'area' ? '동네까지만 표시' : '도시까지만 표시'}">${I('pin', 's')} ${esc(p.place.label)}</span>` : ''}${p.status === 'closed' ? ' · <span class="tag warn">종료됨</span>' : ''}</p>
+    <div><h1>${esc(p.title)}</h1><p class="sub body2">${I('cal', 'xs')} ${fmtDate(p.occurred_on)}${p.place ? ` · <span title="${p.place.precision === 'exact' ? '정확한 장소' : p.place.precision === 'area' ? '동네까지만 표시' : '도시까지만 표시'}">${I('pin', 'xs')} ${esc(p.place.label)}</span>` : ''}${p.status === 'closed' ? ' · <span class="tag warn">종료됨</span>' : ''}</p>
       ${p.meetup ? `<a class="tag" href="#/meetup/${p.meetup.id}">${esc(p.meetup.title)} 약속에서</a>` : ''}${p.groups.map(g => `<span class="tag">${esc(g.name)}</span>`).join(' ')}</div>
-    ${open ? `<button class="btn block" data-act="add-more">${I('plus')} 사진 또는 기억 더하기</button><input type="file" accept="image/*" multiple hidden data-upload="${p.id}" id="pf">` : ''}
-    <div class="split"><div class="stack"><section class="card pad" aria-label="볼 수 있는 사람"><div class="row between"><h3>함께한 사람 ${acc.length}명</h3><span class="cap">${I('lock', 's')} 초대된 사람만 볼 수 있어요</span></div>
+    ${open ? `<button class="btn block" data-act="add-more">${I('imgplus')} 사진 또는 기억 더하기</button><input type="file" accept="image/*" multiple hidden data-upload="${p.id}" id="pf">` : ''}
+    <div class="split"><div class="stack"><section class="card pad" aria-label="볼 수 있는 사람"><div class="row between"><h3>함께한 사람 ${acc.length}명</h3><span class="cap">${I('lock', 'xs')} 초대된 사람만 볼 수 있어요</span></div>
       <div class="row" style="flex-wrap:wrap;margin-top:12px;gap:8px">${acc.map(m => `<span class="row" style="gap:8px">${av(m.name, 's')}<span class="body2"><i class="dot" title="수락함"></i> ${esc(m.name)}${m.role === 'admin' ? ' <span class="tag">관리자</span>' : ''}</span></span>`).join('')}${inv.map(m => `<span class="tag"><i class="dot hollow"></i> ${esc(m.name)} · 초대 중</span>`).join('')}</div></section>
     <section><div class="row between" style="margin-bottom:12px"><h2>사진 ${p.media.length ? p.media.length + '장' : ''}</h2></div>
       ${p.media.length ? `<div class="grid3">${p.media.map(m => m.restricted ? '<div class="res">검토 중인 콘텐츠예요</div>' : `<button data-act="photo" data-id="${m.id}" data-mine="${m.mine ? 1 : 0}" data-cover="${p.cover === m.id ? 1 : 0}" aria-label="사진 크게 보기"><img loading="lazy" src="/media/${m.id}" alt="함께 남긴 사진"></button>`).join('')}</div>` : `<div class="card pad sub body2">아직 사진이 없어요. 오늘 찍은 사진을 가장 먼저 보태 보세요.</div>`}</section>
@@ -249,11 +232,11 @@ P.newPost = async () => {
   if (!pp.friends.length) return `${top('새 추억 만들기')}${empty('함께할 사람을 먼저 연결해 주세요', '이름이나 초대 링크로 연결하면 함께 추억을 남길 수 있어요.', '<a class="btn" href="#/people">사람 연결하기</a>')}`;
   const start = S.q.start === 'story' ? 'story' : (S.q.start === 'photo' || restored || d.meetup_id) ? 'photo' : null;
   if (!start) return `<div class="page stack"><button class="icon-btn" data-act="back" aria-label="닫기" style="margin-left:-8px">${I('x')}</button><div><h1>새 추억 만들기</h1><p class="sub body2" style="margin-top:8px">사진 한 장이나 짧은 이야기로 시작해도 좋아요.</p></div>
-    <div class="stack" style="gap:12px">${[['photo', 'photo', '사진으로 시작하기', '기기에서 사진을 골라 한 번에 올려요.'], ['story', 'pen', '이야기로 시작하기', '사진 없이 그날의 이야기부터 남겨요.']].map(([k, i, t, b]) => `<a class="opt" href="#/new-post?start=${k}"><span class="oi">${I(i)}</span><span><b>${t}</b><span class="cap">${b}</span></span>${I('chev', 's')}</a>`).join('')}
+    <div class="stack" style="gap:12px">${[['photo', 'imgplus', '사진으로 시작하기', '기기에서 사진을 골라 한 번에 올려요.'], ['story', 'pen', '이야기로 시작하기', '사진 없이 그날의 이야기부터 남겨요.']].map(([k, i, t, b]) => `<a class="opt" href="#/new-post?start=${k}"><span class="oi">${I(i)}</span><span><b>${t}</b><span class="cap">${b}</span></span>${I('chev', 's')}</a>`).join('')}
       <p class="cap">어느 쪽으로 시작해도 같은 추억이 돼요. 사진과 이야기는 나중에 더할 수 있어요.</p></div></div>`;
   const story = start === 'story'; PP.files = []; PP.urls = [];
   const storyField = `<label class="field"><span>${story ? '이야기' : '이야기 (선택)'}</span><textarea name="text" maxlength="2000" placeholder="그날 어땠는지 한두 줄" data-counter>${esc(d.text || '')}</textarea><small class="count"></small></label>`;
-  const photoField = `<div class="field"><span>사진${story ? ' (선택)' : ''}</span><div class="pp"><label class="pp-add" aria-label="기기에서 사진 고르기"><input type="file" name="photos" accept="image/*" multiple>${I('photo')}<span>기기에서 고르기</span></label><div class="pp-list" id="pp-list"></div></div><small id="pp-note">${story ? '사진 없이도 추억을 만들 수 있어요.' : '맨 앞 사진이 대표 사진이 돼요. 사진의 GPS 정보는 올릴 때 지워요.'}</small></div>`;
+  const photoField = `<div class="field"><span>사진${story ? ' (선택)' : ''}</span><div class="pp"><label class="pp-add" aria-label="기기에서 사진 고르기"><input type="file" name="photos" accept="image/*" multiple>${I('imgplus')}<span>기기에서 고르기</span></label><div class="pp-list" id="pp-list"></div></div><small id="pp-note">${story ? '사진 없이도 추억을 만들 수 있어요.' : '맨 앞 사진이 대표 사진이 돼요. 사진의 GPS 정보는 올릴 때 지워요.'}</small></div>`;
   return `${top('새 추억 만들기')}<form class="page stack" data-form="newpost" data-meetup="${d.meetup_id || ''}">
     ${d.meetup_id ? `<div class="note">${esc(d.title || '이 약속')} 약속에서 이어 만드는 추억이에요. 제목·날짜·함께한 사람은 미리 채웠어요. 지역은 직접 골라 주세요.</div>` : ''}
     ${restored ? '<div class="note row between"><span>임시 저장된 초안을 불러왔어요.</span><button type="button" class="btn sm line" data-act="draft-clear">삭제</button></div>' : ''}
@@ -324,7 +307,7 @@ P.memories = async () => {
       : t.items.length ? `<section class="sec"><h2 style="margin-bottom:12px">그날의 우리가 여기 있어요.</h2><p class="cap" style="margin-bottom:12px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p><div class="feed">${t.items.map(p => `<div>${postCard(p)}<div class="row" style="margin-top:8px;flex-wrap:wrap"><a class="btn sm sec2" href="#/post/${p.id}?add=1">${I('plus', 's')} 기억 더하기</a><button class="btn sm line" data-act="save" data-id="${p.id}">${p.saved ? '저장함' : '저장'}</button><button class="btn sm line" data-act="hide-post" data-id="${p.id}">다시 추천하지 않기</button></div></div>`).join('')}</div></section>`
         : empty('오늘과 연결된 추억이 없어요.', '기록은 그대로 안전하게 보관되어 있어요.');
   }
-  return `<header class="top"><h1>추억</h1><a class="btn sm sec2 only-pc" href="#/new-post">${I('plus', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '피드'], ['cal', '달력']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${feedFilter}${hint}</div>${body}</div>${tab === 'today' ? '' : `<a class="fab" href="#/new-post">${I('plus')} 새 추억</a>`}`;
+  return `<header class="top"><h1>추억</h1><a class="btn sm sec2 only-pc" href="#/new-post">${I('create', 's')} 새 추억</a></header><div class="page" style="padding-top:8px"><div class="seg" role="tablist" aria-label="보기 방식">${[['list', '피드'], ['cal', '달력']].map(([k, l]) => `<button role="tab" aria-selected="${tab === k}" data-act="tab" data-v="${k}">${l}</button>`).join('')}</div><div class="stack" style="margin-top:12px">${feedFilter}${hint}</div>${body}</div>${tab === 'today' ? '' : `<a class="fab" href="#/new-post">${I('create')} 새 추억</a>`}`;
 };
 
 const REGIONS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
@@ -351,7 +334,7 @@ P.foot = async () => {
 P.meetups = async () => {
   const { meetups } = await api('GET', '/api/meetups'), now = new Date().toISOString();
   const up = meetups.filter(m => m.starts_at >= now && m.status === 'active').reverse(), past = meetups.filter(m => !(m.starts_at >= now && m.status === 'active'));
-  return `${top('약속', { right: `<a class="btn sm" href="#/new-meetup">${I('plus', 's')} 새 약속</a>` })}<div class="page">
+  return `${top('약속', { right: `<a class="btn sm" href="#/new-meetup">${I('calplus', 's')} 새 약속</a>` })}<div class="page">
     <section><h2 style="margin-bottom:12px">다가오는 약속</h2>${up.length ? `<div class="stack" style="gap:12px">${up.map(planCard).join('')}</div>` : empty('예정된 약속이 없어요', '함께할 사람을 초대해 약속을 잡아 보세요.', '<a class="btn" href="#/new-meetup">새 약속 만들기</a>')}</section>
     ${past.length ? `<section class="sec"><h2 style="margin-bottom:12px">지난 약속</h2><div class="stack" style="gap:12px">${past.map(planCard).join('')}</div></section>` : ''}</div>`;
 };
@@ -369,16 +352,16 @@ P.newMeetup = async () => {
     <p class="err" role="alert"></p><button class="btn block">약속 만들기</button></form>`;
 };
 
-const RS = { yes: I('check', 's') + ' 참석', no: I('x', 's') + ' 불참', maybe: I('help', 's') + ' 미정', invited: I('clock', 's') + ' 응답 대기' };
+const RS = { yes: I('cc', 's') + ' 참석', no: I('cx', 's') + ' 불참', maybe: I('cd', 's') + ' 미정', invited: I('clock', 's') + ' 응답 대기' };
 P.meetup = async id => {
   const m = await api('GET', '/api/meetups/' + id), isOrg = m.organizer_id === S.me.id, started = Date.parse(m.starts_at) <= Date.now(), cancelled = m.status === 'cancelled';
   window._m = m;
   const rs = m.mine.rsvp;
   return `${top('약속', { right: isOrg && !cancelled ? `<button class="icon-btn" data-act="meetup-menu" aria-label="더 보기">${I('more')}</button>` : '' })}<div class="page stack" style="padding-top:8px">
-    <div><h1${cancelled ? ' style="text-decoration:line-through"' : ''}>${esc(m.title)}</h1>${cancelled ? '<span class="tag warn">취소된 약속</span>' : ''}<p class="sub body2">${I('clock', 's')} ${fmtDT(m.starts_at, m.tz)}<br>${I('pin', 's')} ${m.place ? esc(m.place) : '장소 미정'}<br>주최 ${esc(m.organizer)}</p>${m.descr ? `<p style="margin-top:8px;white-space:pre-wrap">${esc(m.descr)}</p>` : ''}</div>
+    <div><h1${cancelled ? ' style="text-decoration:line-through"' : ''}>${esc(m.title)}</h1>${cancelled ? '<span class="tag warn">취소된 약속</span>' : ''}<div class="pl-lines"><span>${I('cal')}${new Date(m.starts_at).toLocaleDateString('ko-KR', { timeZone: m.tz || localTz, year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}</span><span>${I('clock')}${new Date(m.starts_at).toLocaleTimeString('ko-KR', { timeZone: m.tz || localTz, hour: 'numeric', minute: '2-digit' })}</span><span${m.place ? '' : ' class="muted"'}>${I('pin')}${m.place ? esc(m.place) : '장소 미정'}</span></div><p class="sub body2">주최 ${esc(m.organizer)}</p>${m.descr ? `<p style="margin-top:8px;white-space:pre-wrap">${esc(m.descr)}</p>` : ''}</div>
     ${m.changed && !cancelled ? `<div class="note">${esc(m.changed)}</div>` : ''}
     ${isOrg && started && !cancelled ? `<div class="note stack"><span>약속이 끝났어요. 실제로 함께한 사람을 확인하면 추억을 만들 때 바로 고를 수 있어요.</span><button class="btn" data-act="att-open">실제 함께한 사람 확인하기</button></div>` : ''}
-    ${!cancelled && !isOrg && !started ? `<section><h3 style="margin-bottom:12px">참석할 수 있나요?</h3>${rs === 'invited' ? '<p class="cap" style="margin-bottom:12px">일정이 새로 정해졌거나 바뀌었어요. 다시 응답해 주세요.</p>' : ''}<div class="rsvp">${[['yes', '참석'], ['maybe', '미정'], ['no', '불참']].map(([k, l]) => `<button data-act="rsvp" data-v="${k}" aria-pressed="${rs === k}">${l}</button>`).join('')}</div></section>` : ''}
+    ${!cancelled && !isOrg && !started ? `<section><h3 style="margin-bottom:12px">참석할 수 있나요?</h3>${rs === 'invited' ? '<p class="cap" style="margin-bottom:12px">일정이 새로 정해졌거나 바뀌었어요. 다시 응답해 주세요.</p>' : ''}<div class="rsvp">${[['yes', '참석', 'cchk'], ['maybe', '미정', 'cd'], ['no', '불참', 'cx']].map(([k, l, i]) => `<button data-act="rsvp" data-v="${k}" aria-pressed="${rs === k}">${I(i)}<span>${l}</span></button>`).join('')}</div></section>` : ''}
     <section><h2 style="margin-bottom:12px">함께하는 사람 ${m.participants.length}명</h2><div class="card list">${m.participants.map(p => `<div>${av(p.name)}<span class="grow">${esc(p.name)}${p.id === m.organizer_id ? ' <span class="tag">주최</span>' : ''}</span>${started ? `<span class="tag">${p.attended ? '실제 참석 확인' : '참석 미확인'}</span>` : ''}<span class="body2">${RS[p.rsvp]}</span></div>`).join('')}</div><p class="cap" style="margin-top:8px">응답은 약속이고, 실제 참석은 약속 뒤에 주최자가 확인해요.</p></section>
     ${cancelled || (!m.posts.length && !started) ? '' : `<section><h2 style="margin-bottom:12px">${m.posts.length ? '함께한 추억' : '이 약속의 추억'}</h2>${m.posts.length ? `<div class="feed">${m.posts.map(postCard).join('')}</div><a class="btn block" style="margin-top:12px" href="#/post/${m.posts[0].id}">함께한 추억 보기</a>` : `<p class="sub body2" style="margin-bottom:12px">아직 남긴 추억이 없어요.</p><button class="btn block" data-act="meetup-post">${I('photo', 's')} 이 약속을 추억으로 남기기</button>`}<p class="cap" style="margin-top:8px">추억은 직접 고른 사람에게만 초대가 가요. 약속에 초대된 것만으로 볼 수 있지 않아요.</p></section>`}
     <section><div class="row between" style="margin-bottom:12px"><h2>정산</h2>${cancelled ? '' : `<button class="btn sm sec2" data-act="settle-new">${I('plus', 's')} 정산 만들기</button>`}</div>
@@ -421,7 +404,7 @@ P.me = async () => {
   return `<header class="top"><h1>나</h1></header><div class="page stack"><div class="row" style="gap:16px">${av(u.name, 'l')}<span class="grow"><b class="me-n">${esc(u.name)}</b><br><span class="cap">${first ? `${first.slice(0, 4)}년 ${+first.slice(5, 7)}월부터 기록 중` : '@' + esc(u.username)}</span></span><button class="btn sm line" data-act="rename">닉네임 변경하기</button></div>
     <div class="me-stats">${[['추억', all.posts.length], ['함께한 사람', pp.friends.length], ['지역', nRegion]].map(([l, v]) => `<div><span class="cap">${l}</span><b>${v}</b></div>`).join('')}</div>
     <section><h3 style="margin:0 0 8px 4px" class="cap">함께한 사람</h3>${pp.friends.length ? `<div class="card list">${pp.friends.map((f, i) => `<div style="min-height:52px">${av(f.name, 's')}<span class="grow">${esc(f.name)}</span><span class="cap">함께한 추억 ${counts[i]}</span></div>`).join('')}</div>` : '<p class="sub body2">아직 연결된 사람이 없어요. 아래 사람 메뉴에서 연결해 보세요.</p>'}</section>
-    <div class="card list">${row('#/people', 'users', '사람', '연결·초대 링크')}${row('#/groups', 'star', '그룹')}</div>
+    <div class="card list">${row('#/people', 'invite', '사람', '연결·초대 링크')}${row('#/groups', 'users', '그룹')}</div>
     <section><h3 style="margin:0 0 12px 4px">회상</h3><div class="card list"><div>${I('clock')}<span class="grow">1년 전 오늘<br><span class="cap">${u.mem_enabled ? '켜져 있어요. 앱 안에서만 보여줘요.' : '꺼져 있어요. 켜기 전에는 추천하지 않아요.'}</span></span><button class="btn sm ${u.mem_enabled ? 'line' : ''}" data-act="mem" data-v="${u.mem_enabled ? 0 : 1}">${u.mem_enabled ? '끄기' : '켜기'}</button></div>${row('#/hidden', 'eye', '숨긴 추억', '다시 추천하지 않기 관리')}</div></section>
     <section><h3 style="margin:0 0 12px 4px">안전·데이터</h3><div class="card list">${row('#/saved', 'bookmark', '저장한 추억', '나만 볼 수 있는 책갈피')}${row('#/privacy', 'lock', '개인정보 요청', '열람·정정·삭제·처리정지')}${row('#/blocks', 'block', '차단한 사람')}${row('#/reports', 'flag', '내 신고 내역')}<button class="li" data-act="export">${I('down')}<span class="grow">내 데이터 내보내기<br><span class="cap">내 프로필, 글, 사진 목록을 파일로 받아요</span></span></button></div></section>
     <div class="card list"><button class="li" data-act="logout">${I('out')}<span class="grow">로그아웃하기</span></button><button class="li" data-act="delete-account" style="color:var(--danger)">${I('block')}<span class="grow">계정 삭제하기</span></button></div>
@@ -439,7 +422,7 @@ P.join = async code => {
 };
 
 // ---------- 라우터 ----------
-const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/foot$/, P.foot, 'foot'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, 'home'], [/^\/new-post$/, P.newPost, 'home'], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
+const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/foot$/, P.foot, 'foot'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, ''], [/^\/new-post$/, P.newPost, ''], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
 let seq = 0;
 async function route() {
   const my = ++seq, view = $('#view');
@@ -461,9 +444,9 @@ async function route() {
   if (S.join) { const j = S.join; S.join = null; S.joinFrom = undefined; try { sessionStorage.removeItem('ws_join'); } catch { } if (path !== j) return go(j); }
   const r = routes.find(x => x[0].test(path)) || routes[0], args = r[0].exec(path).slice(1);
   const tabs = $('#tabs'); tabs.hidden = false;
-  const T = [['home', '홈', 'home', '#/'], ['memories', '추억', 'photo', '#/memories'], ['new', '만들기', 'plus'], ['foot', '발자국', 'pin', '#/foot'], ['me', '나', 'user', '#/me']];
+  const T = [['home', '홈', 'home', '#/'], ['memories', '추억', 'photo', '#/memories'], ['new', '만들기', 'create'], ['foot', '발자국', 'pinned', '#/foot'], ['me', '나', 'user', '#/me']];
   $('#app').classList.add('authed');
-  tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i, h]) => k === 'new' ? `<button data-act="create" data-k="new" aria-label="만들기"><span class="mk">${I('plus')}</span>${l}</button>` : `<a href="${h}" data-k="${k}" ${r[2] === k ? 'aria-current="page"' : ''}><span class="nv-ic">${I(i)}</span>${l}</a>`).join('') + '<div class="side-label l1">둘러보기</div><div class="side-label l2">함께하기</div><div class="side-label l3">내 공간</div>' + `<a class="side-user" href="#/me" data-k="user">${av(S.me.name, 's')}<span><b>${esc(S.me.name)}</b><span class="cap">@${esc(S.me.username)}</span></span></a>`;
+  tabs.innerHTML = '<div class="brand"><img src="/logo.svg" alt=""><span class="wordmark">우리사이</span></div>' + T.map(([k, l, i, h]) => k === 'new' ? `<button data-act="create" data-k="new" aria-label="만들기"><span class="mk">${I('create')}</span>${l}</button>` : `<a href="${h}" data-k="${k}" ${r[2] === k ? 'aria-current="page"' : ''}><span class="nv-ic">${I(i)}</span>${l}</a>`).join('') + '<div class="side-label l1">둘러보기</div><div class="side-label l2">함께하기</div><div class="side-label l3">내 공간</div>' + `<a class="side-user" href="#/me" data-k="user">${av(S.me.name, 's')}<span><b>${esc(S.me.name)}</b><span class="cap">@${esc(S.me.username)}</span></span></a>`;
   let html; try { html = await r[1](...args); } catch (e) { if (e.status === 401) { S.me = null; return route(); } html = gone(e); }
   if (my !== seq) return;
   view.innerHTML = html; document.querySelectorAll('form[data-form]').forEach(f => f.noValidate = true); if (S.q.add) $('#story-ta')?.focus(); updSel(); updCounters(); initSignup(); if (!/^\/post\//.test(path) || true) { window.scrollTo(0, 0); }
@@ -516,7 +499,7 @@ const A = {
     ov.innerHTML = `<div class="v-top"><span><b class="v-t"></b><span class="v-s" aria-live="polite"></span></span><button class="v-x" data-v="x" aria-label="닫기">${I('x')}</button></div><div class="v-g">${list.map(p => `<div class="v-p"><img src="/media/${p.id}" alt="함께 남긴 사진" draggable="false"></div>`).join('')}</div><div class="v-bar"><span class="v-h">두 번 탭하면 확대해요</span><span class="v-b"><button data-v="cover">대표 사진으로</button><button data-v="more"></button><button data-v="zoom"></button></span></div>`;
     document.body.append(ov); document.body.style.overflow = 'hidden';
     const g = $('.v-g', ov), cur = () => $$('.v-p img', ov)[i], apply = () => { $$('.v-p img', ov).forEach(im => { im.style.transform = ''; }); if (cur()) cur().style.transform = zoom ? `translate(${tx}px,${ty}px) scale(2.2)` : ''; };
-    const upd = () => { $('.v-t', ov).textContent = list[i].mine ? '내가 올린 사진' : '함께 남긴 사진'; $('.v-s', ov).textContent = `${i + 1} / ${list.length}`; $('[data-v=more]', ov).textContent = list[i].mine ? '삭제' : '신고'; $('[data-v=zoom]', ov).textContent = zoom ? '원래대로' : '확대'; g.classList.toggle('z', zoom); apply(); };
+    const upd = () => { $('.v-t', ov).textContent = list[i].mine ? '내가 올린 사진' : '함께 남긴 사진'; $('.v-s', ov).textContent = `${i + 1} / ${list.length}`; $('[data-v=more]', ov).innerHTML = list[i].mine ? I('trash') + '삭제' : I('flag') + '신고'; $('[data-v=zoom]', ov).innerHTML = I(zoom ? 'zout' : 'zin') + (zoom ? '원래 크기' : '확대'); g.classList.toggle('z', zoom); apply(); };
     const setZoom = z => { zoom = z; tx = ty = 0; upd(); };
     const close = () => { document.removeEventListener('keydown', key); document.body.style.overflow = ''; ov.remove(); btns[i]?.scrollIntoView({ block: 'nearest' }); btns[i]?.focus(); };
     const key = e => { if (e.key === 'Escape') close(); else if (!zoom && e.key === 'ArrowRight') g.scrollBy({ left: g.clientWidth }); else if (!zoom && e.key === 'ArrowLeft') g.scrollBy({ left: -g.clientWidth }); };
@@ -556,7 +539,7 @@ const A = {
       }
     });
   },
-  'add-more': () => { const b = sheet(`<h2>무엇을 더할까요?</h2><div class="menu" style="margin-top:8px"><button data-a="photo">${I('photo')}<span><b>사진 고르기</b><br><span class="cap">여러 장을 한 번에 올릴 수 있어요</span></span></button><button data-a="text">${I('star')}<span><b>기억 쓰기</b><br><span class="cap">내가 기억하는 그날을 남겨요</span></span></button></div>`); b.addEventListener('click', e => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; closeSheet(); if (a === 'photo') $('#pf')?.click(); else { const t = $('#story-ta'); t?.scrollIntoView({ block: 'center' }); t?.focus(); } }); },
+  'add-more': () => { const b = sheet(`<h2>무엇을 더할까요?</h2><div class="menu" style="margin-top:8px"><button data-a="photo">${I('imgplus')}<span><b>사진 고르기</b><br><span class="cap">여러 장을 한 번에 올릴 수 있어요</span></span></button><button data-a="text">${I('pen')}<span><b>기억 쓰기</b><br><span class="cap">내가 기억하는 그날을 남겨요</span></span></button></div>`); b.addEventListener('click', e => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; closeSheet(); if (a === 'photo') $('#pf')?.click(); else { const t = $('#story-ta'); t?.scrollIntoView({ block: 'center' }); t?.focus(); } }); },
   save: d => act(() => api('POST', '/api/saves', { post_id: +d.id })),
   marker: (d, t) => {
     const city = window._map.countries[+d.c].cities[+d.i], pv = $('#preview');

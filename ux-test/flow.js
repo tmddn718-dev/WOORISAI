@@ -2,6 +2,7 @@
  * 스플래시 → 온보딩, 테스트 완료 화면, 화면 이벤트(GA4 준비)를 앱 위에 얹는다. 기존 앱 코드는 고치지 않는다. */
 import { resetAll, state, markCompleted, startDemo } from './mock-api.js';
 import { track, askConsent } from './analytics.js';
+import { LUCIDE } from '/lucide.js';
 
 const SEEN = 'wsux_seen';
 const q = new URLSearchParams(location.search);
@@ -9,12 +10,8 @@ const MODE = q.get('mode'); // 진행자용: ?mode=demo 는 샘플 계정으로 
 if (q.has('reset')) { resetAll(); try { sessionStorage.removeItem(SEEN); } catch { } history.replaceState(null, '', location.pathname + location.hash); }
 if (MODE === 'demo') { startDemo(); try { sessionStorage.setItem(SEEN, '1'); } catch { } }
 
-const ICON = {
-  images: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/></svg>',
-  lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
-  flask: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3"/></svg>',
-  check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>'
-};
+const lu = n => `<svg viewBox="0 0 24 24" aria-hidden="true">${LUCIDE[n]}</svg>`;
+const ICON = { images: lu('images'), lock: lu('lock'), flask: lu('flask-conical'), check: lu('check') }; // images·lock 은 첫 실행 시안의 아이콘, flask-conical 은 테스트 안내용(시안에 없음)
 const SLIDES = [
   { icon: 'images', title: '함께한 순간을 하나의 추억으로', body: '각자 찍은 사진과 이야기를 한곳에 모아 같이 완성해요.' },
   { icon: 'lock', title: '초대한 사람만 볼 수 있어요', body: '추억마다 볼 수 있는 사람을 직접 정해요.' },
