@@ -1,0 +1,12 @@
+# UX 테스트 배포(정적)에는 서버 코드와 데이터가 필요 없다. Vercel 이 server.js 를 서버 함수로 실행하지 않게 제외한다.
+server.js
+test.js
+data
+backup
+docs
+mobile-prototype-review-checklist
+*.md
+!ux-test/README.md
+*.fig
+*.zip
+.claude
