@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { patchProto } from './proto-patch.mjs';
+import { patchProto, MARKUP } from './proto-patch.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const src = path.join(root, 'mobile-prototype-review-checklist', 'project');
@@ -48,11 +48,12 @@ for (const name of COPY) for (const f of (fs.statSync(path.join(src, name)).isDi
   if (sha(f) !== sha(path.join(out, path.relative(src, f)))) throw new Error('원본과 달라요: ' + path.relative(src, f));
   n++;
 }
-// 검사 2: app.html 의 화면(마크업) 부분이 원본과 같은지. 로직 <script> 앞부분은 </head> 앞 GA 태그 말고는 바이트 단위로 같아야 한다.
+// 검사 2: app.html 의 화면(마크업) 부분이 원본과 같은지. 허용한 마크업 패치(MARKUP)를 되돌리고 </head> 앞 GA 태그를 빼면 원본과 바이트 단위로 같아야 한다.
 const mk = '<script type="text/x-dc" data-dc-script';
-const appHtml = fs.readFileSync(path.join(out, 'app.html'), 'utf8').replace(inject, '</head>');
-if (appHtml.slice(0, appHtml.indexOf(mk)) !== original.slice(0, original.indexOf(mk))) throw new Error('app.html 의 화면(마크업)이 원본과 달라요.');
+let appHtml = fs.readFileSync(path.join(out, 'app.html'), 'utf8').replace(inject, '</head>');
+for (const [a, c] of MARKUP) appHtml = appHtml.replace(c, () => a);
+if (appHtml.slice(0, appHtml.indexOf(mk)) !== original.slice(0, original.indexOf(mk))) throw new Error('app.html 의 화면(마크업)이 허용한 패치 밖에서 원본과 달라요.');
 const need = ['index.html', 'app.html', 'support.js', 'lucide-icon.js', PROTO, 'ux-test/analytics.js', 'ux-test/app-ga.js', 'ux-test/entry/entry.js', 'ux-test/entry/entry.css', 'ux-test/original-consent.css'];
 const miss = need.filter(f => !fs.existsSync(path.join(out, f)));
 if (miss.length) throw new Error('산출물에 빠진 파일: ' + miss.join(', '));
-console.log(`dist-ux-test 생성 완료: 원본 ${n}개 파일 sha256 일치, app.html 화면(마크업) 원본과 동일, 진입 영역 index.html (GA4: ${gaId ? '측정 ID 설정됨' : '미설정, 전송 없음'})`);
+console.log(`dist-ux-test 생성 완료: 원본 ${n}개 파일 sha256 일치, app.html 화면(마크업)은 허용 패치(추억 상세 갤러리) 외 원본과 동일, 진입 영역 index.html (GA4: ${gaId ? '측정 ID 설정됨' : '미설정, 전송 없음'})`);

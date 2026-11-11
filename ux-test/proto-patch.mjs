@@ -19,6 +19,7 @@ const ev = (name, params) => { // 화면 동작 기록: 가이드 진행 표시�
   try { const k = 'wsux_ev:' + (CFG.flow === 'demo' ? CFG.sc : 'new'), s = JSON.parse(sessionStorage.getItem(k) || '{}'); s[name] = 1; if (name === 'create_save' && params && params.plan) s.plan_memory_saved = 1; sessionStorage.setItem(k, JSON.stringify(s)); } catch (e) {}
   try { window.dispatchEvent(new CustomEvent('ws:event', { detail: { name, params: params || {} } })); } catch (e) {}
 };`);
+rep("itemW: list.length > 1 ? '86%' : '100%', onScroll: this.galScroll(key),", "itemW: list.length > 1 ? '86%' : '100%', restW: '14%', onScroll: this.galScroll(key),");
 rep("const ME = '서연';", "const ME = (CFG.flow === 'new' && CFG.name) ? CFG.name : '서연';");
 rep("const key = (y, m, d) => y + '. ' + String(m).padStart(2, '0') + '. ' + String(d).padStart(2, '0');\n", "const key = (y, m, d) => y + '. ' + String(m).padStart(2, '0') + '. ' + String(d).padStart(2, '0');\n" + SEEDS);
 
@@ -83,13 +84,30 @@ rep("create: LI('square-pen', 20), planAdd: LI('calendar-plus', 20), edit: LI('p
 rep("invite: LI('user-round-plus', 20), users: LI('users-round', 20), reset: LI('rotate-ccw', 20), login: LI('log-in', 20) },", "invite: undefined, users: undefined, reset: undefined, login: undefined },");
 rep("barIcon: bar && bar.icon,", "barIcon: undefined,");
 
+// ── 마크업(화면) 패치: 추억 상세의 참여자별 사진 갤러리 페이지네이션 + 간격만. 허용 범위가 이것뿐이며, build.mjs 가 '이 치환을 되돌리면 원본과 바이트 단위로 같은지' 검사한다. ──
+export const MARKUP = [
+  // 참여자 기록 사이 24→32px, 프로필→사진·사진→글 10→12px
+  ['<section style="display:flex;flex-direction:column;gap:24px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:10px">',
+   '<section style="display:flex;flex-direction:column;gap:32px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:12px">'],
+  // 갤러리 컨테이너를 relative 로(사진 아래 행을 위한 gap:6 제거)
+  ['<div style="display:flex;flex-direction:column;gap:6px">\n                    <div data-gal="{{ c.key }}"', '<div style="position:relative">\n                    <div data-gal="{{ c.key }}"'],
+  // 사진 아래 'n / m' 행을 없애고, 사진 위 우측 하단 플로팅 배지(공통 오버레이 레이어)로. 마지막 사진도 같은 자리에 맞도록 끝에 여백 칸 추가
+  ['                      </sc-for>\n                    </div>\n                    <sc-if value="{{ c.multi }}" hint-placeholder-val="{{ true }}">\n                      <span aria-live="polite" style="align-self:flex-end;font:var(--type-caption-1);color:var(--ws-color-fg-tertiary)">{{ c.pos }} / {{ c.count }}</span>\n                    </sc-if>',
+   '                      </sc-for>\n                      <sc-if value="{{ c.multi }}" hint-placeholder-val="{{ true }}">\n                        <span aria-hidden="true" style="flex:0 0 {{ c.restW }}"></span>\n                      </sc-if>\n                    </div>\n                    <sc-if value="{{ c.multi }}" hint-placeholder-val="{{ true }}">\n                      <div style="position:absolute;left:0;top:0;bottom:0;width:{{ c.itemW }};z-index:1;pointer-events:none">\n                        <span aria-live="polite" style="position:absolute;right:12px;bottom:12px;padding:6px 12px;border-radius:9999px;background:rgba(36,38,34,.72);color:#fff;font:var(--type-caption-1);white-space:nowrap;font-variant-numeric:tabular-nums">{{ c.pos }} / {{ c.count }}</span>\n                      </div>\n                    </sc-if>']
+];
+
 /** @returns {string} 패치한 .dc.html 전체. markup(스크립트 앞)은 원본과 바이트 단위로 같다. */
 export function patchProto(src) {
   const marker = '<script type="text/x-dc" data-dc-script';
   const at = src.indexOf(marker);
   if (at < 0) throw new Error('원본에서 로직 <script> 를 찾지 못했어요.');
-  const head = src.slice(0, at);
+  let head = src.slice(0, at);
   let body = src.slice(at);
+  for (const [a, b] of MARKUP) {
+    const n = head.split(a).length - 1;
+    if (n !== 1) throw new Error(`마크업 패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
+    head = head.replace(a, () => b);
+  }
   for (const [a, b] of R) {
     const n = body.split(a).length - 1;
     if (n !== 1) throw new Error(`패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
