@@ -1,7 +1,7 @@
   persist() {
     if (!CFG.flow) return; // 설정이 없으면 원본과 똑같이(저장하지 않음) 동작
     const s = this.state;
-    try { sessionStorage.setItem(SKEY, JSON.stringify({ mems: s.mems, plans: s.plans, invite: s.invite, friends: s.friends, devPics: s.devPics.filter(x => !/^blob:/.test(x)) })); } catch (e) { /* 저장 공간이 모자라도 동작에는 문제 없음 */ }
+    try { sessionStorage.setItem(SKEY, JSON.stringify({ mems: s.mems, plans: s.plans, invite: s.invite, friends: s.friends, spaces: s.spaces, devPics: s.devPics.filter(x => !/^blob:/.test(x)) })); } catch (e) { /* 저장 공간이 모자라도 동작에는 문제 없음 */ }
   }
   goTab(t, top) { if (top && top.t === 'create') ev('create_abandon'); if (t === 'foot') ev('foot_view'); this.setState({ stack: [], tab: t, overlay: null }); }
   // 친구 초대 시뮬레이션: 초대 링크를 복사하면 잠시 뒤 친구가 수락하고 사진 2장과 이야기를 더한다(서버 없음)

@@ -2,6 +2,7 @@
 // 모든 치환은 '원본에 정확히 1번 있는 문자열'만 대상으로 하고, 아니면 빌드를 실패시킨다(원본이 바뀌면 바로 알 수 있다).
 import fs from 'node:fs';
 import path from 'node:path';
+import { SPACES_MARKUP, SPACES_LOGIC } from './proto-spaces.mjs';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -45,7 +46,7 @@ const PEOPLE_USES = [
 for (const a of PEOPLE_USES) rep(a, a.replace('PEOPLE', 's.friends'));
 
 // 이벤트·시뮬레이션 연결
-rep("openCreate(date, pre) { this.setState(", "openCreate(date, pre) { ev('create_start', { entry: pre && pre.fromPlan ? 'plan' : date ? 'calendar' : 'tab', first: this.state.mems.length === 0 }); this.setState(");
+rep("openCreate(date, pre) { this.setState(", "openCreate(date, pre) { ev('create_start', { entry: pre && pre.fromPlan ? 'plan' : pre && pre.space ? 'space' : date ? 'calendar' : 'tab', first: this.state.mems.length === 0 }); this.setState(");
 rep("back: () => this.setState(st => ({ stack: st.stack.slice(0, -1), overlay: null, planAs: null })),", "back: () => { if (top && top.t === 'create') ev('create_abandon'); this.setState(st => ({ stack: st.stack.slice(0, -1), overlay: null, planAs: null })); },");
 rep("this.setState({ tab: t, stack: [], overlay: null })", "this.goTab(t, top)");
 rep("this.setState({ tab: k, stack: [], overlay: null })", "this.goTab(k, top)");
@@ -94,6 +95,7 @@ rep("barIcon: bar && bar.icon,", "barIcon: undefined,");
 
 // ── 마크업(화면) 패치: 추억 상세의 참여자별 사진 갤러리 페이지네이션 + 간격만. 허용 범위가 이것뿐이며, build.mjs 가 '이 치환을 되돌리면 원본과 바이트 단위로 같은지' 검사한다. ──
 export const MARKUP = [
+  ...SPACES_MARKUP,
   // 참여자 기록 사이 24→32px, 프로필→사진·사진→글 10→12px
   ['<section style="display:flex;flex-direction:column;gap:24px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:10px">',
    '<section style="display:flex;flex-direction:column;gap:32px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:12px">'],
@@ -120,7 +122,7 @@ export function patchProto(src) {
     if (n !== 1) throw new Error(`마크업 패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
     head = head.replace(a, () => b);
   }
-  for (const [a, b] of R) {
+  for (const [a, b] of [...R, ...SPACES_LOGIC]) {
     const n = body.split(a).length - 1;
     if (n !== 1) throw new Error(`패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
     body = body.replace(a, () => b);

@@ -8,11 +8,12 @@ const makeSeeds = cfg => {
   const flow = cfg.flow, sc = +cfg.sc || 0;
   const cl = p => ({ ...p, inv: { ...p.inv } });
   const ids = list => SEED.filter(m => list.includes(m.id)).map(materialize);
-  if (flow === 'new') return { mems: [], plans: [], invite: false, friends: [] };
-  if (flow === 'demo' && sc === 1) return { mems: ids(['han', 'jeju']), plans: [], invite: true, friends: ['민지', '지호', '하은'] };
-  if (flow === 'demo' && sc === 2) return { mems: ids(['han', 'cafe', 'first']), plans: PLANS.filter(p => ['pl-move', 'pl-kimjang', 'pl-party', 'pl-board', 'pl-han'].includes(p.id)).map(cl), invite: false, friends: [...PEOPLE] };
-  if (flow === 'demo' && sc === 3) return { mems: SEED.map(materialize), plans: PLANS.map(cl), invite: false, friends: [...PEOPLE] };
-  return { mems: SEED.map(materialize), plans: PLANS.map(cl), invite: true, friends: [...PEOPLE] }; // 설정이 없으면 원본 기본 상태
+  const link = (list, id, spaceId) => list.map(m => m.id === id ? { ...m, space: spaceId } : m);
+  if (flow === 'new') return { mems: [], plans: [], invite: false, friends: [], spaces: [] };
+  if (flow === 'demo' && sc === 1) return { mems: link(ids(['han', 'jeju']), 'jeju', 'sp1'), plans: [], invite: true, friends: ['민지', '지호', '하은'], spaces: [{ id: 'sp1', name: '제주 친구들', members: ['민지', '지호', '하은'] }] };
+  if (flow === 'demo' && sc === 2) return { mems: link(ids(['han', 'cafe', 'first']), 'han', 'sp1'), plans: PLANS.filter(p => ['pl-move', 'pl-kimjang', 'pl-party', 'pl-board', 'pl-han'].includes(p.id)).map(cl), invite: false, friends: [...PEOPLE], spaces: [{ id: 'sp1', name: '망원 모임', members: ['민지', '지호', '하은'] }] };
+  if (flow === 'demo' && sc === 3) return { mems: link(link(SEED.map(materialize), 'jeju', 'sp1'), 'cafe', 'sp2'), plans: PLANS.map(cl), invite: false, friends: [...PEOPLE], spaces: [{ id: 'sp1', name: '제주 친구들', members: ['민지', '지호', '하은'] }, { id: 'sp2', name: '성수 사람들', members: ['유나', '하은'] }] };
+  return { mems: SEED.map(materialize), plans: PLANS.map(cl), invite: true, friends: [...PEOPLE], spaces: [] }; // 설정이 없으면 원본 기본 상태
 };
 const SEEDS = makeSeeds(CFG);
 const SKEY = 'wsux_state:' + [CFG.flow || 'orig', CFG.sc || 0, CFG.name || ''].join(':');

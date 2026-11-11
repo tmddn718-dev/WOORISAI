@@ -15,10 +15,11 @@ const ALLOW = {
   create_start: ['entry', 'first'], create_save: ['first', 'photos', 'story', 'people', 'plan'], create_abandon: [],
   invite_start: [], invite_complete: ['friends', 'via'], contrib_add: ['photos', 'story'], photo_view: [],
   plan_create_start: [], plan_create: ['invited', 'past'], plan_view: [], plan_rsvp: ['answer'], plan_to_memory: [], plan_memory_view: [],
-  cal_view: [], foot_view: [], region_view: [], memory_view: ['year'], logout: []
+  cal_view: [], foot_view: [], region_view: [], memory_view: ['year'], logout: [],
+  space_view: [], space_create_start: [], space_create: ['members'], space_update: ['members'], space_delete: []
 };
 // 탐색 계열 이벤트는 세션 안에서 여러 번 보내고, 나머지(단계 이벤트)는 세션당 한 번만 보낸다.
-const REPEAT = new Set(['page_view', 'cal_view', 'foot_view', 'region_view', 'memory_view', 'photo_view', 'plan_view', 'plan_rsvp', 'contrib_add', 'scenario_start', 'scenario_reset']);
+const REPEAT = new Set(['space_view', 'page_view', 'cal_view', 'foot_view', 'region_view', 'memory_view', 'photo_view', 'plan_view', 'plan_rsvp', 'contrib_add', 'scenario_start', 'scenario_reset']);
 const cfg = () => { try { return JSON.parse(sessionStorage.getItem('wsux_cfg') || '{}'); } catch { return {}; } };
 const CKEY = 'wsux_consent', SENT = 'wsux_sent', RUN = 'wsux_run', DEV = 'wsux_dev';
 const ls = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { } }, del: k => { try { localStorage.removeItem(k); } catch { } } };
