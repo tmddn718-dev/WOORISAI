@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/woorisai-design-system-e5e56bd3-1094-469a-b2c6-d51e8ddd353c/fonts/fonts.css">
+  <link rel="stylesheet" href="_ds/woorisai-design-system-e5e56bd3-1094-469a-b2c6-d51e8ddd353c/tokens/fig-tokens.css">
+  <link rel="stylesheet" href="_ds/woorisai-design-system-e5e56bd3-1094-469a-b2c6-d51e8ddd353c/tokens/fig-typography.css">
+  <link rel="stylesheet" href="_ds/woorisai-design-system-e5e56bd3-1094-469a-b2c6-d51e8ddd353c/tokens/ws-tokens.css">
+  <link rel="stylesheet" href="_ds/woorisai-design-system-e5e56bd3-1094-469a-b2c6-d51e8ddd353c/tokens/semantic.css">
+  <link rel="stylesheet" href="_ds/woorisai-design-system-e5e56bd3-1094-469a-b2c6-d51e8ddd353c/components/components.css">
+  <link rel="stylesheet" href="_ds/woorisai-design-system-e5e56bd3-1094-469a-b2c6-d51e8ddd353c/styles.css">
+  <script src="_ds/woorisai-design-system-e5e56bd3-1094-469a-b2c6-d51e8ddd353c/_ds_bundle.js"></script>
+  <style>
+    html,body{margin:0;background:#E6E4DE;font-family:var(--ws-font-product);-webkit-font-smoothing:antialiased}
+    a{color:var(--ws-color-fg-link)}a:hover{color:var(--ws-color-bg-brand-hover)}
+    *{box-sizing:border-box}
+  </style>
+</helmet>
+<section style="padding:56px 56px 80px;display:flex;flex-direction:column;gap:32px">
+  <div style="display:flex;flex-direction:column;gap:6px;max-width:720px">
+    <span style="font-family:var(--ws-font-wordmark);font-weight:800;font-size:22px;color:var(--ws-color-fg-brand)">우리사이</span>
+    <h1 style="margin:0;font:var(--type-title-2);color:var(--ws-color-fg-strong)">실사용 데이터 목업 · 서연의 8개월</h1>
+    <p style="margin:0;font:var(--type-body-2-read);color:var(--ws-color-fg-secondary)">공동 추억 24개 · 함께한 사람 6명 · 발자국 8개 지역 · 2026년 3월 7일 첫 기록부터 11월 10일까지. 사진은 Unsplash 라이선스 이미지예요.</p>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:48px 40px;align-items:flex-start">
+
+    <div id="1a" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="padding:3px 8px;border-radius:6px;background:var(--ws-color-bg-brand);color:var(--ws-color-fg-on-brand);font:var(--type-label-2)">1a</span><span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">활성 사용자 홈</span></div>
+      <div id="s-home" data-screen-label="1a 활성 사용자 홈" style="position:relative;width:375px;height:812px;border-radius:44px;overflow:hidden;background:var(--ws-color-bg-canvas);box-shadow:0 0 0 10px #242622, var(--ws-elevation-3);display:flex;flex-direction:column;color:var(--ws-color-fg-default)">
+        <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:var(--type-label-1);color:var(--ws-color-fg-strong)"><span>9:41</span><span style="width:120px;height:28px;border-radius:9999px;background:#242622;margin-top:-6px"></span><span style="font:var(--type-caption-1)">5G</span></div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:32px;padding:4px 20px 32px">
+          <div style="display:flex;align-items:center;justify-content:space-between;height:44px;flex:none">
+            <span style="font-family:var(--ws-font-wordmark);font-weight:800;font-size:20px;color:var(--ws-color-fg-brand)">우리사이</span>
+            <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Avatar" size="32" name="서연" hint-size="32px,32px"></x-import>
+          </div>
+          <section style="display:flex;flex-direction:column;gap:12px">
+            <h2 style="margin:0;font:var(--type-headline-1);color:var(--ws-color-fg-strong)">최근 함께한 추억</h2>
+            <div style="border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle);overflow:hidden;display:flex;flex-direction:column">
+              <div style="position:relative;aspect-ratio:4/3;background:var(--ws-color-bg-recall-subtle)"><img src="{{ hero.img }}" alt="{{ hero.title }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></div>
+              <div style="padding:16px 16px 18px;display:flex;flex-direction:column;gap:6px">
+                <span style="font:var(--type-heading-2);color:var(--ws-color-fg-strong);text-wrap:pretty">{{ hero.title }}</span>
+                <span style="font:var(--type-label-1-read);color:var(--ws-color-fg-secondary)">{{ hero.meta }}</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px">
+                  <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                    <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.ParticipantGroup" names="{{ hero.names }}" size="{{ 28 }}" hint-size="96px,28px"></x-import>
+                    <span style="display:flex;flex-direction:column;min-width:0">
+                      <span style="font:var(--type-label-1);color:var(--ws-color-fg-strong)">{{ hero.withShort }}</span>
+                      <span style="font:var(--type-caption-1);color:var(--ws-color-fg-tertiary)">{{ hero.counts }}</span>
+                    </span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:12px;border-top:1px solid var(--ws-color-border-subtle);font:var(--type-label-1-read);color:var(--ws-color-fg-default)"><span style="width:6px;height:6px;border-radius:9999px;background:var(--ws-color-bg-brand);flex:none"></span>{{ hero.newNote }}</div>
+              </div>
+            </div>
+            <sc-for list="{{ homeRows }}" as="m" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:12px;padding:4px 0">
+                <span style="position:relative;width:56px;height:56px;flex:none;border-radius:var(--ws-radius-small);overflow:hidden;background:var(--ws-color-bg-recall-subtle)"><img src="{{ m.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></span>
+                <span style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1">
+                  <span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">{{ m.title }}</span>
+                  <span style="font:var(--type-label-2);color:var(--ws-color-fg-tertiary)">{{ m.dateShort }} · {{ m.withShort }} · 사진 {{ m.ph }}</span>
+                </span>
+                <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Icon" name="IconChevronRight" size="{{ 20 }}" hint-size="20px,20px"></x-import>
+              </div>
+            </sc-for>
+          </section>
+          <section style="display:flex;flex-direction:column;gap:12px">
+            <h2 style="margin:0;font:var(--type-headline-1);color:var(--ws-color-fg-strong)">우리의 발자국</h2>
+            <div style="padding:16px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle);display:flex;flex-direction:column;gap:12px">
+              <span style="font:var(--type-label-1-read);color:var(--ws-color-fg-secondary)">8개 지역 · 추억 24개</span>
+              <div style="display:flex;gap:8px">
+                <sc-for list="{{ footMini }}" as="r" hint-placeholder-count="5">
+                  <span style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                    <span style="position:relative;width:52px;height:52px;border-radius:9999px;overflow:hidden;border:2px solid var(--ws-color-border-brand)"><img src="{{ r.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></span>
+                    <span style="font:var(--type-caption-1);color:var(--ws-color-fg-secondary)">{{ r.name }}</span>
+                  </span>
+                </sc-for>
+              </div>
+            </div>
+          </section>
+        </div>
+        <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.BottomNavigation" items="{{ navItems }}" value="home" style="width:100%;flex:none" hint-size="100%,64px"></x-import>
+      </div>
+    </div>
+
+    <div id="1b" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="padding:3px 8px;border-radius:6px;background:var(--ws-color-bg-brand);color:var(--ws-color-fg-on-brand);font:var(--type-label-2)">1b</span><span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">추억 피드</span></div>
+      <div id="s-feed" data-screen-label="1b 추억 피드" style="position:relative;width:375px;height:812px;border-radius:44px;overflow:hidden;background:var(--ws-color-bg-canvas);box-shadow:0 0 0 10px #242622, var(--ws-elevation-3);display:flex;flex-direction:column;color:var(--ws-color-fg-default)">
+        <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:var(--type-label-1);color:var(--ws-color-fg-strong)"><span>9:41</span><span style="width:120px;height:28px;border-radius:9999px;background:#242622;margin-top:-6px"></span><span style="font:var(--type-caption-1)">5G</span></div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:4px 20px 32px">
+          <h1 style="margin:0;height:44px;flex:none;display:flex;align-items:center;font:var(--type-title-2);color:var(--ws-color-fg-strong)">추억</h1>
+          <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.SegmentedControl" label="보기" options="{{ viewOptions }}" value="feed" dc-props="{{ fullW }}" hint-size="100%,44px"></x-import>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <sc-for list="{{ dimChips }}" as="d" hint-placeholder-count="4">
+              <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.FilterChip" label="{{ d.label }}" selected="{{ d.selected }}" hint-size="64px,36px"></x-import>
+            </sc-for>
+          </div>
+          <span style="font:var(--type-label-2);color:var(--ws-color-fg-tertiary)">추억 24개 · 최근 순</span>
+          <sc-for list="{{ feedCards }}" as="m" hint-placeholder-count="2">
+            <div style="flex:none;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle);overflow:hidden;display:flex;flex-direction:column">
+              <div style="position:relative;aspect-ratio:3/2;background:var(--ws-color-bg-recall-subtle)">
+                <img src="{{ m.img }}" alt="{{ m.title }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+                <span style="position:absolute;left:12px;top:12px"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Badge" tone="neutral" icon="IconLock" label="초대된 사람만" hint-size="96px,24px"></x-import></span>
+              </div>
+              <div style="padding:16px 16px 18px;display:flex;flex-direction:column;gap:6px">
+                <span style="font:var(--type-headline-1);color:var(--ws-color-fg-strong);text-wrap:pretty">{{ m.title }}</span>
+                <span style="font:var(--type-label-1-read);color:var(--ws-color-fg-secondary)">{{ m.meta }}</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px">
+                  <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                    <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.ParticipantGroup" names="{{ m.names }}" size="{{ 28 }}" hint-size="96px,28px"></x-import>
+                    <span style="display:flex;flex-direction:column;min-width:0">
+                      <span style="font:var(--type-label-1);color:var(--ws-color-fg-strong)">{{ m.withShort }}</span>
+                      <span style="font:var(--type-caption-1);color:var(--ws-color-fg-tertiary)">{{ m.counts }}</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.BottomNavigation" items="{{ navItems }}" value="memory" style="width:100%;flex:none" hint-size="100%,64px"></x-import>
+      </div>
+    </div>
+
+    <div id="1c" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="padding:3px 8px;border-radius:6px;background:var(--ws-color-bg-brand);color:var(--ws-color-fg-on-brand);font:var(--type-label-2)">1c</span><span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">추억 달력</span></div>
+      <div id="s-cal" data-screen-label="1c 추억 달력" style="position:relative;width:375px;height:812px;border-radius:44px;overflow:hidden;background:var(--ws-color-bg-canvas);box-shadow:0 0 0 10px #242622, var(--ws-elevation-3);display:flex;flex-direction:column;color:var(--ws-color-fg-default)">
+        <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:var(--type-label-1);color:var(--ws-color-fg-strong)"><span>9:41</span><span style="width:120px;height:28px;border-radius:9999px;background:#242622;margin-top:-6px"></span><span style="font:var(--type-caption-1)">5G</span></div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:4px 20px 32px">
+          <h1 style="margin:0;height:44px;flex:none;display:flex;align-items:center;font:var(--type-title-2);color:var(--ws-color-fg-strong)">추억</h1>
+          <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.SegmentedControl" label="보기" options="{{ viewOptions }}" value="cal" dc-props="{{ fullW }}" hint-size="100%,44px"></x-import>
+          <div style="padding:12px 8px 8px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle);display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px">
+              <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.IconButton" icon="IconChevronRight" label="이전 달" style="transform:rotate(180deg)" hint-size="44px,44px"></x-import>
+              <span style="display:flex;flex-direction:column;align-items:center">
+                <span style="font:var(--type-headline-1);color:var(--ws-color-fg-strong)">2026년 10월</span>
+                <span style="font:var(--type-caption-1);color:var(--ws-color-fg-tertiary)">추억 3개 · 사진 69장</span>
+              </span>
+              <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.IconButton" icon="IconChevronRight" label="다음 달" hint-size="44px,44px"></x-import>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:2px;text-align:center">
+              <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7">
+                <span style="font:var(--type-caption-1);color:{{ w.color }};padding:4px 0">{{ w.label }}</span>
+              </sc-for>
+              <sc-for list="{{ calCells }}" as="d" hint-placeholder-count="35">
+                <div style="height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;visibility:{{ d.vis }};background:{{ d.band }};border-radius:{{ d.bandRadius }}">
+                  <span style="width:34px;height:34px;border-radius:var(--ws-radius-small);display:grid;place-items:center;font:var(--type-label-1);background:{{ d.bg }};color:{{ d.fg }}">{{ d.label }}</span>
+                  <span style="width:4px;height:4px;border-radius:9999px;background:{{ d.dot }}"></span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <h2 style="margin:0;font:var(--type-headline-2);color:var(--ws-color-fg-strong)">10월 3일 토요일</h2>
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle)">
+              <span style="position:relative;width:64px;height:64px;flex:none;border-radius:var(--ws-radius-small);overflow:hidden"><img src="{{ jeju.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></span>
+              <span style="display:flex;flex-direction:column;gap:3px;min-width:0;flex:1">
+                <span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">{{ jeju.title }}</span>
+                <span style="font:var(--type-label-2);color:var(--ws-color-fg-tertiary)">10월 3일 – 5일 · 제주 서귀포</span>
+                <span style="font:var(--type-label-2);color:var(--ws-color-fg-secondary)">{{ jeju.withShort }} · {{ jeju.counts }}</span>
+              </span>
+              <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Icon" name="IconChevronRight" size="{{ 20 }}" hint-size="20px,20px"></x-import>
+            </div>
+          </div>
+        </div>
+        <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.BottomNavigation" items="{{ navItems }}" value="memory" style="width:100%;flex:none" hint-size="100%,64px"></x-import>
+      </div>
+    </div>
+
+    <div id="1d" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="padding:3px 8px;border-radius:6px;background:var(--ws-color-bg-brand);color:var(--ws-color-fg-on-brand);font:var(--type-label-2)">1d</span><span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">우리의 발자국</span></div>
+      <div id="s-foot" data-screen-label="1d 우리의 발자국" style="position:relative;width:375px;height:812px;border-radius:44px;overflow:hidden;background:var(--ws-color-bg-canvas);box-shadow:0 0 0 10px #242622, var(--ws-elevation-3);display:flex;flex-direction:column;color:var(--ws-color-fg-default)">
+        <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:var(--type-label-1);color:var(--ws-color-fg-strong)"><span>9:41</span><span style="width:120px;height:28px;border-radius:9999px;background:#242622;margin-top:-6px"></span><span style="font:var(--type-caption-1)">5G</span></div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:4px 20px 32px">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:none">
+            <h1 style="margin:0;height:44px;display:flex;align-items:center;font:var(--type-title-2);color:var(--ws-color-fg-strong)">우리의 발자국</h1>
+            <p style="margin:0;font:var(--type-body-2-read);color:var(--ws-color-fg-secondary)">함께 다녀온 곳에 추억이 쌓였어요.</p>
+          </div>
+          <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.SegmentedControl" label="발자국 종류" options="{{ footOptions }}" value="mine" dc-props="{{ fullW }}" hint-size="100%,44px"></x-import>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:none">
+            <div style="padding:14px 16px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle);display:flex;flex-direction:column;gap:2px">
+              <span style="font:var(--type-label-2);color:var(--ws-color-fg-tertiary)">기록된 지역</span>
+              <span style="font:var(--type-title-2);color:var(--ws-color-fg-strong)">8<span style="font:var(--type-body-2);color:var(--ws-color-fg-secondary)"> / 17곳</span></span>
+            </div>
+            <div style="padding:14px 16px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle);display:flex;flex-direction:column;gap:2px">
+              <span style="font:var(--type-label-2);color:var(--ws-color-fg-tertiary)">연결된 추억</span>
+              <span style="font:var(--type-title-2);color:var(--ws-color-fg-strong)">24<span style="font:var(--type-body-2);color:var(--ws-color-fg-secondary)">개</span></span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 4px;padding:16px 6px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle);flex:none">
+            <sc-for list="{{ stamps }}" as="r" hint-placeholder-count="17">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:5px">
+                <span style="position:relative;width:52px;height:52px;border-radius:9999px;overflow:hidden;display:grid;place-items:center;border:{{ r.border }};font:var(--type-label-2);color:var(--ws-color-fg-tertiary)">
+                  <sc-if value="{{ r.has }}" hint-placeholder-val="{{ false }}"><img src="{{ r.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></sc-if>
+                  <sc-if value="{{ r.none }}" hint-placeholder-val="{{ true }}">{{ r.name }}</sc-if>
+                </span>
+                <span style="min-height:16px;font:var(--type-caption-1);color:{{ r.capColor }}">{{ r.cap }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.BottomNavigation" items="{{ navItems }}" value="foot" style="width:100%;flex:none" hint-size="100%,64px"></x-import>
+      </div>
+    </div>
+
+    <div id="1e" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="padding:3px 8px;border-radius:6px;background:var(--ws-color-bg-brand);color:var(--ws-color-fg-on-brand);font:var(--type-label-2)">1e</span><span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">제주 여행 추억 상세</span></div>
+      <div id="s-detail" data-screen-label="1e 제주 추억 상세" style="position:relative;width:375px;height:812px;border-radius:44px;overflow:hidden;background:var(--ws-color-bg-canvas);box-shadow:0 0 0 10px #242622, var(--ws-elevation-3);display:flex;flex-direction:column;color:var(--ws-color-fg-default)">
+        <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:var(--type-label-1);color:var(--ws-color-fg-strong)"><span>9:41</span><span style="width:120px;height:28px;border-radius:9999px;background:#242622;margin-top:-6px"></span><span style="font:var(--type-caption-1)">5G</span></div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:20px;padding:0 0 24px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 0;flex:none">
+            <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.IconButton" icon="IconChevronRight" label="뒤로" style="transform:rotate(180deg)" hint-size="44px,44px"></x-import>
+            <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.IconButton" icon="IconMore" label="더 보기" hint-size="44px,44px"></x-import>
+          </div>
+          <div style="margin:0 20px;position:relative;aspect-ratio:4/3;flex:none;border-radius:var(--ws-radius-card);overflow:hidden;background:var(--ws-color-bg-recall-subtle)">
+            <img src="{{ jeju.img }}" alt="{{ jeju.title }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+            <span style="position:absolute;right:12px;bottom:12px;padding:4px 10px;border-radius:9999px;background:rgba(36,38,34,.72);color:#fff;font:var(--type-caption-1)">1 / 38</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 20px;flex:none">
+            <div style="display:flex"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Badge" tone="brand" icon="IconLock" label="초대된 사람만" hint-size="104px,24px"></x-import></div>
+            <h1 style="margin:4px 0 0;font:var(--type-title-2);color:var(--ws-color-fg-strong);text-wrap:pretty">{{ jeju.title }}</h1>
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;font:var(--type-label-1-read);color:var(--ws-color-fg-secondary)">
+              <span style="display:flex;align-items:center;gap:4px"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Icon" name="IconCalendar" size="{{ 16 }}" hint-size="16px,16px"></x-import>2026. 10. 03 – 10. 05</span>
+              <span style="display:flex;align-items:center;gap:4px"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Icon" name="IconMapPin" size="{{ 16 }}" hint-size="16px,16px"></x-import>제주 서귀포</span>
+            </div>
+          </div>
+          <div style="margin:0 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--ws-color-border-subtle);border-bottom:1px solid var(--ws-color-border-subtle);flex:none">
+            <div style="display:flex;align-items:center;gap:10px;min-width:0">
+              <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.ParticipantGroup" names="{{ jeju.names }}" hint-size="96px,32px"></x-import>
+              <span style="display:flex;flex-direction:column">
+                <span style="font:var(--type-label-1);color:var(--ws-color-fg-strong)">{{ jeju.withFull }}</span>
+                <span style="font:var(--type-caption-1);color:var(--ws-color-fg-tertiary)">4명이 함께 기록 · {{ jeju.counts }}</span>
+              </span>
+            </div>
+            <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Button" style2="ghost" size="sm" label="참여자" hint-size="64px,36px"></x-import>
+          </div>
+          <section style="display:flex;flex-direction:column;gap:24px;padding:0 20px">
+            <sc-for list="{{ contribs }}" as="c" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Avatar" size="32" name="{{ c.name }}" hint-size="32px,32px"></x-import>
+                  <span style="display:flex;flex-direction:column;flex:1;min-width:0">
+                    <span style="font:var(--type-label-1);color:var(--ws-color-fg-strong)">{{ c.name }}</span>
+                    <span style="font:var(--type-caption-1);color:var(--ws-color-fg-tertiary)">{{ c.at }} · 사진 {{ c.ph }}장</span>
+                  </span>
+                  <sc-if value="{{ c.mine }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Badge" tone="neutral" label="내 기록" hint-size="56px,24px"></x-import></sc-if>
+                </div>
+                <div style="display:grid;grid-template-columns:2fr 1fr;grid-template-rows:1fr 1fr;gap:4px;height:180px;border-radius:var(--ws-radius-small);overflow:hidden">
+                  <sc-for list="{{ c.tiles }}" as="t" hint-placeholder-count="3">
+                    <div style="position:relative;grid-row:{{ t.row }};background:var(--ws-color-bg-recall-subtle)">
+                      <img src="{{ t.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+                      <sc-if value="{{ t.more }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;inset:0;display:grid;place-items:center;background:rgba(36,38,34,.48);color:#fff;font:var(--type-headline-2)">+{{ t.moreN }}</span></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+                <p style="margin:0;font:var(--type-body-1-read);color:var(--ws-color-fg-default);text-wrap:pretty">{{ c.text }}</p>
+              </div>
+            </sc-for>
+          </section>
+        </div>
+        <div style="flex:none;display:flex;gap:8px;padding:12px 20px 24px;background:var(--ws-color-bg-canvas);border-top:1px solid var(--ws-color-border-subtle)">
+          <div style="flex:1;display:flex;min-width:0"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Button" full-width="{{ true }}" icon="IconPlus" label="내 사진과 이야기 더하기" hint-size="100%,48px"></x-import></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="1f" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="padding:3px 8px;border-radius:6px;background:var(--ws-color-bg-brand);color:var(--ws-color-fg-on-brand);font:var(--type-label-2)">1f</span><span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">비로그인 둘러보기 홈</span></div>
+      <div id="s-guest" data-screen-label="1f 둘러보기 홈" style="position:relative;width:375px;height:812px;border-radius:44px;overflow:hidden;background:var(--ws-color-bg-canvas);box-shadow:0 0 0 10px #242622, var(--ws-elevation-3);display:flex;flex-direction:column;color:var(--ws-color-fg-default)">
+        <div style="height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 28px;font:var(--type-label-1);color:var(--ws-color-fg-strong)"><span>9:41</span><span style="width:120px;height:28px;border-radius:9999px;background:#242622;margin-top:-6px"></span><span style="font:var(--type-caption-1)">5G</span></div>
+        <div style="flex:none;display:flex;align-items:center;gap:12px;margin:4px 16px 0;padding:8px 8px 8px 14px;border-radius:var(--ws-radius-control);background:var(--ws-color-bg-recall-subtle)">
+          <span style="display:flex;flex-direction:column;flex:1;min-width:0">
+            <span style="font:var(--type-label-1);color:var(--ws-color-fg-strong)">우리사이 미리보기</span>
+            <span style="font:var(--type-caption-1);color:var(--ws-color-fg-secondary)">예시 추억으로 둘러보고 있어요.</span>
+          </span>
+          <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Button" size="sm" label="시작하기" hint-size="80px,36px"></x-import>
+        </div>
+        <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;gap:28px;padding:12px 20px 32px">
+          <section style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <h2 style="margin:0;font:var(--type-heading-2);color:var(--ws-color-fg-strong);text-wrap:pretty">함께 다녀온 날을,<br>한 곳에 같이 모아요</h2>
+              <span style="font:var(--type-body-2-read);color:var(--ws-color-fg-secondary)">각자 찍은 사진과 이야기가 하나의 추억이 돼요.</span>
+            </div>
+            <div style="border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle);overflow:hidden;display:flex;flex-direction:column">
+              <div style="position:relative;aspect-ratio:16/10">
+                <img src="{{ guest.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+                <span style="position:absolute;left:12px;top:12px"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Badge" tone="neutral" label="예시 추억" hint-size="72px,24px"></x-import></span>
+              </div>
+              <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px">
+                <span style="font:var(--type-headline-1);color:var(--ws-color-fg-strong)">친구 넷이 떠난 제주 2박 3일</span>
+                <span style="font:var(--type-label-1-read);color:var(--ws-color-fg-secondary)">4명이 남긴 사진 38장 · 이야기 9개</span>
+                <div style="display:flex;gap:4px;margin-top:6px">
+                  <sc-for list="{{ guest.thumbs }}" as="t" hint-placeholder-count="4">
+                    <span style="position:relative;flex:1;aspect-ratio:1;border-radius:6px;overflow:hidden"><img src="{{ t.img }}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"><span style="position:absolute;left:4px;bottom:4px;padding:1px 6px;border-radius:9999px;background:rgba(36,38,34,.64);color:#fff;font:var(--type-caption-2)">{{ t.by }}</span></span>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section style="display:flex;flex-direction:column;gap:14px">
+            <sc-for list="{{ guestSteps }}" as="g" hint-placeholder-count="3">
+              <div style="display:flex;align-items:flex-start;gap:12px">
+                <span style="width:36px;height:36px;flex:none;border-radius:9999px;display:grid;place-items:center;background:var(--ws-color-bg-brand-subtle);color:var(--ws-color-fg-brand)"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Icon" name="{{ g.icon }}" size="{{ 20 }}" hint-size="20px,20px"></x-import></span>
+                <span style="display:flex;flex-direction:column;gap:2px">
+                  <span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">{{ g.title }}</span>
+                  <span style="font:var(--type-label-1-read);color:var(--ws-color-fg-secondary)">{{ g.body }}</span>
+                </span>
+              </div>
+            </sc-for>
+          </section>
+          <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Button" full-width="{{ true }}" label="나도 추억 남기기" hint-size="100%,48px"></x-import>
+        </div>
+        <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.BottomNavigation" items="{{ navItems }}" value="home" style="width:100%;flex:none" hint-size="100%,64px"></x-import>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const U = id => 'https://images.unsplash.com/photo-' + id + '?w=900&q=75&auto=format&fit=crop';
+const ME = '서연';
+const M = [
+  { id: 'han', t: '가을 끝 한강, 돗자리 위에서 노을까지', d: '2026. 11. 08', r: '서울', p: '망원한강공원', w: ['민지', '지호', '하은'], img: '1758892591932-64a3d2203a3a', ph: 14, st: 5, nw: '하은님이 어제 사진 3장을 더했어요' },
+  { id: 'bday', t: '하은이 서른 번째 생일, 연남동 작은 케이크 가게에서 다 같이 노래 부른 밤', d: '2026. 10. 31', r: '서울', p: '연남동', w: ['하은', '민지', '유나', '준서'], img: '1545696563-af8f6ec2295a', ph: 22, st: 6 },
+  { id: 'cafe', t: '성수 골목 카페 투어', d: '2026. 10. 18', r: '서울', p: '성수동', w: ['유나'], img: '1685455853674-68f3ef40f705', ph: 9, st: 2 },
+  { id: 'jeju', t: '제주 2박 3일, 비 그친 뒤의 오름', d: '2026. 10. 03', r: '제주', p: '서귀포', w: ['민지', '지호', '하은'], img: '1628411848698-e3b3249a272a', ph: 38, st: 9 },
+  { id: 'expo', t: '전시 보고 나와서 한참 걸었던 날', d: '2026. 09. 20', r: '서울', p: '종로', w: ['도윤'], img: '1726311480832-f7d33ec155c0', ph: 7, st: 2 },
+  { id: 'cookie', t: '유나가 구워 온 쿠키와 긴 오후', d: '2026. 09. 06', r: '서울', p: '연희동', w: ['유나', '하은'], img: '1590872809786-3513a0238a19', ph: 6, st: 2 },
+  { id: 'gwangan', t: '광안리 밤바다 산책', d: '2026. 08. 17', r: '부산', p: '광안리', w: ['지호', '도윤', '준서'], img: '1702040093537-b8c34eaa0f5c', ph: 12, st: 3 },
+  { id: 'gamcheon', t: '감천마을 계단 끝까지', d: '2026. 08. 16', r: '부산', p: '감천문화마을', w: ['지호', '도윤', '준서'], img: '1672671187899-a10f547341f1', ph: 10, st: 2 },
+  { id: 'haeundae', t: '해운대 아침 수영', d: '2026. 08. 15', r: '부산', p: '해운대', w: ['지호', '도윤', '준서'], img: '1638591751482-1a7d27fcea15', ph: 8, st: 2 },
+  { id: 'busanst', t: 'KTX 타고 부산 도착, 첫 끼는 돼지국밥', d: '2026. 08. 15', r: '부산', p: '부산역', w: ['지호', '도윤', '준서'], img: '1723707959328-4106c2a3854d', ph: 3, st: 1 },
+  { id: 'gyeongpo', t: '경포 바다까지 걸어간 저녁', d: '2026. 07. 13', r: '강원', p: '강릉 경포', w: ['민지', '유나'], img: '1611372876693-4dc4153dee61', ph: 6, st: 2 },
+  { id: 'anmok', t: '강릉 안목해변 커피거리', d: '2026. 07. 12', r: '강원', p: '강릉 안목해변', w: ['민지', '유나'], img: '1667971286579-63a5222780ff', ph: 11, st: 3 },
+  { id: 'house', t: '도윤이 집들이, 처음 해본 밀푀유나베', d: '2026. 06. 27', r: '경기', p: '성남 분당', w: ['도윤', '준서', '지호'], img: '1656057339655-786cadf701a7', ph: 9, st: 4 },
+  { id: 'banpo', t: '퇴근하고 반포 무지개분수', d: '2026. 06. 18', r: '서울', p: '반포한강공원', w: ['지호'], img: '1659242710553-3f8513f136b3', ph: 4, st: 1 },
+  { id: 'incheon', t: '인천대교 건너 영종도 드라이브', d: '2026. 06. 07', r: '인천', p: '영종도', w: ['준서'], img: '1617108309814-3326655a165a', ph: 5, st: 1 },
+  { id: 'namsan', t: '남산 아래 야경 보러', d: '2026. 05. 30', r: '서울', p: '남산', w: ['도윤'], img: '1556513584-fc549ffb7577', ph: 5, st: 1 },
+  { id: 'yeosu', t: '여수 밤바다, 케이블카에서 본 다리', d: '2026. 05. 23', r: '전남', p: '여수 돌산', w: ['하은', '민지'], img: '1724618194655-c3c12254d61c', ph: 13, st: 3 },
+  { id: 'udo', t: '우도 한 바퀴, 자전거로', d: '2026. 05. 10', r: '제주', p: '우도', w: ['유나'], img: '1612977512598-3b8d6a498bbb', ph: 10, st: 2 },
+  { id: 'aewol', t: '제주 한 달 살기 중인 유나 만나러', d: '2026. 05. 09', r: '제주', p: '애월', w: ['유나'], img: '1599922407641-d20388f17918', ph: 8, st: 3 },
+  { id: 'taean', t: '태안 유채꽃 바닷길', d: '2026. 04. 19', r: '충남', p: '태안', w: ['지호'], img: '1698726958935-98833cb28bdb', ph: 7, st: 1 },
+  { id: 'forest', t: '서울숲 벚꽃 피크닉', d: '2026. 04. 05', r: '서울', p: '서울숲', w: ['민지', '하은', '유나'], img: '1763901326436-256ad090a6c9', ph: 16, st: 4 },
+  { id: 'minji', t: '민지 생일, 촛불 두 번 끈 날', d: '2026. 03. 28', r: '서울', p: '합정', w: ['민지', '하은', '유나'], img: '1562804698-732e972e46e4', ph: 12, st: 5 },
+  { id: 'euljiro', t: '을지로 다방에서 밤 열한 시까지', d: '2026. 03. 14', r: '서울', p: '을지로', w: ['준서', '도윤'], img: '1743248927891-e448e433618e', ph: 4, st: 2 },
+  { id: 'first', t: '우리사이 첫 기록, 망원동 브런치', d: '2026. 03. 07', r: '서울', p: '망원동', w: ['민지'], img: '1593034509785-5b17ba49f683', ph: 5, st: 1 }
+];
+const REGIONS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
+const wa = s => { const c = s.charCodeAt(s.length - 1) - 0xAC00; return s + ((c >= 0 && c % 28) ? '과' : '와'); };
+const withShort = w => w.length === 1 ? wa(w[0]) + ' 함께' : w[0] + ' 외 ' + (w.length - 1) + '명';
+const dec = m => ({
+  ...m, title: m.t, img: U(m.img), names: [ME, ...m.w],
+  meta: m.d + ' · ' + m.r + ' ' + m.p,
+  dateShort: (+m.d.slice(6, 8)) + '월 ' + (+m.d.slice(10, 12)) + '일',
+  withShort: withShort(m.w), withFull: wa(m.w.join(', ')) + ' 함께',
+  counts: '사진 ' + m.ph + ' · 이야기 ' + m.st, newNote: m.nw
+});
+const ALL = M.map(dec);
+const byId = Object.fromEntries(ALL.map(m => [m.id, m]));
+
+class Component extends DCLogic {
+  renderVals() {
+    const jeju = byId.jeju;
+    // calendar: Oct 2026
+    const first = new Date(2026, 9, 1).getDay();
+    const marks = { 3: 'sel', 4: 'range', 5: 'range', 18: 'dot', 31: 'dot' };
+    const calCells = [];
+    for (let i = 0; i < first; i++) calCells.push({ vis: 'hidden', label: '', bg: 'none', fg: 'inherit', dot: 'transparent', band: 'none', bandRadius: '0' });
+    for (let d = 1; d <= 31; d++) {
+      const k = marks[d];
+      calCells.push({
+        vis: 'visible', label: d,
+        bg: k === 'sel' ? 'var(--ws-color-bg-brand)' : 'none',
+        fg: k === 'sel' ? 'var(--ws-color-fg-on-brand)' : k ? 'var(--ws-color-fg-strong)' : 'var(--ws-color-fg-tertiary)',
+        dot: k ? 'var(--ws-color-bg-brand)' : 'transparent',
+        band: d >= 3 && d <= 5 ? 'var(--ws-color-bg-brand-subtle)' : 'none',
+        bandRadius: d === 3 ? '10px 0 0 10px' : d === 5 ? '0 10px 10px 0' : '0'
+      });
+    }
+    // footprints
+    const regionCover = {}, regionCount = {};
+    ALL.forEach(m => { regionCount[m.r] = (regionCount[m.r] || 0) + 1; if (!regionCover[m.r]) regionCover[m.r] = m.img; });
+    const stamps = REGIONS.map(r => regionCount[r]
+      ? { name: r, has: true, none: false, img: regionCover[r], border: '2px solid var(--ws-color-border-brand)', cap: r + ' ' + regionCount[r], capColor: 'var(--ws-color-fg-strong)' }
+      : { name: r, has: false, none: true, img: '', border: '1.5px dashed var(--ws-color-border-default)', cap: ' ', capColor: 'transparent' });
+    const footMini = ['서울', '제주', '부산', '강원', '전남'].map(name => ({ name, img: regionCover[name] }));
+    // jeju contributions
+    const J = id => U(id);
+    const contribs = [
+      { name: ME, mine: true, at: '10월 3일', ph: 14, text: '비가 그치자마자 오름에 올랐다. 안개가 천천히 걷히는 걸 넷이서 한참 말없이 봤다.',
+        tiles: [{ img: J('1628411848698-e3b3249a272a'), row: '1 / 3' }, { img: J('1610997999027-681b320cee66'), row: 'auto' }, { img: J('1717947464554-54d935c2155f'), row: 'auto', more: true, moreN: 11 }] },
+      { name: '민지', mine: false, at: '10월 4일', ph: 12, text: '협재에서 해 질 때까지. 다음엔 꼭 일주일 있자.',
+        tiles: [{ img: J('1612977423916-8e4bb45b5233'), row: '1 / 3' }, { img: J('1584263570952-bcff471c3b0a'), row: 'auto' }, { img: J('1609766418178-cc976c0fa435'), row: 'auto', more: true, moreN: 9 }] }
+    ].map(c => ({ ...c, tiles: c.tiles.map(t => ({ more: false, moreN: 0, ...t })) }));
+    return {
+      fullW: { style: { width: '100%', maxWidth: 'none' } },
+      navItems: [{ key: 'home', label: '홈', icon: 'IconHome' }, { key: 'memory', label: '추억', icon: 'IconMemory' }, { key: 'create', label: '기록', icon: 'IconPlus' }, { key: 'foot', label: '발자국', icon: 'IconMapPin' }, { key: 'me', label: '나', icon: 'IconProfile' }],
+      hero: byId.han, homeRows: [byId.bday, byId.cafe], footMini,
+      viewOptions: [{ value: 'feed', label: '피드' }, { value: 'cal', label: '달력' }],
+      dimChips: [{ label: '전체', selected: true }, { label: '사람', selected: false }, { label: '기간', selected: false }, { label: '지역', selected: false }],
+      feedCards: ALL.slice(0, 3),
+      weekdays: '일월화수목금토'.split('').map((l, i) => ({ label: l, color: i === 0 ? 'var(--ws-color-fg-danger)' : 'var(--ws-color-fg-tertiary)' })),
+      calCells, jeju,
+      footOptions: [{ value: 'mine', label: '내 발자국' }, { value: 'with', label: '함께한 발자국' }], stamps,
+      contribs,
+      guest: { img: U('1628411848698-e3b3249a272a'), thumbs: [{ img: U('1612977423916-8e4bb45b5233'), by: '친구 A' }, { img: U('1610997999027-681b320cee66'), by: '친구 B' }, { img: U('1717947464554-54d935c2155f'), by: '친구 C' }, { img: U('1584263570952-bcff471c3b0a'), by: '나' }] },
+      guestSteps: [
+        { icon: 'IconPeople', title: '함께한 사람을 초대해요', body: '초대를 수락한 사람만 볼 수 있어요.' },
+        { icon: 'IconMemory', title: '각자의 사진과 이야기를 더해요', body: '한 추억 안에 모두의 기록이 쌓여요.' },
+        { icon: 'IconMapPin', title: '다녀온 지역에 발자국이 남아요', body: '전국 17개 시·도를 함께 채워요.' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

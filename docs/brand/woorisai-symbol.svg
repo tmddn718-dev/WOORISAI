@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1024"
+     height="1024"
+     viewBox="0 0 120 120">
+
+  <title>WOORISAI — Connection Knot</title>
+  <desc>
+    우리사이 브랜드 로고.
+    두 개의 연결된 형태와 중앙의 추억을 표현한 심볼.
+  </desc>
+
+  <!-- 앱 아이콘 배경 -->
+  <rect
+    id="background"
+    x="10"
+    y="10"
+    width="100"
+    height="100"
+    rx="26"
+    fill="#566B5C"
+  />
+
+  <!-- 연결의 매듭 -->
+  <path
+    id="connection-knot"
+    d="
+      M32 41
+      C32 30 44 25 53 33
+      L60 40
+      L67 33
+      C76 25 88 30 88 41
+      V74
+      C88 85 76 90 67 82
+      L60 75
+      L53 82
+      C44 90 32 85 32 74
+      Z
+    "
+    fill="#FAF9F6"
+  />
+
+  <!-- 함께 만든 추억 -->
+  <circle
+    id="shared-memory"
+    cx="60"
+    cy="57"
+    r="9"
+    fill="#566B5C"
+  />
+
+</svg>

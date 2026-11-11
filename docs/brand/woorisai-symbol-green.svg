@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="1024"
+     height="1024"
+     viewBox="0 0 120 120">
+
+  <title>WOORISAI — Connection Knot (green)</title>
+  <desc>
+    우리사이 심볼 그린 단색형. 밝은 배경과 인쇄물용.
+    색 반전: 매듭은 #566B5C, 중앙 원과 배경은 #FAF9F6.
+  </desc>
+
+  <rect id="background" x="10" y="10" width="100" height="100" rx="26" fill="#FAF9F6"/>
+
+  <path
+    id="connection-knot"
+    d="
+      M32 41
+      C32 30 44 25 53 33
+      L60 40
+      L67 33
+      C76 25 88 30 88 41
+      V74
+      C88 85 76 90 67 82
+      L60 75
+      L53 82
+      C44 90 32 85 32 74
+      Z
+    "
+    fill="#566B5C"
+  />
+
+  <circle id="shared-memory" cx="60" cy="57" r="9" fill="#FAF9F6"/>
+
+</svg>
