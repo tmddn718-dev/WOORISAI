@@ -4,7 +4,7 @@
  * - 비밀번호는 저장하지 않는다. 로그인은 가입해 둔 이름만 확인한다.
  * - 실제 서버의 권한 정책(초대 수락자만 열람 등)을 구현한 것이 아니다.
  */
-import { FRIEND_POOL, TAKEN, ME_ID, DEMO_USER, DEMO_FRIENDS, DEMO_POSTS } from './seed.js';
+import { FRIEND_POOL, TAKEN, ME_ID, DEMO_USER, DEMO_FRIENDS, DEMO_POSTS, SEED_MEDIA } from './seed.js';
 
 const KEY = 'wsux_state', DRAFT = 'ws_draft';
 const emit = (name, params) => window.dispatchEvent(new CustomEvent('ux:event', { detail: { name, params: params || {} } }));
@@ -16,7 +16,8 @@ load();
 
 // 업로드한 사진은 브라우저 메모리(Blob)에만 둔다. 새로고침하면 사라진다.
 const BLOBS = new Map();
-export const mediaUrl = id => BLOBS.get(+id) || '/ux-test/media/seed-' + ((+id % 3) + 1) + '.svg';
+// 샘플 사진(시안과 같은 Unsplash 사진의 정적 사본) > 사용자가 올린 사진(브라우저 메모리) > 대체 이미지. 사용자 사진은 샘플 사진으로 덮어쓰지 않는다.
+export const mediaUrl = id => SEED_MEDIA[+id] || BLOBS.get(+id) || '/ux-test/media/seed-' + ((+id % 3) + 1) + '.svg';
 
 export function resetAll() {
   S = fresh(); BLOBS.clear(); save();
@@ -125,7 +126,7 @@ R('POST', '/api/invites', () => { const code = 'test' + (++S.seq); S.links.unshi
 R('DELETE', '/api/invites/([^/]+)', c => { S.links = S.links.filter(l => l.code !== c.m[1]); save(); return ok(); });
 
 // ----- 추억 -----
-const posts = () => [...S.posts].sort((a, b) => b.id - a.id);
+const posts = () => [...S.posts].sort((a, b) => (b.occurred_on || '').localeCompare(a.occurred_on || '') || b.id - a.id); // 서버와 같은 순서: 날짜 최신순, 같으면 나중에 만든 것 먼저
 R('GET', '/api/home', () => { settle(); return ok({ postInvites: [], friendRequests: [], meetupInvites: [], upcoming: [], posts: posts().map(card) }); });
 R('GET', '/api/today', () => ok({ enabled: !!S.user && S.user.mem_enabled, items: [] }));
 R('GET', '/api/posts', () => ok({ posts: posts().map(card) }));

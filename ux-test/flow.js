@@ -84,6 +84,9 @@ window.addEventListener('ux:event', e => {
   if (name === 'post_create_complete') setTimeout(complete, 900); // 앱이 새 추억 화면으로 이동한 뒤에 띄운다
 });
 
+// 사진 로딩에 실패하면 깨진 이미지 아이콘 대신 카드의 배경색이 보이게 숨긴다
+document.addEventListener('error', e => { const t = e.target; if (t && t.tagName === 'IMG' && /^(\/media\/|\/ux-test\/images\/|blob:)/.test(t.getAttribute('src') || '')) t.style.visibility = 'hidden'; }, true);
+
 // 시작 행동 감지: 화면이 실제로 나타났을 때(가입 폼, 새 추억 폼)와 친구 이름 입력을 시작할 때
 function watchStarts() {
   new MutationObserver(() => {
