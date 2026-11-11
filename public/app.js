@@ -23,6 +23,7 @@ const ic = {
   check: '<path d="M5 12l5 5 9-10"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>', help: '<circle cx="12" cy="12" r="8"/><path d="M9.5 9.500a2.500 2.500 0 1 1 3.500 2.300c-.700.400-1 .900-1 1.700M12 16.500v.01"/>',
   list: '<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
   bookmark: '<path d="M7 4h10v16l-5-4-5 4z"/>',
+  pen: '<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
   star: '<path d="M12 4l2.400 5 5.600.7-4 3.900 1 5.500-5-2.700-5 2.700 1-5.500-4-3.900 5.600-.7z"/>',
 };
 const KNOT = '<svg class="knot" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 41 C32 30 44 25 53 33 L60 40 L67 33 C76 25 88 30 88 41 V74 C88 85 76 90 67 82 L60 75 L53 82 C44 90 32 85 32 74Z" fill="#fff" opacity=".85"/><circle cx="60" cy="57" r="9" fill="#D3DBD1"/></svg>';
@@ -189,6 +190,13 @@ function guestRoute(path, view) {
 
 // ---------- 페이지 ----------
 const P = {};
+const PP = { files: [], urls: [] };
+function ppRender() {
+  const f = $('[data-form=newpost]'), list = $('#pp-list'); if (!f || !list) return;
+  const dt = new DataTransfer(); PP.files.forEach(x => dt.items.add(x)); f.photos.files = dt.files;
+  list.innerHTML = PP.urls.map((u, i) => `<span class="pp-t"><img src="${u}" alt="">${i === 0 ? '<i>대표</i>' : ''}<button type="button" data-act="pp-rm" data-i="${i}" aria-label="이 사진 빼기">${I('x', 's')}</button></span>`).join('');
+  const n = $('#pp-note'); if (n && PP.files.length) n.textContent = `사진 ${PP.files.length}장 · 맨 앞 사진이 대표 사진이 돼요.`;
+}
 const RSL = { yes: '참석', maybe: '미정', no: '불참', invited: '응답 대기' };
 const planCard = m => { const d = new Date(m.starts_at), off = m.status === 'cancelled'; return `<a class="plan${off ? ' off' : ''}" href="#/meetup/${m.id}" aria-label="${esc(m.title)}, ${off ? '취소됨' : RSL[m.rsvp] || ''}"><span class="pd"><span>${d.getMonth() + 1}월</span><b>${d.getDate()}</b></span><span class="pb"><b>${esc(m.title)}</b><span class="cap">${d.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })} · ${m.place ? esc(m.place) : '장소 미정'}</span><span class="going">${m.going?.length ? `<span class="avs">${m.going.map(n => av(n, 's')).join('')}</span>` : ''}<span class="cap">${m.yes ? m.yes + '명 참석' : '아직 응답이 없어요'}</span></span></span><span class="pr"><span class="rs ${off ? 'x' : m.rsvp}">${off ? '취소됨' : RSL[m.rsvp] || ''}</span>${m.changed && !off ? '<span class="chg">변경됨</span>' : ''}</span></a>`; };
 
@@ -237,19 +245,27 @@ P.newPost = async () => {
   let restored = false, d = S.draft; S.draft = null;
   if (!d) { try { d = JSON.parse(localStorage.getItem('ws_draft') || 'null'); restored = !!d; } catch { } } d ||= {}; window._groups = gg.groups;
   if (!pp.friends.length) return `${top('새 추억 만들기')}${empty('함께할 사람을 먼저 연결해 주세요', '이름이나 초대 링크로 연결하면 함께 추억을 남길 수 있어요.', '<a class="btn" href="#/people">사람 연결하기</a>')}`;
+  const start = S.q.start === 'story' ? 'story' : (S.q.start === 'photo' || restored || d.meetup_id) ? 'photo' : null;
+  if (!start) return `<div class="page stack"><button class="icon-btn" data-act="back" aria-label="닫기" style="margin-left:-8px">${I('x')}</button><div><h1>새 추억 만들기</h1><p class="sub body2" style="margin-top:8px">사진 한 장이나 짧은 이야기로 시작해도 좋아요.</p></div>
+    <div class="stack" style="gap:12px">${[['photo', 'photo', '사진으로 시작하기', '기기에서 사진을 골라 한 번에 올려요.'], ['story', 'pen', '이야기로 시작하기', '사진 없이 그날의 이야기부터 남겨요.']].map(([k, i, t, b]) => `<a class="opt" href="#/new-post?start=${k}"><span class="oi">${I(i)}</span><span><b>${t}</b><span class="cap">${b}</span></span>${I('chev', 's')}</a>`).join('')}
+      <p class="cap">어느 쪽으로 시작해도 같은 추억이 돼요. 사진과 이야기는 나중에 더할 수 있어요.</p></div></div>`;
+  const story = start === 'story'; PP.files = []; PP.urls = [];
+  const storyField = `<label class="field"><span>${story ? '이야기' : '이야기 (선택)'}</span><textarea name="text" maxlength="2000" placeholder="그날 어땠는지 한두 줄" data-counter>${esc(d.text || '')}</textarea><small class="count"></small></label>`;
+  const photoField = `<div class="field"><span>사진${story ? ' (선택)' : ''}</span><div class="pp"><label class="pp-add" aria-label="기기에서 사진 고르기"><input type="file" name="photos" accept="image/*" multiple>${I('photo')}<span>기기에서 고르기</span></label><div class="pp-list" id="pp-list"></div></div><small id="pp-note">${story ? '사진 없이도 추억을 만들 수 있어요.' : '맨 앞 사진이 대표 사진이 돼요. 사진의 GPS 정보는 올릴 때 지워요.'}</small></div>`;
   return `${top('새 추억 만들기')}<form class="page stack" data-form="newpost" data-meetup="${d.meetup_id || ''}">
+    ${d.meetup_id ? `<div class="note">${esc(d.title || '이 약속')} 약속에서 이어 만드는 추억이에요. 제목·날짜·함께한 사람은 미리 채웠어요. 지역은 직접 골라 주세요.</div>` : ''}
     ${restored ? '<div class="note row between"><span>임시 저장된 초안을 불러왔어요.</span><button type="button" class="btn sm line" data-act="draft-clear">삭제</button></div>' : ''}
+    ${story ? storyField + photoField : photoField}
     <label class="field"><span>추억 제목</span><input type="text" name="title" maxlength="40" required value="${esc(d.title || '')}" placeholder="예) 성수동 브런치" data-counter><small class="count"></small></label>
     <label class="field"><span>언제였나요?</span><input type="date" name="date" value="${d.date || localDate()}" max="${localDate()}"></label>
     <div class="field"><span>누구와 함께했나요?</span><div class="selbar" id="selbar" aria-live="polite"></div>${pick(pp.friends, 'm', d.members || [])}
       ${gg.groups.length ? `<label class="field" style="margin-top:12px"><span class="cap">그룹으로 빠르게 고르기 <small style="display:inline">(선택)</small></span><select name="group" data-fillgroup><option value="">그룹 없이 사람만 고를게요</option>${gg.groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select><small>그룹을 골라도 이 추억에 초대한 사람만 볼 수 있어요. 그룹을 나중에 바꿔도 이미 만든 추억의 멤버는 바뀌지 않아요.</small></label>` : ''}</div>
-    <details class="card pad"><summary style="cursor:pointer;font-weight:500">장소 남기기 (선택)</summary><div class="stack" style="margin-top:12px">
-      <label class="field"><span>장소 이름</span><input type="text" name="pname" maxlength="40"></label>
-      <div class="row"><label class="field grow"><span>동네</span><input type="text" name="parea" maxlength="30"></label><label class="field grow"><span>도시</span><input type="text" name="pcity" maxlength="30"></label></div>
-      <label class="field"><span>국가</span><input type="text" name="pcountry" maxlength="30" value="대한민국"></label>
+    <div class="field"><span>지역</span><div class="pick regions" role="radiogroup" aria-label="지역">${REGIONS.map(r => `<label><input type="radio" name="pcity" value="${r}"><span>${r}</span></label>`).join('')}</div><small>지역을 고르면 우리의 발자국에 쌓여요. 지역은 나중에 바꿀 수 있어요.</small></div>
+    <label class="field"><span>장소 (선택)</span><input type="text" name="parea" maxlength="30" placeholder="예) 성수동"></label>
+    <details class="card pad"><summary style="cursor:pointer;font-weight:500">해외·다른 지역이거나 위치 공개 범위를 바꾸려면</summary><div class="stack" style="margin-top:12px">
+      <div class="row"><label class="field grow"><span>도시</span><input type="text" name="pcity_x" maxlength="30"></label><label class="field grow"><span>국가</span><input type="text" name="pcountry_x" maxlength="30" placeholder="대한민국"></label></div>
       <label class="field"><span>보여줄 위치 수준</span><select name="pprec"><option value="exact">정확한 장소까지</option><option value="area" selected>동네까지만</option><option value="city">도시까지만</option></select><small>선택한 수준보다 자세한 위치는 서버에서 내려주지 않아요. 사진의 GPS 정보는 올릴 때 항상 지워요.</small></label></div></details>
-    <label class="field"><span>첫 이야기 (선택)</span><textarea name="text" maxlength="2000" placeholder="그날을 한 줄로 남겨 보세요" data-counter>${esc(d.text || '')}</textarea><small class="count"></small></label>
-    <label class="field"><span>사진 (선택)</span><input type="file" name="photos" accept="image/*" multiple></label>
+    ${story ? '' : storyField}
     <div class="stickybar"><p class="err" role="alert"></p><button class="btn block">다음: 볼 수 있는 사람 확인</button></div></form>`;
 };
 
@@ -537,6 +553,7 @@ const A = {
   'mode': d => { S.filter.mode = d.v; route(); },
   'clear-filter': () => { S.filter = { people: [], mode: 'and', group: '', year: '' }; route(); },
   tab: d => go('/memories?tab=' + d.v),
+  'pp-rm': d => { PP.urls.splice(+d.i, 1).forEach(u => URL.revokeObjectURL(u)); PP.files.splice(+d.i, 1); ppRender(); },
   'guest-start': () => { S.guest = true; try { sessionStorage.setItem('ws_guest', '1'); } catch { } go('/'); route(); },
   'guest-login': () => leaveGuest(null),
   'guest-gate': d => gate(d.k),
@@ -619,7 +636,7 @@ function EDIT_UI(p) {
     <label class="field"><span>장소 이름</span><input type="text" name="pname" maxlength="40" value="${esc(r.name || '')}"></label><div class="row"><label class="field grow"><span>동네</span><input type="text" name="parea" maxlength="30" value="${esc(r.area || '')}"></label><label class="field grow"><span>도시</span><input type="text" name="pcity" maxlength="30" value="${esc(r.city || '')}"></label></div><label class="field"><span>국가</span><input type="text" name="pcountry" maxlength="30" value="${esc(r.country || '')}"></label>
     <label class="field"><span>보여줄 위치 수준</span><select name="pprec">${[['exact', '정확한 장소까지'], ['area', '동네까지만'], ['city', '도시까지만']].map(([k, l]) => `<option value="${k}" ${r.precision === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label><p class="err" role="alert"></p><button class="btn">저장하기</button></form>`);
 }
-const placeOf = fd => fd.get('pcity') || fd.get('pcountry') || fd.get('pname') ? { name: fd.get('pname'), area: fd.get('parea'), city: fd.get('pcity'), country: fd.get('pcountry'), precision: fd.get('pprec') } : null;
+const placeOf = fd => { const city = String(fd.get('pcity') || fd.get('pcity_x') || '').trim(), country = String(fd.has('pcountry') ? fd.get('pcountry') : (fd.get('pcountry_x') || (city ? '대한민국' : ''))).trim(); return city || country || fd.get('pname') ? { name: fd.get('pname') || '', area: fd.get('parea'), city, country, precision: fd.get('pprec') || 'area' } : null; };
 
 // ---------- 폼 ----------
 const F = {
@@ -738,7 +755,7 @@ const VALID = {
   login: fd => [['username', need(fd.get('username'), '이름을 입력해 주세요.')], ['password', need(fd.get('password'), '비밀번호를 입력해 주세요.')]],
   request: fd => { const v = String(fd.get('username') || '').trim().replace(/^@/, ''); return [['username', !v ? '연결할 이름을 입력해 주세요.' : !/^[a-z0-9_]{3,20}$/i.test(v) ? '이름은 영문, 숫자, _ 로 3–20자예요.' : null]]; },
   note: fd => [['text', need(fd.get('text'), '내용을 입력해 주세요.')]],
-  newpost: fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['m', fd.getAll('m').length ? null : '함께한 사람을 한 명 이상 선택해 주세요.'], ['date', pastOk(fd.get('date'))], ['pcity', (fd.get('pname') || fd.get('parea')) && !fd.get('pcity') && !fd.get('pcountry') ? '도시나 국가를 입력해 주세요.' : null]],
+  newpost: fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['m', fd.getAll('m').length ? null : '함께한 사람을 한 명 이상 선택해 주세요.'], ['date', pastOk(fd.get('date'))], ['pcity', (fd.get('pname') || fd.get('parea')) && !fd.get('pcity') && !fd.get('pcity_x') && !fd.get('pcountry') && !fd.get('pcountry_x') ? '지역을 골라 주세요.' : null]],
   newmeetup: fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
   'meetup-edit': fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
   'post-edit': fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['date', pastOk(fd.get('date'))]],
@@ -775,7 +792,7 @@ document.addEventListener('submit', async e => {
   }
   finally { btn && (btn.disabled = false); f._upd?.(); }
 });
-document.addEventListener('change', e => {
+document.addEventListener('change', e => { const pf = e.target; if (pf.matches?.('[data-form=newpost] input[name=photos]')) { const add = [...pf.files].filter(x => !PP.files.some(y => y.name === x.name && y.size === x.size)); PP.files.push(...add); PP.urls.push(...add.map(x => URL.createObjectURL(x))); ppRender(); return; }
   const t = e.target;
   if (t.closest('[data-form=newpost]')) { updSel(); saveDraft(t.closest('form')); }
   if (t.matches('[data-upload]')) { const files = [...t.files]; t.value = ''; upload(+t.dataset.upload, files).then(() => route()); }
