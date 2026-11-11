@@ -628,3 +628,8 @@ svg.i { stroke-width: 1.75; }
 .stamp:not(.on) { cursor: default; opacity: .5; }
 .stamp:not(.on) .sp { border-style: dashed; border-color: var(--ws-color-border-subtle); }
 .stamp.on:hover .sp { border-color: var(--ws-color-bg-brand); }
+
+/* 사진 확대 미리보기: 썸네일 본문은 크게 보기, 모서리 X는 빼기 */
+.pp-t button.pp-v { top: 0; right: 0; width: 100%; height: 100%; padding: 0; border-radius: 0; background: none; cursor: zoom-in; }
+.pp-t > button[data-act=pp-rm] { z-index: 1; }
+@media (prefers-reduced-motion: reduce) { #viewer * { transition: none !important; } }

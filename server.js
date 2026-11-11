@@ -38,6 +38,8 @@ create table if not exists privacy_requests(id integer primary key, user_id inte
 create table if not exists hides(user_id integer, target_type text, target_id integer, primary key(user_id,target_type,target_id));
 `);
 if (!db.prepare('pragma table_info(users)').all().some(c => c.name === 'nickname_updated_at')) db.exec('alter table users add column nickname_updated_at text');
+// 약속 시간·장소 상태(P0): 기존 약속은 '정확한 시간', 장소는 있으면 '정확한 장소' 없으면 '미정'으로 채운다
+if (!db.prepare('pragma table_info(meetups)').all().some(c => c.name === 'time_kind')) { db.exec("alter table meetups add column time_kind text default 'exact'; alter table meetups add column place_kind text"); db.exec("update meetups set place_kind = case when place is null or place='' then 'tbd' else 'exact' end"); }
 
 db.exec(`
 create table if not exists oauth_identities(provider text, subject text, user_id integer, primary key(provider,subject));
@@ -414,8 +416,8 @@ R('GET', '/api/home', c => {
   return {
     postInvites: q(`select p.id,p.title,i.name inviter,i.username inviter_username from post_members m join posts p on p.id=m.post_id join users i on i.id=m.invited_by where m.user_id=? and m.access='invited' and p.status!='deleted'`, u),
     friendRequests: q(`select u.id,u.name from connections c join users u on u.id=c.from_id where c.to_id=? and c.status='pending'`, u),
-    meetupInvites: q(`select m.id,m.title,m.starts_at,m.tz from meetups m join meetup_participants p on p.meetup_id=m.id where p.user_id=? and p.rsvp='invited' and m.status='active' and m.starts_at>?`, u, now),
-    upcoming: q(`select m.id,m.title,m.starts_at,m.tz,m.place,p.rsvp from meetups m join meetup_participants p on p.meetup_id=m.id where p.user_id=? and m.status='active' and m.starts_at>? order by m.starts_at limit 3`, u, now),
+    meetupInvites: q(`select m.id,m.title,m.starts_at,m.tz,m.time_kind from meetups m join meetup_participants p on p.meetup_id=m.id where p.user_id=? and p.rsvp='invited' and m.status='active' and m.starts_at>?`, u, now),
+    upcoming: q(`select m.id,m.title,m.starts_at,m.tz,m.time_kind,m.place_kind,m.place,p.rsvp from meetups m join meetup_participants p on p.meetup_id=m.id where p.user_id=? and m.status='active' and m.starts_at>? order by m.starts_at limit 3`, u, now),
     posts: accessible(u).sort((a, b) => b.id - a.id).slice(0, 30).map(p => card(p, u)),
   };
 });
@@ -572,15 +574,21 @@ function meetupFor(mid, uid) {
 }
 const orgOnly = (mid, uid) => { const r = meetupFor(mid, uid); if (r.m.organizer_id !== uid) throw fail('주최자만 할 수 있어요.', 403); return r; };
 const tzOk = tz => { try { new Intl.DateTimeFormat('ko-KR', { timeZone: tz || 'Asia/Seoul' }); return tz || 'Asia/Seoul'; } catch { return 'Asia/Seoul'; } };
+const TK = ['exact', 'am', 'pm', 'tbd'], PK = ['tbd', 'area', 'exact'];
+// 시간 상태: 정확한 시간이 아니면 그날 끝(23:59:5x)으로 저장해 당일엔 '다가오는 약속'에 남고, 같은 날 안에서 정확한 시간 → 오전 → 오후 → 미정 순으로 정렬된다. 화면은 이 시각을 보여주지 않는다.
+const kindOk = (v, set, d) => v == null || v === '' ? d : set.includes(v) ? v : (() => { throw fail('선택한 값이 올바르지 않아요.'); })();
+const placeKind = (kind, place) => { const k = kindOk(kind, PK, place ? 'exact' : 'tbd'); if (k === 'tbd') return null; if (!place) throw fail('장소를 입력해 주세요.', 400, { field: 'place' }); return k; };
+const placeOf = (kind, place) => { const p = optStr(place, 60), k = placeKind(kind, p); return { place: k ? p : null, kind: k }; };
 const isoOk = s => { const t = Date.parse(s); if (isNaN(t)) throw fail('일시가 올바르지 않아요.'); return new Date(t).toISOString(); };
 
-R('GET', '/api/meetups', c => ({ meetups: q(`select m.id,m.title,m.starts_at,m.tz,m.place,m.status,p.rsvp,u.name organizer, (select count(*) from meetup_participants x where x.meetup_id=m.id and x.rsvp='yes') yes from meetups m join meetup_participants p on p.meetup_id=m.id join users u on u.id=m.organizer_id where p.user_id=? order by m.starts_at desc`, c.u.id) }));
+R('GET', '/api/meetups', c => ({ meetups: q(`select m.id,m.title,m.starts_at,m.tz,m.time_kind,m.place_kind,m.place,m.status,p.rsvp,u.name organizer, (select count(*) from meetup_participants x where x.meetup_id=m.id and x.rsvp='yes') yes from meetups m join meetup_participants p on p.meetup_id=m.id join users u on u.id=m.organizer_id where p.user_id=? order by m.starts_at desc`, c.u.id) }));
 R('POST', '/api/meetups', c => {
   const uid = c.u.id; let inv = ids(c.body.user_ids);
   if (c.body.group_id) { groupOf(+c.body.group_id, uid); inv = [...new Set([...inv, ...q('select user_id from group_members where group_id=?', +c.body.group_id).map(r => r.user_id)])].filter(x => x !== uid && isFriend(uid, x)); } // 시점 스냅샷
   friendsOnly(uid, inv);
+  const pl = placeOf(c.body.place_kind, c.body.place);
   return { id: tx(() => {
-    const mid = run('insert into meetups(organizer_id,title,starts_at,tz,place,descr) values(?,?,?,?,?,?)', uid, str(c.body.title, 40, 1), isoOk(c.body.starts_at), tzOk(c.body.tz), optStr(c.body.place, 60), optStr(c.body.descr, 500)).lastInsertRowid;
+    const mid = run('insert into meetups(organizer_id,title,starts_at,tz,place,descr,time_kind,place_kind) values(?,?,?,?,?,?,?,?)', uid, str(c.body.title, 40, 1), isoOk(c.body.starts_at), tzOk(c.body.tz), pl.place, optStr(c.body.descr, 500), kindOk(c.body.time_kind, TK, 'exact'), pl.kind || 'tbd').lastInsertRowid;
     run(`insert into meetup_participants(meetup_id,user_id,rsvp) values(?,?, 'yes')`, mid, uid);
     for (const u of inv) run('insert into meetup_participants(meetup_id,user_id) values(?,?)', mid, u);
     return mid;
@@ -597,12 +605,14 @@ R('GET', '/api/meetups/:id', c => {
 });
 R('PATCH', '/api/meetups/:id', c => {
   const mid = +c.params.id, { m } = orgOnly(mid, c.u.id), b = c.body;
-  const next = { title: b.title !== undefined ? str(b.title, 40, 1) : m.title, starts_at: b.starts_at ? isoOk(b.starts_at) : m.starts_at, tz: b.tz ? tzOk(b.tz) : m.tz, place: b.place !== undefined ? optStr(b.place, 60) : m.place, descr: b.descr !== undefined ? optStr(b.descr, 500) : m.descr };
+  const next = { title: b.title !== undefined ? str(b.title, 40, 1) : m.title, starts_at: b.starts_at ? isoOk(b.starts_at) : m.starts_at, tz: b.tz ? tzOk(b.tz) : m.tz, descr: b.descr !== undefined ? optStr(b.descr, 500) : m.descr, time_kind: b.time_kind !== undefined ? kindOk(b.time_kind, TK, 'exact') : m.time_kind };
+  const pl = b.place_kind !== undefined || b.place !== undefined ? placeOf(b.place_kind, b.place) : { place: m.place, kind: m.place_kind === 'tbd' ? null : m.place_kind };
+  next.place = pl.place; next.place_kind = pl.kind || 'tbd';
   tx(() => {
-    run('update meetups set title=?,starts_at=?,tz=?,place=?,descr=? where id=?', next.title, next.starts_at, next.tz, next.place, next.descr, mid);
-    if (next.starts_at !== m.starts_at || next.place !== m.place) run(`update meetup_participants set rsvp='invited' where meetup_id=? and user_id!=?`, mid, c.u.id); // 중대한 변경: 재응답
+    run('update meetups set title=?,starts_at=?,tz=?,place=?,descr=?,time_kind=?,place_kind=? where id=?', next.title, next.starts_at, next.tz, next.place, next.descr, next.time_kind, next.place_kind, mid);
+    if (next.starts_at !== m.starts_at || next.place !== m.place || next.time_kind !== m.time_kind) run(`update meetup_participants set rsvp='invited' where meetup_id=? and user_id!=?`, mid, c.u.id); // 중대한 변경: 재응답
   });
-  return { reconfirm: next.starts_at !== m.starts_at || next.place !== m.place };
+  return { reconfirm: next.starts_at !== m.starts_at || next.place !== m.place || next.time_kind !== m.time_kind };
 });
 R('POST', '/api/meetups/:id/rsvp', c => {
   const mid = +c.params.id, { m } = meetupFor(mid, c.u.id);

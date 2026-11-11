@@ -9,7 +9,7 @@ const S = { me: null, draft: null, authMode: 'intro', filter: { people: [], mode
 // 아이콘은 모두 Lucide 0.469.0 원본이다(public/lucide.js). 이름 매핑은 시안(Claude Design)이 쓰는 이름을 그대로 따른다.
 const ICN = { home: 'house', photo: 'images', create: 'square-pen', pinned: 'map-pinned', user: 'user-round', back: 'chevron-left', chev: 'chevron-right', more: 'ellipsis', x: 'x', plus: 'plus', lock: 'lock-keyhole', users: 'users-round', invite: 'user-round-plus', cal: 'calendar-days', calplus: 'calendar-plus', cchk: 'calendar-check', cc: 'circle-check', cd: 'circle-dot', cx: 'circle-x', clock: 'clock', pin: 'map-pin', imgplus: 'image-plus', pen: 'message-square-plus', searchx: 'search-x', zin: 'zoom-in', zout: 'zoom-out', trash: 'trash-2', check: 'check',
   /* 시안에 없는 앱 전용 기능(좋아요·숨기기·신고 등)은 같은 Lucide 라이브러리의 대응 아이콘 */ heart: 'heart', eye: 'eye', flag: 'flag', down: 'download', out: 'log-out', link: 'link', list: 'list', bookmark: 'bookmark', block: 'ban', help: 'circle-dot', star: 'pencil' };
-const KNOT = '<svg class="knot" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 41 C32 30 44 25 53 33 L60 40 L67 33 C76 25 88 30 88 41 V74 C88 85 76 90 67 82 L60 75 L53 82 C44 90 32 85 32 74Z" fill="#fff" opacity=".85"/><circle cx="60" cy="57" r="9" fill="#D3DBD1"/></svg>';
+const KNOT = '<svg class="knot" viewBox="0 0 120 120" aria-hidden="true"><path d="M32 44 C32 33 44 28 53 36 L60 43 L67 36 C76 28 88 33 88 44 V77 C88 88 76 93 67 85 L60 78 L53 85 C44 93 32 88 32 77Z" fill="#fff" opacity=".85"/><circle cx="60" cy="60" r="9" fill="#D3DBD1"/></svg>';
 const I = (n, c = '') => `<svg class="i ${c}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${LUCIDE[ICN[n]] || ''}</svg>`;
 
 // ---------- 공통 ----------
@@ -43,7 +43,18 @@ const ask = o => new Promise(res => {
 });
 const fmtDate = d => { if (!d) return '날짜 미상'; const [y, m, x] = d.split('-'); return `${y}년 ${+m}월 ${+x}일`; };
 const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-const fmtDT = (iso, tz) => new Date(iso).toLocaleString('ko-KR', { timeZone: tz || localTz, month: 'long', day: 'numeric', weekday: 'short', hour: 'numeric', minute: '2-digit', year: 'numeric' }) + (tz && tz !== localTz ? ` (${tz})` : '');
+// 약속 시간·장소 상태: 정확한 시간이 아니면 저장된 시각(그날 끝)을 보여주지 않는다
+const TKL = { am: '오전쯤', pm: '오후쯤', tbd: '시간 미정' };
+const timeTxt = (m, o = {}) => !m.time_kind || m.time_kind === 'exact' ? new Date(m.starts_at).toLocaleTimeString('ko-KR', { timeZone: m.tz || localTz, hour: 'numeric', minute: '2-digit', ...o }) : TKL[m.time_kind];
+const placeTxt = m => m.place ? esc(m.place) : '장소 미정';
+const fmtDT = (iso, tz, kind) => new Date(iso).toLocaleString('ko-KR', { timeZone: tz || localTz, month: 'long', day: 'numeric', weekday: 'short', year: 'numeric', ...(!kind || kind === 'exact' ? { hour: 'numeric', minute: '2-digit' } : {}) }) + (kind && kind !== 'exact' ? ' ' + TKL[kind] : '') + (tz && tz !== localTz ? ` (${tz})` : '');
+const radios = (name, opts, cur) => `<div class="pick" role="radiogroup">${opts.map(([v, t]) => `<label><input type="radio" name="${name}" value="${v}" ${v === cur ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>`;
+const whenFields = (m = {}) => { const d = m.starts_at ? new Date(m.starts_at) : null, tk = m.time_kind || 'exact', pk = m.place_kind || (m.place ? 'exact' : 'tbd');
+  return `<div class="field" data-field="day"><label for="mt-day"><span>날짜</span></label><input id="mt-day" type="date" name="day" required value="${d ? d.toLocaleDateString('sv') : ''}"></div>
+    <div class="field" data-field="at"><span>시간</span>${radios('tk', [['exact', '정확한 시간'], ['am', '오전쯤'], ['pm', '오후쯤'], ['tbd', '아직 미정']], tk)}<input type="time" name="at" aria-label="시간" style="margin-top:8px${tk === 'exact' ? '' : ';display:none'}" value="${d && tk === 'exact' ? d.toLocaleTimeString('sv').slice(0, 5) : ''}"><small>시간은 나중에 정해도 괜찮아요. ${esc(localTz)} 기준이에요.</small></div>
+    <div class="field" data-field="place"><span>장소</span>${radios('pk', [['exact', '정확한 장소'], ['area', '지역만'], ['tbd', '아직 미정']], pk)}<input type="text" name="place" maxlength="60" aria-label="장소" style="margin-top:8px${pk === 'tbd' ? ';display:none' : ''}" value="${esc(m.place || '')}" placeholder="${pk === 'area' ? '예: 성수, 홍대' : '예: 카페 이름'}"><small>장소도 나중에 정해서 바꿀 수 있어요.</small></div>`; };
+const whenBody = fd => { const k = fd.get('tk'), pk = fd.get('pk'); return { starts_at: new Date(k === 'exact' ? `${fd.get('day')}T${fd.get('at')}` : `${fd.get('day')}T23:59:${{ am: 57, pm: 58, tbd: 59 }[k]}`).toISOString(), time_kind: k, tz: localTz, place_kind: pk, place: pk === 'tbd' ? '' : fd.get('place') }; }; // ponytail: 비정확 시간은 그날 끝 초 단위로 저장(오전<오후<미정 정렬), 정확한 시각 아님
+const whenValid = fd => [['day', need(fd.get('day'), '날짜를 선택해 주세요.')], ['at', fd.get('tk') === 'exact' ? need(fd.get('at'), '시간을 입력하거나, 오전쯤·오후쯤·아직 미정을 골라 주세요.') : null], ['place', fd.get('pk') !== 'tbd' ? need(fd.get('place'), fd.get('pk') === 'area' ? '지역을 입력해 주세요.' : '장소를 입력해 주세요.') : null]];
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 const won = n => Number(n).toLocaleString('ko-KR') + '원';
 const top = (title, o = {}) => `<header class="top">${o.back === false ? '' : `<button class="icon-btn" data-act="back" aria-label="뒤로 가기">${I('back')}</button>`}<h1>${esc(title)}</h1>${o.right || ''}</header>`;
@@ -177,11 +188,11 @@ const PP = { files: [], urls: [] };
 function ppRender() {
   const f = $('[data-form=newpost]'), list = $('#pp-list'); if (!f || !list) return;
   const dt = new DataTransfer(); PP.files.forEach(x => dt.items.add(x)); f.photos.files = dt.files;
-  list.innerHTML = PP.urls.map((u, i) => `<span class="pp-t"><img src="${u}" alt="">${i === 0 ? '<i>대표</i>' : ''}<button type="button" data-act="pp-rm" data-i="${i}" aria-label="이 사진 빼기">${I('x', 's')}</button></span>`).join('');
+  list.innerHTML = PP.urls.map((u, i) => `<span class="pp-t"><button type="button" class="pp-v" data-act="pp-view" data-i="${i}" aria-label="${i + 1}번째 사진 크게 보기"><img src="${u}" alt=""></button>${i === 0 ? '<i>대표</i>' : ''}<button type="button" data-act="pp-rm" data-i="${i}" aria-label="이 사진 빼기">${I('x', 's')}</button></span>`).join('');
   const n = $('#pp-note'); if (n && PP.files.length) n.textContent = `사진 ${PP.files.length}장 · 맨 앞 사진이 대표 사진이 돼요.`;
 }
 const RSL = { yes: '참석', maybe: '미정', no: '불참', invited: '응답 대기' };
-const planCard = m => { const d = new Date(m.starts_at), off = m.status === 'cancelled'; return `<a class="plan${off ? ' off' : ''}" href="#/meetup/${m.id}" aria-label="${esc(m.title)}, ${off ? '취소됨' : RSL[m.rsvp] || ''}"><span class="pd"><span>${d.getMonth() + 1}월</span><b>${d.getDate()}</b></span><span class="pb"><b>${esc(m.title)}</b><span class="cap">${d.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' })} · ${m.place ? esc(m.place) : '장소 미정'}</span><span class="going">${m.going?.length ? `<span class="avs">${m.going.map(n => av(n, 's')).join('')}</span>` : ''}<span class="cap">${m.yes ? m.yes + '명 참석' : '아직 응답이 없어요'}</span></span></span><span class="pr"><span class="rs ${off ? 'x' : m.rsvp}">${off ? '취소됨' : RSL[m.rsvp] || ''}</span>${m.changed && !off ? '<span class="chg">변경됨</span>' : ''}</span></a>`; };
+const planCard = m => { const d = new Date(m.starts_at), off = m.status === 'cancelled'; return `<a class="plan${off ? ' off' : ''}" href="#/meetup/${m.id}" aria-label="${esc(m.title)}, ${off ? '취소됨' : RSL[m.rsvp] || ''}"><span class="pd"><span>${d.getMonth() + 1}월</span><b>${d.getDate()}</b></span><span class="pb"><b>${esc(m.title)}</b><span class="cap">${timeTxt(m, { timeZone: localTz })} · ${placeTxt(m)}</span><span class="going">${m.going?.length ? `<span class="avs">${m.going.map(n => av(n, 's')).join('')}</span>` : ''}<span class="cap">${m.yes ? m.yes + '명 참석' : '아직 응답이 없어요'}</span></span></span><span class="pr"><span class="rs ${off ? 'x' : m.rsvp}">${off ? '취소됨' : RSL[m.rsvp] || ''}</span>${m.changed && !off ? '<span class="chg">변경됨</span>' : ''}</span></a>`; };
 
 P.home = async () => {
   const [d, today, fm] = await Promise.all([api('GET', '/api/home'), api('GET', '/api/today?date=' + localDate()), api('GET', '/api/map').catch(() => ({ total: 0, countries: [] }))]);
@@ -193,7 +204,7 @@ P.home = async () => {
   ${news ? `<section aria-label="새 소식"><div class="hd row between"><h2>새 소식</h2></div><div class="card list">
     ${d.postInvites.map(x => `<a href="#/post/${x.id}">${av(x.inviter)}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${esc(x.inviter)}${x.inviter_username ? ` (@${esc(x.inviter_username)})` : ''}님이 추억에 초대했어요</span></span>${I('chev', 's')}</a>`).join('')}
     ${d.friendRequests.map(x => `<div>${av(x.name)}<span class="grow"><b>${esc(x.name)}</b><br><span class="cap">연결을 요청했어요</span></span><button class="btn sm" data-act="accept-friend" data-id="${x.id}">수락</button><button class="btn sm line" data-act="decline-friend" data-id="${x.id}">거절</button></div>`).join('')}
-    ${d.meetupInvites.map(x => `<a href="#/meetup/${x.id}">${av('약')}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${fmtDT(x.starts_at, x.tz)} · 참석 여부를 알려 주세요</span></span>${I('chev', 's')}</a>`).join('')}</div></section>` : ''}
+    ${d.meetupInvites.map(x => `<a href="#/meetup/${x.id}">${av('약')}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${fmtDT(x.starts_at, x.tz, x.time_kind)} · 참석 여부를 알려 주세요</span></span>${I('chev', 's')}</a>`).join('')}</div></section>` : ''}
   ${d.posts.length ? `<section class="home-sec sec" aria-label="최근 함께한 추억"><h2>최근 함께한 추억</h2><div class="hero-card">${postCard(d.posts[0])}</div>${d.posts.slice(1, 3).map(p => `<a class="mrow" href="#/post/${p.id}"><span class="th">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)} · ${p.count}명${p.place ? ' · ' + esc(p.place.label) : ''}</span></span>${I('chev', 's')}</a>`).join('')}${d.posts.length > 3 ? `<a class="btn sm line" style="align-self:flex-start" href="#/memories">추억 모두 보기 (${d.posts.length})</a>` : ''}</section>
   <div class="cta-card sec"><span class="ic">${I('create')}</span><span class="tx"><b>함께한 순간을 남겨볼까요?</b><span>사진과 이야기를 하나의 추억으로 모아보세요.</span><a class="btn sm" href="#/new-post">새 추억 만들기</a></span></div>` : `<section class="sec" aria-label="우리의 추억"><div class="hd"><h2>우리의 추억</h2></div>${empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>')}</section>`}
   ${today.items.length ? `<section class="moment" aria-label="1년 전 오늘"><h2>그날의 우리가 여기 있어요</h2><p class="cap" style="margin:4px 0 16px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p>${postCard(today.items[0])}<div class="row" style="margin-top:12px;flex-wrap:wrap"><a class="btn sm line" href="#/post/${today.items[0].id}?add=1">기억 더하기</a><button class="btn sm line" data-act="hide-post" data-id="${today.items[0].id}">다시 추천하지 않기</button></div></section>` : ''}
@@ -348,8 +359,7 @@ P.newMeetup = async () => {
   if (!pp.friends.length) return `${top('새 약속')}${empty('함께할 사람을 먼저 연결해 주세요', '연결된 사람을 약속에 초대할 수 있어요.', '<a class="btn" href="#/people">사람 연결하기</a>')}`;
   return `${top('새 약속 만들기')}<form class="page stack" data-form="newmeetup">
     <label class="field"><span>약속 이름</span><input type="text" name="title" maxlength="40" required></label>
-    <label class="field"><span>일시</span><input type="datetime-local" name="when" required><small>${esc(localTz)} 기준으로 저장하고, 보는 사람의 시간대에 맞춰 보여줘요.</small></label>
-    <label class="field"><span>장소 (선택)</span><input type="text" name="place" maxlength="60"></label>
+    ${whenFields()}
     <label class="field"><span>설명 (선택)</span><textarea name="descr" maxlength="500"></textarea></label>
     <div class="field"><span>누구를 초대할까요?</span>${pick(pp.friends, 'm')}
       ${gg.groups.length ? `<label class="field" style="margin-top:12px"><span class="cap">우리 공간으로 빠르게 고르기 (선택)</span><select name="group" data-fillgroup><option value="">우리 공간 없이 사람만 고를게요</option>${gg.groups.map(g => `<option value="${g.id}">${esc(g.name)}</option>`).join('')}</select><small>초대 시점의 우리 공간 멤버만 초대돼요. 이후 멤버가 바뀌어도 초대는 바뀌지 않아요.</small></label>` : ''}</div>
@@ -362,7 +372,7 @@ P.meetup = async id => {
   window._m = m;
   const rs = m.mine.rsvp;
   return `${top('약속', { right: isOrg && !cancelled ? `<button class="icon-btn" data-act="meetup-menu" aria-label="더 보기">${I('more')}</button>` : '' })}<div class="page stack" style="padding-top:8px">
-    <div><h1${cancelled ? ' style="text-decoration:line-through"' : ''}>${esc(m.title)}</h1>${cancelled ? '<span class="tag warn">취소된 약속</span>' : ''}<div class="pl-lines"><span>${I('cal')}${new Date(m.starts_at).toLocaleDateString('ko-KR', { timeZone: m.tz || localTz, year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}</span><span>${I('clock')}${new Date(m.starts_at).toLocaleTimeString('ko-KR', { timeZone: m.tz || localTz, hour: 'numeric', minute: '2-digit' })}</span><span${m.place ? '' : ' class="muted"'}>${I('pin')}${m.place ? esc(m.place) : '장소 미정'}</span></div><p class="sub body2">주최 ${esc(m.organizer)}</p>${m.descr ? `<p style="margin-top:8px;white-space:pre-wrap">${esc(m.descr)}</p>` : ''}</div>
+    <div><h1${cancelled ? ' style="text-decoration:line-through"' : ''}>${esc(m.title)}</h1>${cancelled ? '<span class="tag warn">취소된 약속</span>' : ''}<div class="pl-lines"><span>${I('cal')}${new Date(m.starts_at).toLocaleDateString('ko-KR', { timeZone: m.tz || localTz, year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}</span><span${!m.time_kind || m.time_kind === 'exact' ? '' : ' class="muted"'}>${I('clock')}${timeTxt(m)}</span><span${m.place ? '' : ' class="muted"'}>${I('pin')}${placeTxt(m)}${m.place_kind === 'area' ? ' <small class="cap">지역만 정했어요</small>' : ''}</span></div><p class="sub body2">주최 ${esc(m.organizer)}</p>${m.descr ? `<p style="margin-top:8px;white-space:pre-wrap">${esc(m.descr)}</p>` : ''}</div>
     ${m.changed && !cancelled ? `<div class="note">${esc(m.changed)}</div>` : ''}
     ${isOrg && started && !cancelled ? `<div class="note stack"><span>약속이 끝났어요. 실제로 함께한 사람을 확인하면 추억을 만들 때 바로 고를 수 있어요.</span><button class="btn" data-act="att-open">실제 함께한 사람 확인하기</button></div>` : ''}
     ${!cancelled && !isOrg && !started ? `<section><h3 style="margin-bottom:12px">참석할 수 있나요?</h3>${rs === 'invited' ? '<p class="cap" style="margin-bottom:12px">일정이 새로 정해졌거나 바뀌었어요. 다시 응답해 주세요.</p>' : ''}<div class="rsvp">${[['yes', '참석', 'cchk'], ['maybe', '미정', 'cd'], ['no', '불참', 'cx']].map(([k, l, i]) => `<button data-act="rsvp" data-v="${k}" aria-pressed="${rs === k}">${I(i)}<span>${l}</span></button>`).join('')}</div></section>` : ''}
@@ -574,6 +584,21 @@ const A = {
   'f-pick': d => { const f = S.filter; if (d.k === 'people') { const id = +d.v; f.people = f.people.includes(id) ? f.people.filter(x => x !== id) : [...f.people, id]; } else f[d.k] = f[d.k] === d.v ? '' : d.v; route(); },
   'cal-f': d => { S.cal.f = d.v; route(); },
   tab: d => go('/memories?tab=' + d.v),
+  // 올리기 전 확인: 선택한 사진을 크게 넘겨 보고, 마음에 안 들면 여기서 뺀다. 선택 상태(PP)는 그대로 유지된다
+  'pp-view': d => {
+    let i = +d.i; const ov = document.createElement('div'); ov.id = 'viewer'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', '선택한 사진 크게 보기');
+    const draw = () => {
+      ov.innerHTML = `<div class="v-top"><span><b class="v-t">선택한 사진 ${PP.urls.length}장</b></span><button class="v-x" data-v="x" aria-label="닫기">${I('x')}</button></div><div class="v-wrap"><div class="v-g">${PP.urls.map(u => `<div class="v-p"><img src="${u}" alt="선택한 사진" draggable="false"></div>`).join('')}</div><span class="v-pg" aria-live="polite"></span></div><div class="v-bar"><span class="v-h"></span><span class="v-b"><button data-v="rm">이 사진 빼기</button><button data-v="x">확인</button></span></div>`;
+      const g = $('.v-g', ov), pg = $('.v-pg', ov);
+      const upd = () => { pg.textContent = `${i + 1} / ${PP.urls.length}`; pg.hidden = PP.urls.length < 2; $('.v-h', ov).textContent = i === 0 ? '대표 사진이에요' : '좌우로 넘겨 볼 수 있어요'; };
+      g.addEventListener('scroll', () => { const n = Math.round(g.scrollLeft / g.clientWidth); if (n !== i && n >= 0 && n < PP.urls.length) { i = n; upd(); } }, { passive: true });
+      upd(); requestAnimationFrame(() => { g.scrollLeft = i * g.clientWidth; });
+    };
+    const key = e => { if (e.key === 'Escape') close(); };
+    const close = () => { document.removeEventListener('keydown', key); document.body.style.overflow = ''; ov.remove(); $$('.pp-v')[Math.min(i, PP.urls.length - 1)]?.focus(); };
+    document.addEventListener('keydown', key); document.body.style.overflow = 'hidden'; document.body.append(ov); draw(); $('.v-x', ov).focus();
+    ov.addEventListener('click', e => { const a = e.target.closest('[data-v]')?.dataset.v; if (a === 'x') close(); else if (a === 'rm') { A['pp-rm']({ i }); if (!PP.urls.length) return close(); i = Math.min(i, PP.urls.length - 1); draw(); $('.v-x', ov).focus(); } });
+  },
   'pp-rm': d => { PP.urls.splice(+d.i, 1).forEach(u => URL.revokeObjectURL(u)); PP.files.splice(+d.i, 1); ppRender(); },
   'guest-start': () => { S.guest = true; try { sessionStorage.setItem('ws_guest', '1'); } catch { } go('/'); route(); },
   'guest-login': () => leaveGuest(null),
@@ -596,7 +621,7 @@ const A = {
     const b = sheet(`<div class="menu"><button data-a="edit">${I('cal')}일정 수정하기</button><button data-a="invite">${I('users')}사람 초대하기</button>${started ? `<button data-a="att">${I('star')}실제 참석자 확인하기</button>` : ''}<button data-a="cancel" class="d">${I('block')}약속 취소하기</button></div>`);
     b.addEventListener('click', async e => {
       const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; closeSheet();
-      if (a === 'edit') sheet(`<h2>일정 수정하기</h2><form data-form="meetup-edit" class="stack" style="margin-top:12px"><label class="field"><span>약속 이름</span><input type="text" name="title" maxlength="40" required value="${esc(m.title)}"></label><label class="field"><span>일시</span><input type="datetime-local" name="when" required value="${new Date(m.starts_at).toLocaleString('sv').slice(0, 16).replace(' ', 'T')}"></label><label class="field"><span>장소</span><input type="text" name="place" maxlength="60" value="${esc(m.place || '')}"></label><p class="cap">일시나 장소를 바꾸면 참석자들에게 다시 응답을 요청해요.</p><p class="err" role="alert"></p><button class="btn">저장하기</button></form>`);
+      if (a === 'edit') sheet(`<h2>일정 수정하기</h2><form data-form="meetup-edit" class="stack" style="margin-top:12px"><label class="field"><span>약속 이름</span><input type="text" name="title" maxlength="40" required value="${esc(m.title)}"></label>${whenFields(m)}<p class="cap">일시나 장소를 바꾸면 참석자들에게 다시 응답을 요청해요.</p><p class="err" role="alert"></p><button class="btn">저장하기</button></form>`);
       if (a === 'invite') { const pp = await api('GET', '/api/people'), cur = m.participants.map(p => p.id); sheet(`<h2>사람 초대하기</h2><form data-form="meetup-invite" class="stack" style="margin-top:12px">${pick(pp.friends.filter(f => !cur.includes(f.id)), 'm') || ''}<p class="err" role="alert"></p><button class="btn">초대하기</button></form>`); }
       if (a === 'att') ATT_UI(m);
       if (a === 'cancel' && await ask({ title: '약속을 취소할까요?', body: '참석자들에게 취소된 약속으로 표시돼요. 이미 만든 추억과 정산은 그대로 남아요.', ok: '약속 취소하기', danger: true })) act(() => api('POST', `/api/meetups/${m.id}/cancel`), '약속을 취소했어요.');
@@ -683,8 +708,8 @@ const F = {
   async report(fd, f) { await api('POST', '/api/reports', { target_type: f.dataset.t, target_id: +f.dataset.id, category: fd.get('category'), detail: fd.get('detail'), hide: fd.get('hide') === 'on' }); closeSheet(); toast('신고가 접수됐어요. 처리 상태는 ‘나 › 내 신고 내역’에서 확인할 수 있어요.', 4500); },
   async 'post-invite'(fd, f) { await api('POST', `/api/posts/${f.dataset.id}/invite`, { user_ids: fd.getAll('m').map(Number) }); closeSheet(); toast('초대를 보냈어요.'); },
   async 'post-edit'(fd, f) { await api('PATCH', `/api/posts/${f.dataset.id}`, { title: fd.get('title'), occurred_on: fd.get('date'), place: placeOf(fd) }); closeSheet(); },
-  async newmeetup(fd) { const r = await api('POST', '/api/meetups', { title: fd.get('title'), starts_at: new Date(fd.get('when')).toISOString(), tz: localTz, place: fd.get('place'), descr: fd.get('descr'), user_ids: fd.getAll('m').map(Number), group_id: fd.get('group') || null }); location.hash = '#/meetup/' + r.id; return 'noroute'; },
-  async 'meetup-edit'(fd) { const r = await api('PATCH', `/api/meetups/${window._m.id}`, { title: fd.get('title'), starts_at: new Date(fd.get('when')).toISOString(), tz: localTz, place: fd.get('place') }); closeSheet(); if (r.reconfirm) toast('참석자들에게 다시 응답을 요청했어요.'); },
+  async newmeetup(fd) { const r = await api('POST', '/api/meetups', { title: fd.get('title'), ...whenBody(fd), descr: fd.get('descr'), user_ids: fd.getAll('m').map(Number), group_id: fd.get('group') || null }); location.hash = '#/meetup/' + r.id; return 'noroute'; },
+  async 'meetup-edit'(fd) { const r = await api('PATCH', `/api/meetups/${window._m.id}`, { title: fd.get('title'), ...whenBody(fd) }); closeSheet(); if (r.reconfirm) toast('참석자들에게 다시 응답을 요청했어요.'); },
   async 'meetup-invite'(fd) { await api('POST', `/api/meetups/${window._m.id}/invite`, { user_ids: fd.getAll('m').map(Number) }); closeSheet(); },
   async attended(fd) { await api('POST', `/api/meetups/${window._m.id}/attended`, { user_ids: fd.getAll('m').map(Number) }); closeSheet(); toast('실제 참석자를 확인했어요.'); },
   async settle(fd) {
@@ -787,15 +812,14 @@ document.addEventListener('input', e => { const el = e.target, f = el.form; if (
 document.addEventListener('change', e => { const el = e.target, f = el.form; if (!f?.dataset?.form || !el.name) return; const [box] = fieldBox(f, el.name); box?.querySelector(':scope > small.fe')?.remove(); });
 const need = (v, m) => String(v ?? '').trim() ? null : m;
 const pastOk = d => d && d > localDate() ? '오늘 이후 날짜는 고를 수 없어요.' : null;
-const whenOk = v => !v ? '일시를 선택해 주세요.' : isNaN(new Date(v)) ? '일시가 올바르지 않아요.' : null;
 const pickOk = m => fd => [['m', fd.getAll('m').length ? null : m]];
 const VALID = {
   login: fd => [['username', need(fd.get('username'), '이름을 입력해 주세요.')], ['password', need(fd.get('password'), '비밀번호를 입력해 주세요.')]],
   request: fd => { const v = String(fd.get('username') || '').trim().replace(/^@/, ''); return [['username', !v ? '연결할 이름을 입력해 주세요.' : !/^[a-z0-9_]{3,20}$/i.test(v) ? '이름은 영문, 숫자, _ 로 3–20자예요.' : null]]; },
   note: fd => [['text', need(fd.get('text'), '내용을 입력해 주세요.')]],
   newpost: fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['m', fd.getAll('m').length ? null : '함께한 사람을 한 명 이상 선택해 주세요.'], ['date', pastOk(fd.get('date'))], ['pcity', (fd.get('pname') || fd.get('parea')) && !fd.get('pcity') && !fd.get('pcity_x') && !fd.get('pcountry') && !fd.get('pcountry_x') ? '지역을 골라 주세요.' : null]],
-  newmeetup: fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
-  'meetup-edit': fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ['when', whenOk(fd.get('when'))]],
+  newmeetup: fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ...whenValid(fd)],
+  'meetup-edit': fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ...whenValid(fd)],
   'post-edit': fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['date', pastOk(fd.get('date'))]],
   group: fd => [['name', need(fd.get('name'), '우리 공간 이름을 입력해 주세요.')]],
   'space-rename': fd => [['name', need(fd.get('name'), '공간 이름을 입력해 주세요.')]],
@@ -837,6 +861,7 @@ document.addEventListener('change', e => { const pf = e.target; if (pf.matches?.
   if (t.matches('[data-upload]')) { const files = [...t.files]; t.value = ''; upload(+t.dataset.upload, files).then(() => route()); }
   else if (t.matches('[data-filter=people]')) { const id = +t.value; S.filter.people = t.checked ? [...S.filter.people, id] : S.filter.people.filter(x => x !== id); route(); }
   else if (t.matches('[data-filter]')) { S.filter[t.dataset.filter] = t.value; route(); }
+  else if (t.matches('input[name=tk],input[name=pk]')) { const f = t.form, isT = t.name === 'tk', inp = f.elements[isT ? 'at' : 'place']; inp.style.display = (isT ? t.value === 'exact' : t.value !== 'tbd') ? '' : 'none'; if (!isT) inp.placeholder = t.value === 'area' ? '예: 성수, 홍대' : '예: 카페 이름'; }
   else if (t.matches('[data-fillgroup]')) { markSpace(t); saveDraft(t.form); }
   else if (t.matches('[data-method]')) t.form.querySelectorAll('.custom').forEach(i => i.style.display = t.value === 'custom' ? '' : 'none');
 });
