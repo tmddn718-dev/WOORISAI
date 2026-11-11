@@ -6,14 +6,21 @@
  */
 const ID = (window.__UX_GA_ID || '').trim();
 const PROD_HOST = 'woorisai-ux-test.vercel.app';
+// 허용 목록: 이름과 숫자·불리언·짧은 열거값만 보낸다. 모든 이벤트에 flow(new=처음부터 사용, demo=기능 체험)·scenario(1~3)·event_source(ux_test)가 자동으로 붙는다.
 const ALLOW = {
   page_view: ['page_path', 'page_location', 'page_title'],
-  onboarding_complete: ['method'], experience_start: ['mode'],
-  sign_up_start: [], sign_up: ['method'],
-  friend_add_start: [], friend_add_complete: ['friend_count'],
-  post_create_start: [], post_create_complete: ['member_count', 'has_text', 'has_place'],
-  test_complete: []
+  first_visit_test: [], onboarding_complete: ['method'], test_start: ['flow'],
+  sign_up_start: [], sign_up: ['method'], login: ['method'],
+  scenario_start: ['scenario'], scenario_complete: ['scenario'], scenario_reset: ['scenario'],
+  create_start: ['entry', 'first'], create_save: ['first', 'photos', 'story', 'people', 'plan'], create_abandon: [],
+  invite_start: [], invite_complete: ['friends', 'via'], contrib_add: ['photos', 'story'], photo_view: [],
+  plan_create_start: [], plan_create: ['invited', 'past'], plan_view: [], plan_rsvp: ['answer'], plan_to_memory: [], plan_memory_view: [],
+  cal_view: [], foot_view: [], region_view: [], memory_view: ['year'], logout: [],
+  space_view: [], space_create_start: [], space_create: ['members'], space_update: ['members'], space_delete: []
 };
+// 탐색 계열 이벤트는 세션 안에서 여러 번 보내고, 나머지(단계 이벤트)는 세션당 한 번만 보낸다.
+const REPEAT = new Set(['space_view', 'page_view', 'cal_view', 'foot_view', 'region_view', 'memory_view', 'photo_view', 'plan_view', 'plan_rsvp', 'contrib_add', 'scenario_start', 'scenario_reset']);
+const cfg = () => { try { return JSON.parse(sessionStorage.getItem('wsux_cfg') || '{}'); } catch { return {}; } };
 const CKEY = 'wsux_consent', SENT = 'wsux_sent', RUN = 'wsux_run', DEV = 'wsux_dev';
 const ls = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { } }, del: k => { try { localStorage.removeItem(k); } catch { } } };
 const ss = { get: k => { try { return sessionStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { sessionStorage.setItem(k, v); } catch { } } };
@@ -45,7 +52,7 @@ function boot() {
 }
 
 function send(name, params) {
-  const out = { environment, test_run: runId(), ...(isDev() ? { traffic_type: 'internal' } : {}) };
+  const c = cfg(), out = { environment, test_run: runId(), event_source: 'ux_test', flow: c.flow === 'demo' ? 'demo' : c.flow === 'new' ? 'new' : 'none', ...(c.flow === 'demo' && c.sc ? { scenario: +c.sc } : {}), ...(isDev() ? { traffic_type: 'internal' } : {}) };
   for (const k of ALLOW[name]) if (k in params && safe(params[k])) out[k] = params[k];
   if (environment === 'local') { window.__uxGaLog.push({ name, params: out }); return; }
   boot(); gtag('event', name, out);
@@ -53,7 +60,7 @@ function send(name, params) {
 
 export function track(name, params = {}) {
   if (!ID || !(name in ALLOW)) return;
-  if (name !== 'page_view') { // 단계 이벤트는 세션당 한 번
+  if (!REPEAT.has(name)) { // 단계 이벤트는 세션당 한 번
     let sent = []; try { sent = JSON.parse(ss.get(SENT) || '[]'); } catch { }
     if (sent.includes(name)) return; sent.push(name); ss.set(SENT, JSON.stringify(sent));
   }
