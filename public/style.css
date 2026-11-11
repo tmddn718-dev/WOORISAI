@@ -615,3 +615,16 @@ svg.i { stroke-width: 1.75; }
 .v-wrap .v-g { flex: 1; min-width: 0; }
 .v-pg { position: absolute; right: 12px; bottom: 12px; z-index: 1; padding: 6px 12px; border-radius: 9999px; background: rgba(36, 38, 34, .72); color: #fff; font-size: .75rem; line-height: 16px; font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
 .v-pg[hidden] { display: none; }
+
+/* ---------- 우리 공간 · 접근 대상 확인 · 발자국 스탬프 상태 (P1) ---------- */
+.space { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
+.space .grow { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.space b { font-size: 1.0625rem; line-height: 24px; font-weight: 600; color: var(--ws-color-fg-strong); }
+.space .avs { display: flex; margin-top: 4px; }
+.pick label.sp span { border-color: var(--ws-color-border-brand); }
+.pick label.sp span::after { content: '공간'; margin-left: 6px; font-size: .6875rem; line-height: 14px; color: var(--ws-color-fg-brand); }
+.who { display: flex; flex-direction: column; gap: 8px; color: var(--ws-color-fg-default); }
+.who > span { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.stamp:not(.on) { cursor: default; opacity: .5; }
+.stamp:not(.on) .sp { border-style: dashed; border-color: var(--ws-color-border-subtle); }
+.stamp.on:hover .sp { border-color: var(--ws-color-bg-brand); }

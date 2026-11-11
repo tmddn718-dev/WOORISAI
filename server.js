@@ -349,6 +349,10 @@ R('POST', '/api/groups', c => {
   const id = tx(() => { const gid = run('insert into groups(owner_id,name,type_hint) values(?,?,?)', c.u.id, name, hint).lastInsertRowid; for (const m of [c.u.id, ...members]) run('insert into group_members values(?,?)', gid, m); return gid; });
   return { id, duplicateOf: dup?.name || null };
 });
+R('PATCH', '/api/groups/:id', c => { // 우리 공간 이름 바꾸기(소유자만). 이름만 바뀌고 멤버·추억 권한은 그대로
+  const g = groupOf(+c.params.id, c.u.id); if (g.owner_id !== c.u.id) throw fail('공간 소유자만 이름을 바꿀 수 있어요.', 403);
+  run('update groups set name=? where id=?', str(c.body.name, 20, 1), g.id); return {};
+});
 R('POST', '/api/groups/:id/members', c => {
   const g = groupOf(+c.params.id, c.u.id); if (g.owner_id !== c.u.id) throw fail('그룹 소유자만 초대할 수 있어요.', 403);
   for (const m of friendsOnly(c.u.id, ids(c.body.user_ids))) run('insert or ignore into group_members values(?,?)', g.id, m);

@@ -60,6 +60,16 @@ assert.ok(!detail.includes('비밀카페') && !detail.includes('성수동 ') , '
 assert.equal((await a.get('/api/map')).data.total, 1);
 assert.equal((await a.get('/api/map')).data.total, 1);
 assert.equal((await c.get('/api/map')).data.total, 0);
+
+// 우리 공간(그룹): 이름은 소유자만, 목록은 내가 볼 수 있는 추억만, 공간 멤버라도 미초대 추억은 보이지 않는다
+assert.equal((await a.patch('/api/groups/' + g.id, { name: '우리 셋' })).status, 200);
+assert.equal((await b.patch('/api/groups/' + g.id, { name: '탈취' })).status, 403, '소유자가 아니면 이름 변경 불가');
+assert.equal((await a.patch('/api/groups/' + g.id, { name: '' })).status, 400, '빈 이름 불가');
+assert.equal((await a.get('/api/groups')).data.groups[0].name, '우리 셋');
+assert.equal((await b.get('/api/posts?group=' + g.id)).data.posts.length, 1, '수락한 참여자는 공간 목록에서 볼 수 있음');
+assert.equal((await c.get('/api/posts?group=' + g.id)).data.posts.length, 0, '공간 멤버라도 미초대 추억은 목록에 없음');
+const outsider = await signup('spaceout');
+assert.equal((await outsider.get('/api/posts?group=' + g.id)).status, 404, '공간 멤버가 아니면 목록 조회 불가');
 assert.equal((await a.get(`/api/posts?people=${b.id}`)).data.posts.length, 1);
 assert.equal((await a.get(`/api/posts?people=${c.id}`)).data.posts.length, 0, '그룹 소속≠함께한 사람');
 
