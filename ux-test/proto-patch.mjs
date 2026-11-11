@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { SPACES_MARKUP, SPACES_LOGIC } from './proto-spaces.mjs';
 import { P0_MARKUP, P0_LOGIC } from './proto-p0.mjs';
+import { CARDS_MARKUP, CARDS_LOGIC } from './proto-cards.mjs';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -98,6 +99,7 @@ rep("barIcon: bar && bar.icon,", "barIcon: undefined,");
 export const MARKUP = [
   ...SPACES_MARKUP,
   ...P0_MARKUP,
+  ...CARDS_MARKUP,
   // 참여자 기록 사이 24→32px, 프로필→사진·사진→글 10→12px
   ['<section style="display:flex;flex-direction:column;gap:24px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:10px">',
    '<section style="display:flex;flex-direction:column;gap:32px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:12px">'],
@@ -124,7 +126,7 @@ export function patchProto(src) {
     if (n !== 1) throw new Error(`마크업 패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
     head = head.replace(a, () => b);
   }
-  for (const [a, b] of [...R, ...SPACES_LOGIC, ...P0_LOGIC]) {
+  for (const [a, b] of [...R, ...SPACES_LOGIC, ...P0_LOGIC, ...CARDS_LOGIC]) {
     const n = body.split(a).length - 1;
     if (n !== 1) throw new Error(`패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
     body = body.replace(a, () => b);
