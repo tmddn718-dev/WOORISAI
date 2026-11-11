@@ -1,11 +1,13 @@
 /* UX 테스트 진입점. index.html 에서 app.js 보다 먼저 불러와 fetch 를 가로챈 뒤,
  * 스플래시 → 온보딩, 테스트 완료 화면, 화면 이벤트(GA4 준비)를 앱 위에 얹는다. 기존 앱 코드는 고치지 않는다. */
-import { resetAll, state, markCompleted } from './mock-api.js';
+import { resetAll, state, markCompleted, startDemo } from './mock-api.js';
 import { track, askConsent } from './analytics.js';
 
 const SEEN = 'wsux_seen';
 const q = new URLSearchParams(location.search);
+const MODE = q.get('mode'); // 진행자용: ?mode=demo 는 샘플 계정으로 바로 시작, ?mode=new 는 처음 사용자 흐름(체험 선택 화면 생략)
 if (q.has('reset')) { resetAll(); try { sessionStorage.removeItem(SEEN); } catch { } history.replaceState(null, '', location.pathname + location.hash); }
+if (MODE === 'demo') { startDemo(); try { sessionStorage.setItem(SEEN, '1'); } catch { } }
 
 const ICON = {
   images: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M21 16l-5-5-8 8"/></svg>',
@@ -36,10 +38,27 @@ function onboarding(i) {
     <div class="uxt-actions"><button type="button" class="btn block" data-a="${last ? 'done' : 'next'}">${last ? '시작하기' : '다음'}</button></div>`);
   r.addEventListener('click', e => { const a = e.target.closest('[data-a]')?.dataset.a; if (a === 'next') onboarding(i + 1); else if (a === 'done') finishIntro(e.target.closest('.uxt-skip') ? 'skip' : 'finish'); }, { once: true });
 }
-function finishIntro(method) { try { sessionStorage.setItem(SEEN, '1'); } catch { } close(); track('onboarding_complete', { method }); }
+function finishIntro(method) {
+  try { sessionStorage.setItem(SEEN, '1'); } catch { }
+  track('onboarding_complete', { method });
+  if (MODE === 'new' || state().loggedIn) { close(); return; }
+  choice();
+}
+// 체험 방식 선택: 처음 사용자(가입부터) 또는 기존 사용자(샘플 데이터)
+function choice() {
+  const r = render(`<div class="uxt-center"><h1>어떻게 체험해 볼까요?</h1><p class="sub">둘 중 하나를 골라 주세요. 나중에 다시 선택할 수도 있어요.</p></div>
+    <div class="uxt-actions"><button type="button" class="btn block" data-a="new">처음 사용자로 시작하기</button><p class="uxt-cap" style="text-align:center;margin:-2px 0 8px">가입부터 친구 추가, 첫 추억 만들기까지 직접 해 봐요.</p>
+    <button type="button" class="btn line block" data-a="demo">기존 사용자로 둘러보기</button><p class="uxt-cap" style="text-align:center;margin-top:-2px">샘플 추억이 있는 계정으로 바로 들어가요. 로그아웃해도 이름 demo 로 다시 로그인할 수 있어요.</p></div>`);
+  r.addEventListener('click', e => {
+    const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
+    track('experience_start', { mode: a === 'demo' ? 'demo' : 'new' });
+    if (a === 'demo') { startDemo(); location.hash = '#/'; window.dispatchEvent(new HashChangeEvent('hashchange')); }
+    close();
+  }, { once: true });
+}
 
 function complete() {
-  if (document.getElementById('uxt')) return;
+  if (document.getElementById('uxt') || state().mode === 'demo') return; // 샘플 계정 체험에는 완료 화면이 없다
   markCompleted(); track('test_complete');
   const r = render(`<div class="uxt-center"><span class="uxt-icon">${ICON.check}</span><h1>테스트가 끝났어요</h1><p class="sub">참여해 주셔서 고마워요. 가입, 친구 추가, 첫 추억 만들기까지 마쳤어요.</p><p class="uxt-note">입력한 내용은 이 브라우저 안의 가상 데이터예요. 아래에서 지우면 완전히 사라져요.</p></div>
     <div class="uxt-actions"><button type="button" class="btn block" data-a="keep">내가 만든 추억 둘러보기</button><button type="button" class="btn line block" data-a="again">처음부터 다시 해 보기</button><button type="button" class="btn line block" data-a="wipe">데이터 지우고 끝내기</button></div>`);

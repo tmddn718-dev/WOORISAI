@@ -4,11 +4,11 @@
  * - 비밀번호는 저장하지 않는다. 로그인은 가입해 둔 이름만 확인한다.
  * - 실제 서버의 권한 정책(초대 수락자만 열람 등)을 구현한 것이 아니다.
  */
-import { FRIEND_POOL, TAKEN, ME_ID } from './seed.js';
+import { FRIEND_POOL, TAKEN, ME_ID, DEMO_USER, DEMO_FRIENDS, DEMO_POSTS } from './seed.js';
 
 const KEY = 'wsux_state', DRAFT = 'ws_draft';
 const emit = (name, params) => window.dispatchEvent(new CustomEvent('ux:event', { detail: { name, params: params || {} } }));
-const fresh = () => ({ user: null, loggedIn: false, friends: [], outgoing: [], links: [], posts: [], media: [], saves: [], seq: 200, completed: false });
+const fresh = () => ({ mode: 'fresh', stash: null, user: null, loggedIn: false, friends: [], outgoing: [], links: [], posts: [], media: [], saves: [], seq: 200, completed: false });
 let S;
 const load = () => { try { S = JSON.parse(sessionStorage.getItem(KEY)) || fresh(); } catch { S = fresh(); } };
 const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(S)); } catch { /* 저장 불가해도 메모리 상태로 동작 */ } };
@@ -25,6 +25,16 @@ export function resetAll() {
 export const state = () => S;
 export const markCompleted = () => { S.completed = true; save(); };
 
+// 체험용 샘플 계정(demo)으로 시작한다. 지금 계정이 있으면 따로 보관해 두었다가 그 이름으로 로그인하면 돌려준다.
+const strip = st => { const { stash, ...rest } = st; return rest; };
+function demoState(prev) {
+  const d = fresh();
+  Object.assign(d, { mode: 'demo', user: { ...DEMO_USER }, loggedIn: true, friends: [...DEMO_FRIENDS], seq: 500, posts: JSON.parse(JSON.stringify(DEMO_POSTS)).map(p => ({ ...p, seed: true, cover: null, reactions: false })) });
+  if (prev && prev.user) d.stash = strip(prev);
+  return d;
+}
+export function startDemo() { S = demoState(S.user ? S : null); save(); emit('experience_start', { mode: 'demo' }); }
+
 const fail = (error, status = 400, field) => ({ status, body: { error, ...(field ? { field } : {}) } });
 const ok = (body = {}) => ({ status: 200, body });
 const meView = u => ({ id: u.id, name: u.name, nickname: u.name, username: u.username, mem_enabled: u.mem_enabled, has_password: true, nickname_updated_at: null });
@@ -36,7 +46,8 @@ const placeView = p => {
   return { label, country: q.country || '기타', city: q.city || q.country || '기타', precision: q.precision || 'city' };
 };
 const cover = p => (p.cover || p.media[0] || null);
-const card = p => ({ id: p.id, title: p.title, occurred_on: p.occurred_on, status: 'active', cover: cover(p), place: placeView(p), count: 1, names: [S.user.name] });
+const acc = p => (p.accepted || []).map(person).filter(Boolean).map(f => f.name);
+const card = p => ({ id: p.id, title: p.title, occurred_on: p.occurred_on, status: 'active', cover: cover(p), place: placeView(p), count: 1 + acc(p).length, names: [S.user.name, ...acc(p)].slice(0, 3) });
 
 // 친구 요청은 몇 초 뒤 상대가 수락한 것으로 시뮬레이션한다.
 const ACCEPT_MS = 3000;
@@ -75,7 +86,11 @@ R('POST', '/api/signup', c => {
 }, true);
 R('POST', '/api/login', c => {
   const username = String(c.b.username || '').trim().toLowerCase();
-  if (!S.user || S.user.username !== username) return fail('이름 또는 비밀번호를 확인해 주세요. (테스트에서는 이 브라우저에서 가입한 이름만 로그인돼요)', 401, 'password');
+  const here = S.user && S.user.username === username, held = S.stash && S.stash.user && S.stash.user.username === username;
+  if (here) { /* 같은 계정 */ }
+  else if (held) { const cur = strip(S); S = S.stash; S.stash = cur; } // 보관해 둔 다른 체험 계정으로 바꾼다
+  else if (username === 'demo') S = demoState(S.user ? S : null);
+  else return fail('이름 또는 비밀번호를 확인해 주세요. (체험에서는 이 브라우저에서 가입한 이름이나 demo 로 로그인해요. 비밀번호는 확인하지 않아요)', 401, 'password');
   S.loggedIn = true; save(); return ok(meView(S.user));
 }, true);
 R('POST', '/api/logout', () => { S.loggedIn = false; save(); return ok(); });
@@ -138,9 +153,9 @@ R('GET', '/api/posts/(\\d+)', c => {
     place_raw: p.place ? { name: p.place.name, area: p.place.area, city: p.place.city, country: p.place.country, precision: p.place.precision } : undefined,
     me: { id: ME_ID, role: 'admin' },
     // 초대한 친구는 수락 전(invited) 상태로 둔다. 가상 데이터라 수락은 일어나지 않는다.
-    members: [{ id: ME_ID, name: S.user.name, role: 'admin', access: 'accepted' }, ...p.members.map(id => ({ id, name: person(id).name, role: 'member', access: 'invited' }))],
-    media: p.media.map(id => ({ id, mine: true, restricted: false })),
-    notes: p.notes.map(n => ({ id: n.id, kind: n.kind, author: S.user.name, created_at: n.at, mine: true, restricted: false, text: n.text })),
+    members: [{ id: ME_ID, name: S.user.name, role: 'admin', access: 'accepted' }, ...p.members.map(id => ({ id, name: person(id).name, role: 'member', access: (p.accepted || []).includes(id) ? 'accepted' : 'invited' }))],
+    media: p.media.map(id => ({ id, mine: !p.seed, restricted: false })),
+    notes: p.notes.map(n => ({ id: n.id, kind: n.kind, author: n.by || S.user.name, created_at: n.at || '2026-10-26T09:00:00.000Z', mine: !n.by, restricted: false, text: n.text })),
     saved: S.saves.includes(p.id), reactions: { count: p.reactions ? 1 : 0, mine: !!p.reactions }, groups: [], meetup: null
   });
 });

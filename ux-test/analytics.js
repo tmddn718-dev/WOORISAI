@@ -8,7 +8,7 @@ const ID = (window.__UX_GA_ID || '').trim();
 const PROD_HOST = 'woorisai-ux-test.vercel.app';
 const ALLOW = {
   page_view: ['page_path', 'page_location', 'page_title'],
-  onboarding_complete: ['method'],
+  onboarding_complete: ['method'], experience_start: ['mode'],
   sign_up_start: [], sign_up: ['method'],
   friend_add_start: [], friend_add_complete: ['friend_count'],
   post_create_start: [], post_create_complete: ['member_count', 'has_text', 'has_place'],
