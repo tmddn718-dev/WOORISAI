@@ -1,3 +1,5 @@
+/* 한글 워드마크 전용 서체(나눔스퀘어라운드 ExtraBold). 외부 CDN 주소가 없어져(404) 직접 제공한다 */
+@font-face { font-family: 'NanumSquareRound'; font-weight: 800; font-display: block; src: url('/fonts/NanumSquareRoundEB.woff2') format('woff2'); }
 /* Warm Archive — 브랜드 가이드 v1.0 토큰 (색은 그대로, 간격·반경·모션 토큰 추가) */
 :root {
   --green: #566B5C; --green-d: #465A4D; --ink: #242622; --bg: #FAF9F6; --sage: #E9EDE7; --white: #FFFFFF;
@@ -141,12 +143,17 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
 .hero { min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; padding: 32px 24px; gap: 32px; }
 .hero-art { display: none; }
 .hero-text { display: flex; flex-direction: column; gap: 32px; }
-.logo-row { display: flex; align-items: center; gap: 12px; }
-.logo-row img { width: 56px; height: 56px; }
-.logo-row .wordmark { font-size: 2rem; line-height: 1.1; }
-.small-logo { display: flex; align-items: center; gap: 8px; }
-.small-logo img { width: 28px; height: 28px; }
-.small-logo .wordmark { font-size: 1.125rem; }
+/* 로고 락업: 정렬은 상자가 아니라 실제로 보이는 모양(타일·글자 획) 기준으로 맞춘다.
+   - 아이콘 SVG 는 바깥에 1/12 여백이 있어 타일을 본문 왼쪽 선에 맞추려고 그만큼 당긴다
+   - 한글 '우'의 왼쪽 획이 영문 W 보다 안쪽에서 시작해 조금 당긴다
+   - 글자 묶음의 보이는 세로 중심을 타일 중심에 맞추려고 아래로 내린다 */
+.logo-row { display: flex; align-items: center; gap: .5625rem; width: fit-content; }
+.logo-row img { width: 56px; height: 56px; margin-left: -4.67px; }
+.logo-row > div { position: relative; top: .11rem; }
+.logo-row .wordmark { font-size: 2rem; line-height: 1.1; margin: 0 -.09em 0 -.03em; } /* 오른쪽: 글자 뒤 여백을 빼서 상자 폭을 보이는 폭에 맞춘다(가운데 정렬해도 치우치지 않게) */
+.small-logo { display: flex; align-items: center; gap: 4.5px; } /* 큰 락업과 같은 비율(타일 대비 간격 약 0.3)로 맞춘다 */
+.small-logo img { width: 28px; height: 28px; margin-left: -2.33px; }
+.small-logo .wordmark { font-size: 1.125rem; position: relative; top: .6px; }
 .empty { text-align: center; padding: 40px 24px; }
 .empty-ic { width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%; background: var(--sage); color: var(--green); display: grid; place-items: center; }
 .empty-ic .i { width: 28px; height: 28px; }
@@ -200,9 +207,9 @@ input[type=checkbox], input[type=radio] { accent-color: var(--green); }
   .page { padding: 24px 32px 48px; }
   .top { padding: 24px 32px 0; }
   #tabs { top: 0; bottom: 0; left: 0; transform: none; width: var(--side); max-width: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 24px 16px; background: var(--bg); backdrop-filter: none; border-top: 0; border-right: 1px solid var(--line); }
-  #tabs .brand { display: flex; align-items: center; gap: 8px; padding: 0 12px 24px; }
-  #tabs .brand img { width: 28px; height: 28px; }
-  #tabs .brand .wordmark { font-size: 1.125rem; }
+  #tabs .brand { display: flex; align-items: center; gap: 4.5px; padding: 0 12px 24px; }
+  #tabs .brand img { width: 28px; height: 28px; margin-left: -2.33px; }
+  #tabs .brand .wordmark { font-size: 1.125rem; position: relative; top: .6px; }
   #tabs a, #tabs button { flex-direction: row; justify-content: flex-start; gap: 12px; min-height: 40px; padding: 0 12px; border-radius: 10px; font-size: .875rem; line-height: 20px; order: 2; transition: background-color var(--t) var(--ease); }
   #tabs a:hover { background: var(--sage); }
   #tabs [aria-current=page] { background: var(--sage); color: var(--ink); }
