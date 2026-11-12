@@ -60,6 +60,16 @@ assert.ok(!detail.includes('비밀카페') && !detail.includes('성수동 ') , '
 assert.equal((await a.get('/api/map')).data.total, 1);
 assert.equal((await a.get('/api/map')).data.total, 1);
 assert.equal((await c.get('/api/map')).data.total, 0);
+
+// 우리 공간(그룹): 이름은 소유자만, 목록은 내가 볼 수 있는 추억만, 공간 멤버라도 미초대 추억은 보이지 않는다
+assert.equal((await a.patch('/api/groups/' + g.id, { name: '우리 셋' })).status, 200);
+assert.equal((await b.patch('/api/groups/' + g.id, { name: '탈취' })).status, 403, '소유자가 아니면 이름 변경 불가');
+assert.equal((await a.patch('/api/groups/' + g.id, { name: '' })).status, 400, '빈 이름 불가');
+assert.equal((await a.get('/api/groups')).data.groups[0].name, '우리 셋');
+assert.equal((await b.get('/api/posts?group=' + g.id)).data.posts.length, 1, '수락한 참여자는 공간 목록에서 볼 수 있음');
+assert.equal((await c.get('/api/posts?group=' + g.id)).data.posts.length, 0, '공간 멤버라도 미초대 추억은 목록에 없음');
+const outsider = await signup('spaceout');
+assert.equal((await outsider.get('/api/posts?group=' + g.id)).status, 404, '공간 멤버가 아니면 목록 조회 불가');
 assert.equal((await a.get(`/api/posts?people=${b.id}`)).data.posts.length, 1);
 assert.equal((await a.get(`/api/posts?people=${c.id}`)).data.posts.length, 0, '그룹 소속≠함께한 사람');
 
@@ -72,6 +82,27 @@ assert.equal((await a.post(`/api/meetups/${mt.id}/settlements`, { title: 'x', to
 
 // 일정 변경 시 재응답
 await b.post(`/api/meetups/${mt.id}/rsvp`, { rsvp: 'yes' });
+// 약속 시간·장소 상태: 기본값 호환, 오전/오후/미정, 지역만, 잘못된 값 차단, 변경 시 재응답
+{
+  const day = new Date(Date.now() + 864e5 * 3).toLocaleDateString('sv'), iso = t => new Date(day + 'T' + t).toISOString();
+  const old = (await a.post('/api/meetups', { title: '기본', starts_at: iso('18:00'), user_ids: [b.id] })).data;
+  const o = (await a.get('/api/meetups/' + old.id)).data;
+  assert.equal(o.time_kind, 'exact', '기존 방식 요청은 정확한 시간'); assert.equal(o.place_kind, 'tbd', '장소 없으면 미정');
+  const pm = (await a.post('/api/meetups', { title: '오후', starts_at: iso('23:59:58'), time_kind: 'pm', place_kind: 'area', place: '성수', user_ids: [b.id] })).data;
+  const p = (await b.get('/api/meetups/' + pm.id)).data;
+  assert.equal(p.time_kind, 'pm'); assert.equal(p.place_kind, 'area'); assert.equal(p.place, '성수');
+  assert.equal((await a.post('/api/meetups', { title: 'x', starts_at: iso('10:00'), time_kind: 'noon', user_ids: [b.id] })).status, 400, '알 수 없는 시간 상태 차단');
+  const noPlace = await a.post('/api/meetups', { title: 'x', starts_at: iso('10:00'), place_kind: 'area', place: '', user_ids: [b.id] });
+  assert.equal(noPlace.status, 400); assert.equal(noPlace.data.field, 'place', '지역/장소 상태인데 비어 있으면 place 오류');
+  const tbd = (await a.post('/api/meetups', { title: '미정', starts_at: iso('23:59:59'), time_kind: 'tbd', place_kind: 'tbd', place: '무시됨', user_ids: [b.id] })).data;
+  assert.equal((await a.get('/api/meetups/' + tbd.id)).data.place, null, '장소 미정이면 장소 비움');
+  const list = (await a.get('/api/meetups')).data.meetups.filter(m => [old.id, pm.id, tbd.id].includes(m.id)).sort((x, y) => x.starts_at.localeCompare(y.starts_at)).map(m => m.id);
+  assert.deepEqual(list, [old.id, pm.id, tbd.id], '같은 날 정확한 시간 → 오후 → 미정 순');
+  await b.post('/api/meetups/' + pm.id + '/rsvp', { rsvp: 'yes' });
+  assert.equal((await a.patch('/api/meetups/' + pm.id, { time_kind: 'am', starts_at: iso('23:59:57') })).data.reconfirm, true, '시간 상태 변경은 재응답');
+  assert.equal((await a.patch('/api/meetups/' + pm.id, { place_kind: 'exact', place: '성수 카페' })).data.reconfirm, true, '장소 변경은 재응답');
+  assert.equal((await a.get('/api/meetups/' + pm.id)).data.place_kind, 'exact');
+}
 await a.post(`/api/meetups/${mt.id}`.replace('/api/meetups/', '/api/meetups/') + '/invite', { user_ids: [] });
 // 차단: 신규 초대 중단 + 서로 연결 해제
 await b.post('/api/blocks', { user_id: a.id, hideShared: true });
