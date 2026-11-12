@@ -15,12 +15,12 @@ const PLAN_OLD = `                    <span style="display:flex;align-items:cent
                   </span>`;
 const PLAN_NEW = `                    <span style="font:var(--type-label-2);color:var(--ws-color-fg-tertiary);white-space:nowrap">{{ p.goingText }}</span>
                     </span>
-                    <span style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin-top:4px">
+                  </span>
+                    <span style="grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;padding-top:4px">
                       <sc-if value="{{ p.showResp }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:6px;font:var(--type-label-2);color:var(--ws-color-fg-tertiary);white-space:nowrap">내 응답<span style="padding:2px 10px;border-radius:9999px;font:var(--type-label-2);background:{{ p.myBg }};color:{{ p.myFg }}">{{ p.myLabel }}</span></span></sc-if>
                       <sc-if value="{{ p.isHost }}" hint-placeholder-val="{{ false }}"><span style="font:var(--type-label-2);color:var(--ws-color-fg-brand);white-space:nowrap">내가 만든 약속</span></sc-if>
                     </span>
-                    <sc-if value="{{ p.hasChanged }}" hint-placeholder-val="{{ false }}"><span style="display:flex;align-items:flex-start;gap:6px;margin-top:2px;font:var(--type-caption-1);color:var(--ws-badge-info-fg)"><lucide-icon name="info" size="14" style="flex:none;margin-top:1px"></lucide-icon><span style="min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">{{ p.changeText }}</span></span></sc-if>
-                  </span>`;
+                    <sc-if value="{{ p.hasChanged }}" hint-placeholder-val="{{ false }}"><span style="grid-column:1/-1;display:flex;align-items:flex-start;gap:8px;min-width:0;padding:12px;border-radius:12px;background:#F0F5FA;color:#456B94"><lucide-icon name="info" size="16" style="flex:none;margin-top:1px"></lucide-icon><span style="min-width:0;display:flex;flex-direction:column;gap:2px;font:var(--type-label-2)"><b>{{ p.changeTitle }}</b><sc-if value="{{ p.hasChangeDetail }}" hint-placeholder-val="{{ true }}"><span style="overflow-wrap:anywhere;font:var(--type-caption-1)">{{ p.changeDetail }}</span></sc-if></span></span></sc-if>`;
 
 // 2) 지역 상세 '이곳의 추억' 카드: 제목은 늘 2줄 높이(1줄이어도 같은 높이, 3줄 이상은 2줄 말줄임)라 날짜·장소와 참여·개수 줄이 모든 카드에서 같은 세로 위치에서 시작한다.
 //    참여자 이름이 길어도 사진·이야기 개수는 밀려나지 않게 개수만 고정폭으로 둔다.
@@ -51,5 +51,5 @@ export const CARDS_MARKUP = [
   ['<sc-for list="{{ region.list }}" as="m" hint-placeholder-count="2">\n              <div onClick="{{ m.open }}" role="button" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle)">\n                <span style="position:relative;width:64px;height:64px;flex:none;border-radius:var(--ws-radius-small);overflow:hidden;background:var(--ws-color-bg-recall-subtle)">', '<sc-for list="{{ region.list }}" as="m" hint-placeholder-count="2">\n              <div onClick="{{ m.open }}" role="button" style="cursor:pointer;display:grid;grid-template-columns:76px minmax(0,1fr) 44px;align-items:center;gap:12px;padding:16px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle)">\n                <span style="position:relative;width:76px;height:76px;border-radius:var(--ws-radius-small);overflow:hidden;background:var(--ws-color-bg-recall-subtle)">']
 ];
 export const CARDS_LOGIC = [
-  ["myLabel: state === 'cancelled' ? '취소됨' : MY[0],", "isHost: p.host === ME, showResp: p.host !== ME || state === 'cancelled', changeText: p.changed ? String(p.changed).split(' · ')[0] : '',\n        myLabel: state === 'cancelled' ? '취소됨' : MY[0],"],
+  ["myLabel: state === 'cancelled' ? '취소됨' : MY[0],", "isHost: p.host === ME, showResp: p.host !== ME || state === 'cancelled', changeTitle: p.changed ? (/^장소가 .+에서 .+으로 바뀌었어요/.test(String(p.changed)) ? '장소가 변경되었어요' : String(p.changed).split(' · ')[0]) : '', changeDetail: p.changed && /^장소가 (.+)에서 (.+)으로 바뀌었어요/.test(String(p.changed)) ? String(p.changed).match(/^장소가 (.+)에서 (.+)으로 바뀌었어요/).slice(1).join(' → ') : '', hasChangeDetail: !!(p.changed && /^장소가 (.+)에서 (.+)으로 바뀌었어요/.test(String(p.changed))),\n        myLabel: state === 'cancelled' ? '취소됨' : MY[0],"],
 ];

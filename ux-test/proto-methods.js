@@ -21,8 +21,8 @@
   }
   threadSubmit() {
     const s = this.state, text = String(s.threadDraft || '').trim();
-    if (!text && !s.threadPhoto) { this.say('댓글이나 사진을 남겨 주세요.', 'warning'); return; }
-    const photoId = s.threadPhotoId, row = { id: 'tc' + Date.now(), by: ME, at: '방금', text, photo: s.threadPhoto || '', parent: s.threadParent || null };
+    if (!text) { this.say('짧은 기억을 남겨 주세요.', 'warning'); return; }
+    const photoId = s.threadPhotoId, row = { id: 'tc' + Date.now(), by: ME, at: '방금', text, photo: '', parent: s.threadParent || null };
     this.setState(st => { const all = { ...(st.threads || {}) }, cur = { comments: [], reactions: {}, ...(all[photoId] || {}) }; cur.comments = [...cur.comments, row]; all[photoId] = cur; return { threads: all, threadDraft: '', threadPhoto: '', threadParent: null, threadReplyName: '' }; });
   }
   // 친구 초대 시뮬레이션: 초대 링크를 복사하면 잠시 뒤 친구가 수락하고 사진 2장과 이야기를 더한다(서버 없음)
