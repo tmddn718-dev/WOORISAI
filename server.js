@@ -106,7 +106,7 @@ function placeView(p) {
   if (!p.place_city && !p.place_country) return null;
   const j = a => a.filter(Boolean).join(', ');
   const label = p.place_precision === 'exact' ? j([p.place_name, p.place_area, p.place_city]) : p.place_precision === 'area' ? j([p.place_area, p.place_city]) : (p.place_city || p.place_country);
-  return { label, country: p.place_country || '기타', city: p.place_city || p.place_country || '기타', precision: p.place_precision };
+  return { label, country: p.place_country || '기타', city: p.place_city || p.place_country || '기타', area: p.place_precision === 'city' ? null : (p.place_area || null), precision: p.place_precision };
 }
 function placeIn(b) {
   if (!b || (!b.city && !b.country && !b.name)) return {};
@@ -411,7 +411,7 @@ R('GET', '/api/posts', c => ({ posts: filtered(c).map(p => card(p, c.u.id)) }));
 R('GET', '/api/map', c => {
   const posts = filtered(c).map(p => ({ ...card(p, c.u.id) })).filter(p => p.place);
   const tree = {};
-  for (const p of posts) { const { country, city, label } = p.place; (((tree[country] ||= {})[city] ||= []).push({ id: p.id, title: p.title, occurred_on: p.occurred_on, label, cover: p.cover, count: p.count, photo_count: one(`select count(*) n from media where post_id=? and context='gallery' and status='active'`, p.id).n, story_count: one(`select count(*) n from notes where post_id=? and kind='story' and status='active'`, p.id).n })); }
+  for (const p of posts) { const { country, city, area, label } = p.place; (((tree[country] ||= {})[city] ||= []).push({ id: p.id, title: p.title, occurred_on: p.occurred_on, area, label, cover: p.cover, count: p.count, photo_count: one(`select count(*) n from media where post_id=? and context='gallery' and status='active'`, p.id).n, story_count: one(`select count(*) n from notes where post_id=? and kind='story' and status='active'`, p.id).n })); }
   return { countries: Object.entries(tree).map(([country, cities]) => ({ country, count: Object.values(cities).flat().length, cities: Object.entries(cities).map(([city, items]) => ({ city, count: items.length, items })) })), total: posts.length };
 });
 

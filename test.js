@@ -74,8 +74,11 @@ assert.equal((await c.get(`/media/${att.id}`)).status, 403);
 const detail = JSON.stringify((await b.get(`/api/posts/${post.id}`)).data);
 assert.ok(!detail.includes('비밀카페') && !detail.includes('성수동 ') , '정밀도 city면 정확한 장소 비노출');
 
-assert.equal((await a.get('/api/map')).data.total, 1);
-assert.equal((await a.get('/api/map')).data.total, 1);
+const privateMap = (await a.get('/api/map')).data;
+assert.equal(privateMap.total, 1);
+assert.equal(privateMap.countries[0].cities[0].items[0].area, null, '도시 공개면 발자국에도 동네 비노출');
+await a.patch(`/api/posts/${post.id}`, { place: { area: '성수동', city: '서울', country: '대한민국', precision: 'area' } });
+assert.equal((await a.get('/api/map')).data.countries[0].cities[0].items[0].area, '성수동', '동네 공개면 세부 발자국에 사용');
 assert.equal((await c.get('/api/map')).data.total, 0);
 
 // 우리 공간(그룹): 이름은 소유자만, 목록은 내가 볼 수 있는 추억만, 공간 멤버라도 미초대 추억은 보이지 않는다

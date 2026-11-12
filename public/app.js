@@ -339,10 +339,12 @@ const KOREA_COUNTRIES = new Set(['대한민국', '한국', 'South Korea', 'Repub
 const isKorea = c => KOREA_COUNTRIES.has(String(c || '').trim());
 const regionOf = c => { const x = String(c || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, ''); return { 충청북: '충북', 충청남: '충남', 전라북: '전북', 전라남: '전남', 경상북: '경북', 경상남: '경남' }[x] || x.slice(0, 2); };
 const regionMap = m => { const by = {}; m.countries.filter(c => isKorea(c.country)).forEach(c => c.cities.forEach(ct => { const k = regionOf(ct.city); (by[k] ||= []).push(...ct.items); })); return by; };
+const SEOUL_DISTRICT = { 망원한강공원: '마포구', 연남동: '마포구', 망원동: '마포구', 합정: '마포구', 성수동: '성동구', 서울숲: '성동구', 종로: '종로구', 연희동: '서대문구', 반포한강공원: '서초구', 남산: '중구', 을지로: '중구' };
+const districtOf = (p, region = '') => { const area = String(p?.area || '').trim(); if (region === '서울') return SEOUL_DISTRICT[area] || (/구$/.test(area) ? area : area || '세부 지역 미지정'); return area || '세부 지역 미지정'; };
 const regionMemoryCard = p => `<a class="region-memory-card" href="#/post/${p.id}"><span class="region-thumb">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span class="region-copy"><b>${esc(p.title)}</b><span class="region-place">${fmtDate(p.occurred_on)}${p.label ? ' · ' + esc(p.label) : ''}</span><span class="region-meta">사진 ${p.photo_count || 0}장 · 이야기 ${p.story_count || 0}개</span></span><span class="region-chevron">${I('chev', 's')}</span></a>`;
 function REGION_UI(region) {
   const items = S.footBy?.[region]?.items || [];
-  const b = sheet(`<div class="region-sheet"><div class="thread-head"><div><h2>${esc(region)}의 발자국</h2><p class="cap">추억 ${items.length}개</p></div><button class="icon-btn" data-act="sheet-close" aria-label="닫기">${I('x')}</button></div><div class="region-preview">${items.slice(0, 2).map(p => `<a class="region-mini" href="#/post/${p.id}"><span>${p.cover ? `<img src="/media/${p.cover}" alt="">` : KNOT}</span><b>${esc(p.title)}</b><small>${fmtDate(p.occurred_on)}</small></a>`).join('')}</div><a class="btn block" href="#/foot-region/${encodeURIComponent(region)}">전체 추억 보기</a></div>`);
+  const b = sheet(`<div class="region-sheet"><div class="thread-head"><div><h2>${esc(region)}의 발자국</h2><p class="cap">추억 ${items.length}개</p></div><button class="icon-btn" data-act="sheet-close" aria-label="닫기">${I('x')}</button></div><div class="region-preview">${items.slice(0, 2).map(p => `<a class="region-mini" href="#/post/${p.id}"><span>${p.cover ? `<img src="/media/${p.cover}" alt="">` : KNOT}</span><b>${esc(p.title)}</b><small>${esc(region)} &gt; ${esc(districtOf(p, region))} · ${fmtDate(p.occurred_on)}</small></a>`).join('')}</div><a class="btn block" href="#/foot-region/${encodeURIComponent(region)}">전체 추억 보기</a></div>`);
   b.querySelector('a[href^="#/foot-region/"]')?.addEventListener('click', closeSheet);
 }
 P.foot = async () => {
@@ -365,7 +367,12 @@ P.foot = async () => {
 };
 P.footRegion = async raw => {
   const region = decodeURIComponent(raw), f = S.foot || { mode: 'all', people: [] }, m = await api('GET', '/api/map?' + new URLSearchParams({ people: f.mode === 'with' ? f.people.join(',') : '', mode: 'and' })), items = regionMap(m)[region] || [];
-  return `${top(region + '의 발자국')}<div class="page stack region-page"><div><h1>이곳의 추억</h1><p class="sub body2">${items.length ? `${items.length}개의 추억이 이어져 있어요.` : '아직 이 지역에 남긴 추억이 없어요.'}</p></div><div class="region-memory-list">${items.map(regionMemoryCard).join('') || '<div class="card pad sub body2">다른 지역의 발자국을 살펴보세요.</div>'}</div></div>`;
+  const districts = [...new Set(items.map(p => districtOf(p, region)))];
+  return `${top(region + '의 발자국')}<div class="page stack region-page"><div><h1>세부 지역</h1><p class="sub body2">${items.length ? `${region} 안에서 추억이 있는 곳을 골라보세요.` : '아직 이 지역에 남긴 추억이 없어요.'}</p></div><div class="city-list">${districts.map(d => `<a href="#/foot-district/${encodeURIComponent(region)}/${encodeURIComponent(d)}"><span><b>${esc(region)} &gt; ${esc(d)}</b><small>추억 ${items.filter(p => districtOf(p, region) === d).length}개</small></span>${I('chev', 's')}</a>`).join('') || '<div class="card pad sub body2">다른 지역의 발자국을 살펴보세요.</div>'}</div></div>`;
+};
+P.footDistrict = async (rawRegion, rawDistrict) => {
+  const region = decodeURIComponent(rawRegion), district = decodeURIComponent(rawDistrict), f = S.foot || { mode: 'all', people: [] }, m = await api('GET', '/api/map?' + new URLSearchParams({ people: f.mode === 'with' ? f.people.join(',') : '', mode: 'and' })), items = (regionMap(m)[region] || []).filter(p => districtOf(p, region) === district);
+  return `${top(region + ' > ' + district)}<div class="page stack region-page"><div><h1>이곳의 추억</h1><p class="sub body2">${items.length}개의 추억이 이어져 있어요.</p></div><div class="region-memory-list">${items.map(regionMemoryCard).join('') || '<div class="card pad sub body2">볼 수 있는 추억이 없어요.</div>'}</div></div>`;
 };
 P.footCountry = async raw => {
   const country = decodeURIComponent(raw), f = S.foot || { mode: 'all', people: [] }, m = await api('GET', '/api/map?' + new URLSearchParams({ people: f.mode === 'with' ? f.people.join(',') : '', mode: 'and' })), c = m.countries.find(x => x.country === country);
@@ -473,7 +480,7 @@ P.join = async code => {
 };
 
 // ---------- 라우터 ----------
-const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/foot$/, P.foot, 'foot'], [/^\/foot-region\/([^/]+)$/, P.footRegion, 'foot'], [/^\/foot-country\/([^/]+)$/, P.footCountry, 'foot'], [/^\/foot-city\/([^/]+)\/([^/]+)$/, P.footCity, 'foot'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, ''], [/^\/new-post$/, P.newPost, ''], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/space\/(\d+)$/, P.space, 'memories'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
+const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/foot$/, P.foot, 'foot'], [/^\/foot-region\/([^/]+)$/, P.footRegion, 'foot'], [/^\/foot-district\/([^/]+)\/([^/]+)$/, P.footDistrict, 'foot'], [/^\/foot-country\/([^/]+)$/, P.footCountry, 'foot'], [/^\/foot-city\/([^/]+)\/([^/]+)$/, P.footCity, 'foot'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, ''], [/^\/new-post$/, P.newPost, ''], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/space\/(\d+)$/, P.space, 'memories'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
 let seq = 0;
 async function route() {
   const my = ++seq, view = $('#view');
