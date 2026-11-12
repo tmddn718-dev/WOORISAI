@@ -102,6 +102,26 @@ export const MARKUP = [
   ...P0_MARKUP,
   ...CARDS_MARKUP,
   ...MEMORY_MARKUP,
+  ['    .ws-scroll::-webkit-scrollbar{display:none}', '    .ws-scroll::-webkit-scrollbar{display:none}\n    [data-memory-create] .ws-btn{min-height:52px;border-radius:16px;font-size:15px;line-height:1.4;font-weight:600}'],
+  // 홈의 새 추억 안내 카드와 CTA를 하나의 8px 그룹으로 묶는다. 홈 부모의 32px 섹션 간격은 그대로 쓴다.
+  [`            <div style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-recall-subtle)">
+              <span style="width:44px;height:44px;flex:none;border-radius:9999px;display:grid;place-items:center;background:var(--ws-color-bg-surface);color:var(--ws-color-fg-brand)"><lucide-icon name="square-pen" size="22"></lucide-icon></span>
+              <span style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:var(--type-headline-2);color:var(--ws-color-fg-strong)">함께한 순간을 남겨볼까요?</span>
+                <span style="font:var(--type-label-1-read);color:var(--ws-color-fg-secondary);text-wrap:pretty">사진과 이야기를 하나의 추억으로 모아보세요.</span>
+                <span style="display:flex;margin-top:10px"><x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Button" size="sm" icon="{{ ic.create }}" label="새 추억 만들기" on-click="{{ startCreate }}" hint-size="140px,36px"></x-import></span>
+              </span>
+            </div>`,
+   `            <div data-memory-create style="display:flex;flex-direction:column;gap:8px;width:100%;min-width:0">
+              <div style="display:flex;align-items:center;gap:16px;padding:20px;border-radius:20px;background:var(--ws-color-bg-recall-subtle)">
+                <span style="display:grid;place-items:center;flex:0 0 52px;width:52px;height:52px;border-radius:9999px;background:var(--ws-color-bg-surface);color:var(--ws-color-fg-brand)"><lucide-icon name="square-pen" size="24"></lucide-icon></span>
+                <span style="display:flex;flex-direction:column;gap:6px;flex:1;min-width:0">
+                  <span style="font:600 17px/1.4 var(--ws-font-product);color:var(--ws-color-fg-strong);text-wrap:pretty">함께한 순간을 남겨볼까요?</span>
+                  <span style="font:400 14px/1.5 var(--ws-font-product);color:var(--ws-color-fg-secondary);text-wrap:pretty">사진과 이야기를 하나의 추억으로 모아보세요.</span>
+                </span>
+              </div>
+              <x-import component-from-global-scope="WOORISAIDesignSystem_e5e56b.Button" full-width="{{ true }}" label="새 추억 만들기" on-click="{{ startCreate }}" hint-size="100%,52px"></x-import>
+            </div>`],
   // 참여자 기록 사이 24→32px, 프로필→사진·사진→글 10→12px
   ['<section style="display:flex;flex-direction:column;gap:24px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:10px">',
    '<section style="display:flex;flex-direction:column;gap:32px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:12px">'],
