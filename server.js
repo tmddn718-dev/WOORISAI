@@ -29,6 +29,7 @@ create table if not exists post_participants(post_id integer, user_id integer, a
 create table if not exists media(id integer primary key, post_id integer, uploader_id integer, file text, status text default 'active', created_at text default (datetime('now')));
 create table if not exists notes(id integer primary key, post_id integer, author_id integer, kind text, text text, status text default 'active', created_at text default (datetime('now')));
 create table if not exists reactions(post_id integer, user_id integer, primary key(post_id,user_id));
+create table if not exists media_reactions(media_id integer, user_id integer, emoji text, primary key(media_id,user_id,emoji));
 create table if not exists settlements(id integer primary key, meetup_id integer, creator_id integer, payer_id integer, title text, total integer, status text default 'open');
 create table if not exists shares(settlement_id integer, user_id integer, amount integer, confirmed integer default 0, primary key(settlement_id,user_id));
 create table if not exists reports(id integer primary key, reporter_id integer, target_type text, target_id integer, category text, detail text, status text default 'RECEIVED', created_at text default (datetime('now')));
@@ -40,6 +41,12 @@ create table if not exists hides(user_id integer, target_type text, target_id in
 if (!db.prepare('pragma table_info(users)').all().some(c => c.name === 'nickname_updated_at')) db.exec('alter table users add column nickname_updated_at text');
 // 약속 시간·장소 상태(P0): 기존 약속은 '정확한 시간', 장소는 있으면 '정확한 장소' 없으면 '미정'으로 채운다
 if (!db.prepare('pragma table_info(meetups)').all().some(c => c.name === 'time_kind')) { db.exec("alter table meetups add column time_kind text default 'exact'; alter table meetups add column place_kind text"); db.exec("update meetups set place_kind = case when place is null or place='' then 'tbd' else 'exact' end"); }
+if (!db.prepare('pragma table_info(meetups)').all().some(c => c.name === 'changed')) db.exec('alter table meetups add column changed text');
+// 사진별 기억 이어가기: 기존 사진·이야기는 그대로 두고 새 댓글만 사진 ID에 연결한다.
+if (!db.prepare('pragma table_info(media)').all().some(c => c.name === 'context')) db.exec("alter table media add column context text default 'gallery'");
+for (const [name, type] of [['media_id', 'integer'], ['parent_id', 'integer'], ['attachment_media_id', 'integer']]) {
+  if (!db.prepare('pragma table_info(notes)').all().some(c => c.name === name)) db.exec(`alter table notes add column ${name} ${type}`);
+}
 
 db.exec(`
 create table if not exists oauth_identities(provider text, subject text, user_id integer, primary key(provider,subject));
@@ -107,12 +114,24 @@ function placeIn(b) {
   return { place_name: optStr(b.name, 40), place_area: optStr(b.area, 30), place_city: optStr(b.city, 30), place_country: optStr(b.country, 30), place_precision: precision };
 }
 function card(p, uid) {
-  const cover = one(`select id from media where post_id=? and status='active' and uploader_id not in (${blockedIds(uid)}) order by (id=?) desc, id limit 1`, p.id, p.cover_media_id || 0);
+  const cover = one(`select id from media where post_id=? and context='gallery' and status='active' and uploader_id not in (${blockedIds(uid)}) order by (id=?) desc, id limit 1`, p.id, p.cover_media_id || 0);
   const mem = q(`select u.name from post_members m join users u on u.id=m.user_id where m.post_id=? and m.access='accepted' order by m.role='admin' desc, u.id`, p.id);
   return { id: p.id, title: p.title, occurred_on: p.occurred_on, status: p.status, cover: cover?.id || null, place: placeView(p), count: mem.length, names: mem.slice(0, 3).map(x => x.name) };
 }
+function deleteMediaFile(r) {
+  try { fs.unlinkSync(path.join(DATA, 'media', r.file)); } catch {}
+  run(`update media set status='deleted' where id=?`, r.id);
+  run('update posts set cover_media_id=null where cover_media_id=?', r.id);
+}
 function purgeMedia(rows) {
-  for (const r of rows) { try { fs.unlinkSync(path.join(DATA, 'media', r.file)); } catch {} run(`update media set status='deleted' where id=?`, r.id); run('update posts set cover_media_id=null where cover_media_id=?', r.id); }
+  for (const r of rows) {
+    const attached = q(`select m.* from notes n join media m on m.id=n.attachment_media_id where n.media_id=? and m.status!='deleted'`, r.id);
+    for (const a of attached) deleteMediaFile(a);
+    run(`update notes set status='deleted', text='' where media_id=?`, r.id);
+    run('delete from media_reactions where media_id=?', r.id);
+    run('update notes set attachment_media_id=null where attachment_media_id=?', r.id);
+    deleteMediaFile(r);
+  }
 }
 function purgePost(pid) {
   purgeMedia(q(`select * from media where post_id=? and status!='deleted'`, pid));
@@ -392,7 +411,7 @@ R('GET', '/api/posts', c => ({ posts: filtered(c).map(p => card(p, c.u.id)) }));
 R('GET', '/api/map', c => {
   const posts = filtered(c).map(p => ({ ...card(p, c.u.id) })).filter(p => p.place);
   const tree = {};
-  for (const p of posts) { const { country, city, label } = p.place; (((tree[country] ||= {})[city] ||= []).push({ id: p.id, title: p.title, occurred_on: p.occurred_on, label, cover: p.cover, count: p.count })); }
+  for (const p of posts) { const { country, city, label } = p.place; (((tree[country] ||= {})[city] ||= []).push({ id: p.id, title: p.title, occurred_on: p.occurred_on, label, cover: p.cover, count: p.count, photo_count: one(`select count(*) n from media where post_id=? and context='gallery' and status='active'`, p.id).n, story_count: one(`select count(*) n from notes where post_id=? and kind='story' and status='active'`, p.id).n })); }
   return { countries: Object.entries(tree).map(([country, cities]) => ({ country, count: Object.values(cities).flat().length, cities: Object.entries(cities).map(([city, items]) => ({ city, count: items.length, items })) })), total: posts.length };
 });
 
@@ -417,7 +436,7 @@ R('GET', '/api/home', c => {
     postInvites: q(`select p.id,p.title,i.name inviter,i.username inviter_username from post_members m join posts p on p.id=m.post_id join users i on i.id=m.invited_by where m.user_id=? and m.access='invited' and p.status!='deleted'`, u),
     friendRequests: q(`select u.id,u.name from connections c join users u on u.id=c.from_id where c.to_id=? and c.status='pending'`, u),
     meetupInvites: q(`select m.id,m.title,m.starts_at,m.tz,m.time_kind from meetups m join meetup_participants p on p.meetup_id=m.id where p.user_id=? and p.rsvp='invited' and m.status='active' and m.starts_at>?`, u, now),
-    upcoming: q(`select m.id,m.title,m.starts_at,m.tz,m.time_kind,m.place_kind,m.place,p.rsvp from meetups m join meetup_participants p on p.meetup_id=m.id where p.user_id=? and m.status='active' and m.starts_at>? order by m.starts_at limit 3`, u, now),
+    upcoming: q(`select m.id,m.title,m.starts_at,m.tz,m.time_kind,m.place_kind,m.place,m.organizer_id,m.changed,p.rsvp,o.name organizer,(select count(*) from meetup_participants x where x.meetup_id=m.id and x.rsvp='yes') yes from meetups m join meetup_participants p on p.meetup_id=m.id join users o on o.id=m.organizer_id where p.user_id=? and m.status='active' and m.starts_at>? order by m.starts_at limit 3`, u, now),
     posts: accessible(u).sort((a, b) => b.id - a.id).slice(0, 30).map(p => card(p, u)),
   };
 });
@@ -452,13 +471,20 @@ R('GET', '/api/posts/:id', c => {
   }
   const bl = blockedIds(uid);
   const hidden = new Set(q(`select target_type||':'||target_id k from hides where user_id=? and target_type in ('note','media')`, uid).map(r => r.k));
+  const media = q(`select id,uploader_id,status from media where post_id=? and context='gallery' and status in ('active','restricted') and uploader_id not in (${bl}) order by id`, pid).filter(x => !hidden.has('media:' + x.id));
+  const thread = mid => {
+    const comments = q(`select n.id,n.text,n.status,n.created_at,n.author_id,n.parent_id,n.attachment_media_id,u.name author from notes n join users u on u.id=n.author_id where n.post_id=? and n.media_id=? and n.kind='comment' and n.status in ('active','restricted') and n.author_id not in (${bl}) order by n.id`, pid, mid)
+      .filter(x => !hidden.has('note:' + x.id)).map(n => ({ id: n.id, author: n.author, created_at: n.created_at, mine: n.author_id === uid, parent_id: n.parent_id, attachment: n.attachment_media_id, restricted: n.status === 'restricted', text: n.status === 'restricted' ? '' : n.text }));
+    const reactions = q(`select emoji,count(*) count,max(user_id=?) mine from media_reactions where media_id=? group by emoji order by min(rowid)`, uid, mid).map(x => ({ emoji: x.emoji, count: x.count, mine: !!x.mine }));
+    return { comments, reactions, comment_count: comments.length, reaction_count: reactions.reduce((n, x) => n + x.count, 0) };
+  };
   return {
     id: p.id, title: p.title, occurred_on: p.occurred_on, status: p.status, cover: p.cover_media_id,
     place: placeView(p), place_raw: m.role === 'admin' ? { name: p.place_name, area: p.place_area, city: p.place_city, country: p.place_country, precision: p.place_precision } : undefined,
     me: { id: uid, role: m.role },
     members: q(`select u.id,u.name,m.role,m.access from post_members m join users u on u.id=m.user_id where m.post_id=? and m.access in ('accepted','invited') order by m.access='accepted' desc, m.role='admin' desc, u.id`, pid),
-    media: q(`select id,uploader_id,status from media where post_id=? and status in ('active','restricted') and uploader_id not in (${bl}) order by id`, pid).filter(x => !hidden.has('media:' + x.id)).map(x => ({ id: x.id, mine: x.uploader_id === uid, restricted: x.status === 'restricted' })),
-    notes: q(`select n.id,n.kind,n.text,n.status,n.created_at,n.author_id,u.name author from notes n join users u on u.id=n.author_id where n.post_id=? and n.status in ('active','restricted') and n.author_id not in (${bl}) order by n.id`, pid).filter(x => !hidden.has('note:' + x.id)).map(n => ({ id: n.id, kind: n.kind, author: n.author, created_at: n.created_at, mine: n.author_id === uid, restricted: n.status === 'restricted', text: n.status === 'restricted' ? '' : n.text })),
+    media: media.map(x => ({ id: x.id, mine: x.uploader_id === uid, restricted: x.status === 'restricted', ...thread(x.id) })),
+    notes: q(`select n.id,n.kind,n.text,n.status,n.created_at,n.author_id,u.name author from notes n join users u on u.id=n.author_id where n.post_id=? and n.kind='story' and n.status in ('active','restricted') and n.author_id not in (${bl}) order by n.id`, pid).filter(x => !hidden.has('note:' + x.id)).map(n => ({ id: n.id, kind: n.kind, author: n.author, created_at: n.created_at, mine: n.author_id === uid, restricted: n.status === 'restricted', text: n.status === 'restricted' ? '' : n.text })),
     saved: !!one('select 1 from saves where user_id=? and post_id=?', uid, pid),
     reactions: { count: one(`select count(*) n from reactions where post_id=?`, pid).n, mine: !!one('select 1 from reactions where post_id=? and user_id=?', pid, uid) },
     groups: q(`select g.id,g.name from post_groups pg join groups g on g.id=pg.group_id join group_members gm on gm.group_id=g.id and gm.user_id=? where pg.post_id=?`, uid, pid),
@@ -538,6 +564,44 @@ R('POST', '/api/posts/:id/media', async c => {
   fs.writeFileSync(path.join(DATA, 'media', file), buf);
   return { id: run('insert into media(post_id,uploader_id,file) values(?,?,?)', pid, c.u.id, file).lastInsertRowid };
 }, { raw: true });
+R('GET', '/api/media/:id/thread', c => {
+  const m = one(`select * from media where id=? and context='gallery' and status='active'`, +c.params.id);
+  if (!m) throw fail('사진을 찾을 수 없어요.', 404);
+  member(m.post_id, c.u.id);
+  const p = one('select * from posts where id=?', m.post_id);
+  const bl = blockedIds(c.u.id), hidden = new Set(q(`select target_type||':'||target_id k from hides where user_id=? and target_type in ('note','media')`, c.u.id).map(r => r.k));
+  const comments = q(`select n.id,n.text,n.status,n.created_at,n.author_id,n.parent_id,n.attachment_media_id,u.name author from notes n join users u on u.id=n.author_id where n.media_id=? and n.kind='comment' and n.status in ('active','restricted') and n.author_id not in (${bl}) order by n.id`, m.id)
+    .filter(x => !hidden.has('note:' + x.id)).map(n => ({ id: n.id, author: n.author, created_at: n.created_at, mine: n.author_id === c.u.id, parent_id: n.parent_id, attachment: n.attachment_media_id, restricted: n.status === 'restricted', text: n.status === 'restricted' ? '' : n.text }));
+  const reactions = q(`select emoji,count(*) count,max(user_id=?) mine from media_reactions where media_id=? group by emoji order by min(rowid)`, c.u.id, m.id).map(x => ({ emoji: x.emoji, count: x.count, mine: !!x.mine }));
+  return { id: m.id, post_id: p.id, open: p.status === 'active', comments, reactions, comment_count: comments.length, reaction_count: reactions.reduce((n, x) => n + x.count, 0) };
+});
+R('POST', '/api/media/:id/comment-media', async c => {
+  const m = one(`select * from media where id=? and context='gallery' and status='active'`, +c.params.id);
+  if (!m) throw fail('사진을 찾을 수 없어요.', 404);
+  active(member(m.post_id, c.u.id));
+  const buf = stripJpeg(await c.raw(8 * 1024 * 1024)), file = crypto.randomBytes(16).toString('hex') + '.jpg';
+  fs.writeFileSync(path.join(DATA, 'media', file), buf);
+  return { id: run(`insert into media(post_id,uploader_id,file,context) values(?,?,?,'comment')`, m.post_id, c.u.id, file).lastInsertRowid };
+}, { raw: true });
+R('POST', '/api/media/:id/comments', c => {
+  const m = one(`select * from media where id=? and context='gallery' and status='active'`, +c.params.id);
+  if (!m) throw fail('사진을 찾을 수 없어요.', 404);
+  active(member(m.post_id, c.u.id));
+  const text = optStr(c.body.text, 500), attachment = +c.body.attachment_media_id || null, parent = +c.body.parent_id || null;
+  if (!text && !attachment) throw fail('댓글이나 사진을 남겨 주세요.', 400, { field: 'text' });
+  if (attachment && !one(`select 1 from media where id=? and post_id=? and uploader_id=? and context='comment' and status='active'`, attachment, m.post_id, c.u.id)) throw fail('첨부 사진을 찾을 수 없어요.', 404);
+  if (parent && !one(`select 1 from notes where id=? and media_id=? and kind='comment' and status='active'`, parent, m.id)) throw fail('답글을 남길 댓글을 찾을 수 없어요.', 404);
+  return { id: run(`insert into notes(post_id,author_id,kind,text,media_id,parent_id,attachment_media_id) values(?,?,'comment',?,?,?,?)`, m.post_id, c.u.id, text || '', m.id, parent, attachment).lastInsertRowid };
+});
+R('POST', '/api/media/:id/reactions', c => {
+  const m = one(`select * from media where id=? and context='gallery' and status='active'`, +c.params.id);
+  if (!m) throw fail('사진을 찾을 수 없어요.', 404);
+  active(member(m.post_id, c.u.id));
+  const emoji = String(c.body.emoji || '');
+  if (!['❤️', '😊', '😂', '🥹', '👏'].includes(emoji)) throw fail('사용할 수 없는 반응이에요.');
+  if (!run('delete from media_reactions where media_id=? and user_id=? and emoji=?', m.id, c.u.id, emoji).changes) run('insert into media_reactions values(?,?,?)', m.id, c.u.id, emoji);
+  return {};
+});
 R('GET', '/media/:id', c => { // 요청마다 권한 확인: 로그인 + 현재 멤버. 권한이 사라지면 즉시 접근 불가.
   const m = one(`select * from media where id=? and status='active'`, +c.params.id);
   if (!m) throw fail('찾을 수 없어요.', 404);
@@ -558,6 +622,8 @@ R('POST', '/api/posts/:id/notes', c => {
 R('DELETE', '/api/notes/:id', c => {
   const n = one(`select * from notes where id=? and status!='deleted'`, +c.params.id);
   if (!n || n.author_id !== c.u.id) throw fail('내가 쓴 글만 삭제할 수 있어요.', 403);
+  member(n.post_id, c.u.id);
+  if (n.attachment_media_id) purgeMedia(q(`select * from media where id=? and status!='deleted'`, n.attachment_media_id));
   run(`update notes set status='deleted', text='' where id=?`, n.id); return {};
 });
 R('POST', '/api/posts/:id/react', c => {
@@ -608,11 +674,12 @@ R('PATCH', '/api/meetups/:id', c => {
   const next = { title: b.title !== undefined ? str(b.title, 40, 1) : m.title, starts_at: b.starts_at ? isoOk(b.starts_at) : m.starts_at, tz: b.tz ? tzOk(b.tz) : m.tz, descr: b.descr !== undefined ? optStr(b.descr, 500) : m.descr, time_kind: b.time_kind !== undefined ? kindOk(b.time_kind, TK, 'exact') : m.time_kind };
   const pl = b.place_kind !== undefined || b.place !== undefined ? placeOf(b.place_kind, b.place) : { place: m.place, kind: m.place_kind === 'tbd' ? null : m.place_kind };
   next.place = pl.place; next.place_kind = pl.kind || 'tbd';
+  const changes = [next.starts_at !== m.starts_at || next.time_kind !== m.time_kind ? '시간이 변경됐어요' : '', next.place !== m.place ? '장소가 변경됐어요' : ''].filter(Boolean);
   tx(() => {
-    run('update meetups set title=?,starts_at=?,tz=?,place=?,descr=?,time_kind=?,place_kind=? where id=?', next.title, next.starts_at, next.tz, next.place, next.descr, next.time_kind, next.place_kind, mid);
-    if (next.starts_at !== m.starts_at || next.place !== m.place || next.time_kind !== m.time_kind) run(`update meetup_participants set rsvp='invited' where meetup_id=? and user_id!=?`, mid, c.u.id); // 중대한 변경: 재응답
+    run('update meetups set title=?,starts_at=?,tz=?,place=?,descr=?,time_kind=?,place_kind=?,changed=? where id=?', next.title, next.starts_at, next.tz, next.place, next.descr, next.time_kind, next.place_kind, changes.join(' · ') || m.changed, mid);
+    if (changes.length) run(`update meetup_participants set rsvp='invited' where meetup_id=? and user_id!=?`, mid, c.u.id); // 중대한 변경: 재응답
   });
-  return { reconfirm: next.starts_at !== m.starts_at || next.place !== m.place || next.time_kind !== m.time_kind };
+  return { reconfirm: !!changes.length };
 });
 R('POST', '/api/meetups/:id/rsvp', c => {
   const mid = +c.params.id, { m } = meetupFor(mid, c.u.id);

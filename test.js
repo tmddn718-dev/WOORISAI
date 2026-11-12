@@ -53,6 +53,23 @@ assert.equal((await a.get(`/media/${up.data.id}`)).status, 200);
 assert.equal((await c.get(`/media/${up.data.id}`)).status, 403);
 assert.equal((await b.put(`/api/posts/${post.id}/media`, Buffer.from('not a jpeg'))).status, 415);
 
+// 사진별 기억 이어가기: 댓글·첨부·답글·반응은 사진 ID에 묶이고 비멤버에게 노출되지 않는다
+const c1 = (await a.post(`/api/media/${up.data.id}/comments`, { text: '이 사진에서 바람 소리가 생각나.' })).data;
+const att = (await b.put(`/api/media/${up.data.id}/comment-media`, jpeg)).data;
+assert.equal((await b.post(`/api/media/${up.data.id}/comments`, { text: '그날 찍은 한 장 더', parent_id: c1.id, attachment_media_id: att.id })).status, 200);
+assert.equal((await c.get(`/api/media/${up.data.id}/thread`)).status, 403, '비멤버는 사진 대화 열람 불가');
+assert.equal((await c.post(`/api/media/${up.data.id}/comments`, { text: '침입' })).status, 403, '비멤버는 사진 댓글 작성 불가');
+await a.post(`/api/media/${up.data.id}/reactions`, { emoji: '❤️' });
+await b.post(`/api/media/${up.data.id}/reactions`, { emoji: '❤️' });
+let thread = (await b.get(`/api/media/${up.data.id}/thread`)).data;
+assert.equal(thread.comments.length, 2); assert.equal(thread.comments[1].parent_id, c1.id); assert.equal(thread.comments[1].attachment, att.id);
+assert.equal(thread.reactions[0].count, 2); assert.equal(thread.reactions[0].mine, true);
+await b.post(`/api/media/${up.data.id}/reactions`, { emoji: '❤️' });
+thread = (await b.get(`/api/media/${up.data.id}/thread`)).data;
+assert.equal(thread.reactions[0].count, 1, '같은 이모지를 다시 누르면 취소');
+assert.equal((await b.get(`/media/${att.id}`)).status, 200, '댓글 첨부도 같은 추억 멤버만 열람');
+assert.equal((await c.get(`/media/${att.id}`)).status, 403);
+
 // 낮은 정밀도: 응답에 장소명/동네 없음
 const detail = JSON.stringify((await b.get(`/api/posts/${post.id}`)).data);
 assert.ok(!detail.includes('비밀카페') && !detail.includes('성수동 ') , '정밀도 city면 정확한 장소 비노출');

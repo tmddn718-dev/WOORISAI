@@ -633,3 +633,98 @@ svg.i { stroke-width: 1.75; }
 .pp-t button.pp-v { top: 0; right: 0; width: 100%; height: 100%; padding: 0; border-radius: 0; background: none; cursor: zoom-in; }
 .pp-t > button[data-act=pp-rm] { z-index: 1; }
 @media (prefers-reduced-motion: reduce) { #viewer * { transition: none !important; } }
+
+/* ---------- 핵심 경험 v2: 사진별 기억 · 사진 마커 지도 · 정렬 카드 ---------- */
+.memory-swipe { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-inline: contain; margin-inline: -20px; padding-inline: 20px; }
+.memory-swipe::-webkit-scrollbar { display: none; }
+.memory-photo { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; border-radius: var(--r-card); overflow: hidden; background: var(--ws-color-bg-surface); border: 1px solid var(--ws-color-border-subtle); }
+.memory-photo-open { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; }
+.memory-photo-frame { display: block; position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--ws-color-bg-recall-subtle); }
+.memory-photo-frame img { width: 100%; height: 100%; object-fit: cover; }
+.memory-photo-count { position: absolute; right: 12px; bottom: 12px; padding: 6px 10px; border-radius: 9999px; background: rgba(36,38,34,.72); color: #fff; font-size: .75rem; line-height: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.memory-preview { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px 16px; }
+.memory-totals { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; color: var(--ws-color-fg-secondary); font-size: .8125rem; line-height: 18px; }
+.memory-totals > span { display: inline-flex; align-items: center; gap: 4px; }
+.memory-totals svg { width: 16px; height: 16px; }
+.memory-emojis { margin-left: auto; }
+.memory-recent { display: grid; gap: 6px; }
+.memory-recent p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .875rem; line-height: 20px; color: var(--ws-color-fg-default); }
+.memory-recent b { margin-right: 6px; color: var(--ws-color-fg-strong); }
+.memory-empty { margin: 0; color: var(--ws-color-fg-tertiary); font-size: .875rem; line-height: 20px; }
+
+.thread-sheet { display: flex; flex-direction: column; gap: 16px; }
+.thread-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.thread-head h2 { margin: 0; }
+.thread-head .icon-btn { margin: -8px -8px 0 0; flex: none; }
+.reaction-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.reaction-row button { min-width: 48px; min-height: 44px; padding: 0 10px; border: 1px solid var(--ws-color-border-default); border-radius: 9999px; background: var(--ws-color-bg-surface); font: inherit; cursor: pointer; }
+.reaction-row button[aria-pressed=true] { border-color: var(--ws-color-border-brand); background: var(--ws-color-bg-brand-subtle); }
+.reaction-row button span { margin-left: 3px; font-size: .75rem; color: var(--ws-color-fg-secondary); }
+.thread-list { display: grid; gap: 12px; max-height: 38dvh; overflow-y: auto; }
+.thread-comment { padding: 12px 14px; border-radius: var(--ws-radius-control); background: var(--ws-color-bg-surface-muted); }
+.thread-comment.reply { margin-left: 24px; border-left: 2px solid var(--ws-color-border-brand); }
+.thread-author { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.thread-author > span { display: flex; align-items: baseline; gap: 8px; }
+.thread-author b { font-size: .875rem; }
+.thread-author time { color: var(--ws-color-fg-tertiary); font-size: .75rem; }
+.thread-comment p { margin: 7px 0 0; white-space: pre-wrap; font-size: .875rem; line-height: 21px; }
+.thread-delete, .thread-reply { min-height: 32px; padding: 0 6px; border: 0; background: none; color: var(--ws-color-fg-secondary); font: inherit; font-size: .75rem; cursor: pointer; }
+.thread-reply { display: block; margin: 4px -6px -6px auto; }
+.thread-attachment { display: block; width: min(100%, 220px); max-height: 220px; margin-top: 10px; border-radius: var(--ws-radius-small); object-fit: cover; }
+.thread-empty { padding: 20px 8px; text-align: center; color: var(--ws-color-fg-tertiary); font-size: .875rem; }
+.thread-form { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--ws-color-border-subtle); }
+.thread-form textarea { min-height: 80px; }
+.thread-file { display: inline-flex; align-items: center; justify-content: center; width: fit-content; min-height: 44px; padding: 0 14px; border: 1px solid var(--ws-color-border-default); border-radius: var(--ws-radius-control); font-size: .8125rem; font-weight: 600; cursor: pointer; }
+.thread-file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.thread-file-name { margin: -6px 0 0; }
+
+.korea-map { position: relative; width: 100%; max-width: 430px; aspect-ratio: 5 / 7; margin: 0 auto; border-radius: var(--r-card); overflow: hidden; background: linear-gradient(180deg, #f5f7f3, var(--ws-color-bg-surface)); border: 1px solid var(--ws-color-border-subtle); }
+.korea-shape { position: absolute; inset: 5% 12% 3%; width: 76%; height: 92%; fill: var(--ws-color-bg-brand-subtle); stroke: var(--ws-color-border-default); stroke-width: 1.5; }
+.map-marker { position: absolute; left: var(--mx); top: var(--my); transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 2px; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ws-color-fg-tertiary); font: inherit; cursor: pointer; z-index: 2; }
+.map-marker-img { position: relative; width: 18px; height: 18px; display: grid; place-items: center; overflow: hidden; border-radius: 9999px; background: var(--ws-color-bg-surface-muted); border: 1px dashed var(--ws-color-border-default); font-size: .625rem; }
+.map-marker.on .map-marker-img { width: 48px; height: 48px; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--ws-color-border-brand), 0 4px 12px rgba(86,107,92,.2); background: var(--ws-color-bg-brand-subtle); color: var(--ws-color-fg-brand); }
+.map-marker-img img { width: 100%; height: 100%; object-fit: cover; }
+.map-marker.on:hover, .map-marker.on:focus-visible { z-index: 5; transform: translate(-50%, -50%) scale(1.06); }
+.map-marker:focus-visible { outline: 2px solid var(--ws-color-border-focus); outline-offset: 3px; }
+.map-count { position: absolute; top: -5px; right: -2px; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border-radius: 9999px; background: var(--ws-color-bg-brand); color: #fff; border: 2px solid #fff; font-size: .6875rem; font-weight: 700; }
+.map-label { padding: 1px 4px; border-radius: 4px; background: rgba(250,249,246,.86); font-size: .6875rem; line-height: 14px; white-space: nowrap; }
+.map-marker:not(.on) { pointer-events: none; opacity: .7; }
+.region-preview { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.region-mini { display: grid; grid-template-rows: 96px auto auto; gap: 5px; min-width: 0; color: inherit; text-decoration: none; }
+.region-mini > span { position: relative; overflow: hidden; border-radius: var(--ws-radius-small); background: var(--ws-color-bg-recall-subtle); }
+.region-mini img { width: 100%; height: 100%; object-fit: cover; }
+.region-mini b, .region-mini small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.region-mini b { font-size: .875rem; }
+.region-mini small { color: var(--ws-color-fg-tertiary); }
+.region-page { padding-inline: 20px; }
+.region-memory-list { display: grid; gap: 12px; }
+.region-memory-card { display: grid; grid-template-columns: 76px minmax(0,1fr) 44px; align-items: center; gap: 12px; min-height: 108px; padding: 16px; border-radius: var(--r-card); background: var(--ws-color-bg-surface); border: 1px solid var(--ws-color-border-subtle); color: inherit; text-decoration: none; }
+.region-thumb { position: relative; width: 76px; height: 76px; overflow: hidden; border-radius: var(--ws-radius-small); background: var(--ws-color-bg-recall-subtle); }
+.region-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.region-copy { display: grid; grid-template-rows: 44px 20px 20px; min-width: 0; }
+.region-copy b { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 1rem; line-height: 22px; color: var(--ws-color-fg-strong); }
+.region-place, .region-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8125rem; line-height: 20px; color: var(--ws-color-fg-secondary); }
+.region-meta { color: var(--ws-color-fg-tertiary); }
+.region-chevron { width: 44px; height: 44px; display: grid; place-items: center; color: var(--ws-color-fg-tertiary); }
+
+.plan { display: grid; grid-template-columns: 54px minmax(0,1fr); align-items: start; gap: 12px; padding: 16px; }
+.plan .pd { width: 54px; height: 54px; }
+.plan .pb { display: grid; grid-template-rows: minmax(44px,auto) auto auto auto; gap: 5px; }
+.plan .pb > b { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; font-size: 1rem; line-height: 22px; }
+.plan-where { display: grid; gap: 3px; min-width: 0; color: var(--ws-color-fg-secondary); font-size: .8125rem; line-height: 18px; }
+.plan-where > span { display: flex; align-items: center; gap: 5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-where svg { width: 15px; height: 15px; flex: none; }
+.plan-attend { color: var(--ws-color-fg-secondary); font-size: .8125rem; line-height: 18px; }
+.plan-state { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; color: var(--ws-color-fg-secondary); font-size: .8125rem; line-height: 20px; }
+.plan-state > span:first-child { display: inline-flex; align-items: center; gap: 6px; }
+.plan-state .rs { padding: 2px 8px; font-size: .75rem; line-height: 18px; }
+.plan-host { color: var(--ws-color-fg-brand); font-weight: 600; }
+.plan-change { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 6px; margin-top: 3px; padding-top: 9px; border-top: 1px solid var(--ws-color-border-subtle); color: var(--ws-color-fg-info); font-size: .75rem; line-height: 17px; }
+.plan-change svg { width: 15px; height: 15px; flex: none; margin-top: 1px; }
+
+@media (max-width: 380px) {
+  .memory-swipe { margin-inline: -20px; }
+  .region-memory-card { grid-template-columns: 76px minmax(0,1fr) 36px; gap: 10px; padding: 14px 12px; }
+  .region-chevron { width: 36px; }
+  .map-marker.on .map-marker-img { width: 44px; height: 44px; }
+}
