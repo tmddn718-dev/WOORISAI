@@ -15,7 +15,7 @@ const makeSeeds = cfg => {
   if (flow === 'demo' && sc === 3) return { mems: link(link(SEED.map(materialize), 'jeju', 'sp1'), 'cafe', 'sp2'), plans: PLANS.map(cl), invite: false, friends: [...PEOPLE], spaces: [{ id: 'sp1', name: '제주 친구들', members: ['민지', '지호', '하은'] }, { id: 'sp2', name: '성수 사람들', members: ['유나', '하은'] }] };
   return { mems: SEED.map(materialize), plans: PLANS.map(cl), invite: true, friends: [...PEOPLE], spaces: [] }; // 설정이 없으면 원본 기본 상태
 };
-const SEEDS = makeSeeds(CFG);
+const SEEDS = { ...makeSeeds(CFG), threads: {} };
 const SKEY = 'wsux_state:' + [CFG.flow || 'orig', CFG.sc || 0, CFG.name || ''].join(':');
 const shrink = f => new Promise(res => { // 기기 사진: EXIF(위치 포함)가 사라지도록 다시 그리고, 새로고침 뒤에도 남도록 작게 저장
   const r = new FileReader();

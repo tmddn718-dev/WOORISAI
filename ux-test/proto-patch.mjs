@@ -5,6 +5,7 @@ import path from 'node:path';
 import { SPACES_MARKUP, SPACES_LOGIC } from './proto-spaces.mjs';
 import { P0_MARKUP, P0_LOGIC } from './proto-p0.mjs';
 import { CARDS_MARKUP, CARDS_LOGIC } from './proto-cards.mjs';
+import { MEMORY_MARKUP, MEMORY_LOGIC } from './proto-memory.mjs';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -66,7 +67,7 @@ rep("open: () => this.push({ t: 'detail', id: m.id })\n", "open: () => { ev('mem
 rep("action: () => this.push({ t: 'detail', id: pRaw.memId })", "action: () => { ev('plan_memory_view'); this.push({ t: 'detail', id: pRaw.memId }); }");
 rep("open: () => this.setState(st => ({ stack: [...st.stack, { t: 'plan', id: p.id }], overlay: null, planAs: null })) };", "open: () => { ev('plan_view'); this.setState(st => ({ stack: [...st.stack, { t: 'plan', id: p.id }], overlay: null, planAs: null })); } };");
 rep("setView: v => this.setState({ mView: v })", "setView: v => { if (v === 'cal') ev('cal_view'); this.setState({ mView: v }); }");
-rep("pick: () => this.push({ t: 'region', id: r }) }", "pick: () => { ev('region_view'); this.push({ t: 'region', id: r }); } }");
+rep("pick: () => this.push({ t: 'region', id: r }) }", "pick: () => { this.setState({ overlay: 'regionPeek', peekRegion: r }); } }");
 rep("openRegion: () => this.push({ t: 'region', id: curRaw.r })", "openRegion: () => { ev('region_view'); this.push({ t: 'region', id: curRaw.r }); }");
 rep("openViewer(mid, key, idx) { this._vInit = true;", "openViewer(mid, key, idx) { ev('photo_view'); this._vInit = true;");
 rep("logout: () => { this.setState({ auth: 'guest', tab: 'home', stack: [], footMode: 'mine', fPeople: [], fMonth: null, fRegion: null, fDim: 'all' }); this.say('둘러보기 모드로 바뀌었어요.'); },",
@@ -100,6 +101,7 @@ export const MARKUP = [
   ...SPACES_MARKUP,
   ...P0_MARKUP,
   ...CARDS_MARKUP,
+  ...MEMORY_MARKUP,
   // 참여자 기록 사이 24→32px, 프로필→사진·사진→글 10→12px
   ['<section style="display:flex;flex-direction:column;gap:24px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:10px">',
    '<section style="display:flex;flex-direction:column;gap:32px;padding:0 20px">\n            <sc-for list="{{ cur.contribs }}" as="c" hint-placeholder-count="2">\n              <div style="display:flex;flex-direction:column;gap:12px">'],
@@ -126,7 +128,7 @@ export function patchProto(src) {
     if (n !== 1) throw new Error(`마크업 패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
     head = head.replace(a, () => b);
   }
-  for (const [a, b] of [...R, ...SPACES_LOGIC, ...P0_LOGIC, ...CARDS_LOGIC]) {
+  for (const [a, b] of [...R, ...SPACES_LOGIC, ...P0_LOGIC, ...CARDS_LOGIC, ...MEMORY_LOGIC]) {
     const n = body.split(a).length - 1;
     if (n !== 1) throw new Error(`패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
     body = body.replace(a, () => b);
