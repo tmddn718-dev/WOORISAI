@@ -7,6 +7,7 @@ import { P0_MARKUP, P0_LOGIC } from './proto-p0.mjs';
 import { CARDS_MARKUP, CARDS_LOGIC } from './proto-cards.mjs';
 import { MEMORY_MARKUP, MEMORY_LOGIC } from './proto-memory.mjs';
 import { FOOT_MARKUP, FOOT_LOGIC } from './proto-foot.mjs';
+import { CREATE_PEOPLE_MARKUP, CREATE_PEOPLE_LOGIC } from './proto-create-people.mjs';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -104,6 +105,7 @@ export const MARKUP = [
   ...CARDS_MARKUP,
   ...MEMORY_MARKUP,
   ...FOOT_MARKUP,
+  ...CREATE_PEOPLE_MARKUP,
   ['    .ws-scroll::-webkit-scrollbar{display:none}', '    .ws-scroll::-webkit-scrollbar{display:none}\n    [data-memory-create] .ws-btn{min-height:52px;border-radius:16px;font-size:15px;line-height:1.4;font-weight:600}'],
   // 홈의 새 추억 안내 카드와 CTA를 하나의 8px 그룹으로 묶는다. 홈 부모의 32px 섹션 간격은 그대로 쓴다.
   [`            <div style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-recall-subtle)">
@@ -150,7 +152,7 @@ export function patchProto(src) {
     if (n !== 1) throw new Error(`마크업 패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
     head = head.replace(a, () => b);
   }
-  for (const [a, b] of [...R, ...SPACES_LOGIC, ...P0_LOGIC, ...CARDS_LOGIC, ...MEMORY_LOGIC, ...FOOT_LOGIC]) {
+  for (const [a, b] of [...R, ...SPACES_LOGIC, ...P0_LOGIC, ...CARDS_LOGIC, ...MEMORY_LOGIC, ...FOOT_LOGIC, ...CREATE_PEOPLE_LOGIC]) {
     const n = body.split(a).length - 1;
     if (n !== 1) throw new Error(`패치 대상이 원본에 ${n}개 있어요(1개여야 함): ${a.slice(0, 80)}`);
     body = body.replace(a, () => b);
