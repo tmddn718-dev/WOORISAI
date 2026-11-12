@@ -15,6 +15,8 @@ p{margin:0}
 .dots{display:flex;justify-content:center;gap:8px;margin:16px 0}
 .dots i{width:8px;height:8px;border-radius:9999px;background:var(--ws-color-border-default)}
 .dots i.on{width:24px;background:var(--ws-color-bg-brand)}
+.intro-slide{touch-action:pan-y}
+.intro-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px}
 .stack{display:flex;flex-direction:column;gap:12px}
 .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:var(--ws-radius-control);border:1px solid var(--ws-color-bg-brand);background:var(--ws-color-bg-brand);color:var(--ws-color-fg-on-brand);font:var(--type-label-1);font-family:var(--ws-font-product);cursor:pointer;text-decoration:none;width:100%}
 .btn:active{background:var(--ws-color-bg-brand-active)}

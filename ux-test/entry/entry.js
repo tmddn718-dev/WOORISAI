@@ -46,11 +46,21 @@ const view = {
     clearTimeout(view._t); view._t = setTimeout(() => go('#/intro/0'), 1600);
   },
   intro(i) {
-    const s = SLIDES[+i] || SLIDES[0], last = +i >= SLIDES.length - 1;
+    i = Math.max(0, Math.min(+i || 0, SLIDES.length - 1));
+    const s = SLIDES[i], last = i >= SLIDES.length - 1;
     root.innerHTML = `<button class="skip" data-a="introDone" data-m="skip">건너뛰기</button>
-      <div class="center"><span class="ic">${LI(s.icon, 72, 1.5)}</span><h1>${s.title}</h1><p class="sub">${s.body}</p></div>
-      <div class="dots" role="group" aria-label="소개 ${+i + 1} / ${SLIDES.length}">${SLIDES.map((_, k) => `<i class="${k === +i ? 'on' : ''}"></i>`).join('')}</div>
-      <button class="btn" data-a="${last ? 'introDone' : 'next'}" data-i="${+i + 1}" data-m="finish">${last ? '시작하기' : '다음'}</button>`;
+      <div class="center intro-slide"><span class="ic">${LI(s.icon, 72, 1.5)}</span><h1>${s.title}</h1><p class="sub">${s.body}</p></div>
+      <div class="dots" role="group" aria-label="소개 ${i + 1} / ${SLIDES.length}">${SLIDES.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="intro-actions">${i ? `<button class="btn line" data-a="prev" data-i="${i - 1}">이전</button>` : ''}<button class="btn" data-a="${last ? 'introDone' : 'next'}" data-i="${i + 1}" data-m="finish">${last ? '시작하기' : '다음'}</button></div>`;
+    let start;
+    root.onpointerdown = e => { start = { x: e.clientX, y: e.clientY }; };
+    root.onpointerup = e => {
+      if (!start) return;
+      const dx = e.clientX - start.x, dy = e.clientY - start.y; start = null;
+      if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy)) return;
+      if (dx > 0 && i > 0) go('#/intro/' + (i - 1));
+      else if (dx < 0 && !last) go('#/intro/' + (i + 1));
+    };
   },
   start() {
     root.innerHTML = `<div class="stack" style="margin-top:24px"><span class="badge" style="align-self:flex-start">사용성 테스트</span><h1>어떻게 시작해 볼까요?</h1><p class="sub">둘 중 하나를 골라 주세요. 나중에 다시 고를 수도 있어요.</p></div>
@@ -117,6 +127,7 @@ root.addEventListener('click', e => {
   const a = t.dataset.a, n = +t.dataset.n;
   if (a === 'skip') { clearTimeout(view._t); go('#/intro/0'); }
   else if (a === 'next') go('#/intro/' + t.dataset.i);
+  else if (a === 'prev') go('#/intro/' + t.dataset.i);
   else if (a === 'introDone') { track('onboarding_complete', { method: t.dataset.m }); ss.set('wsux_seen', '1'); go('#/start'); }
   else if (a === 'toStart') go('#/start');
   else if (a === 'toSignup') go('#/signup');
