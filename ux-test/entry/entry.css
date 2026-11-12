@@ -53,3 +53,10 @@ p{margin:0}
 .steps li.done .n{background:var(--ws-color-fg-success);color:#fff}
 .grow{flex:1}
 .mt{margin-top:auto;padding-top:20px}
+.experience-lead{font:var(--type-heading-2);color:var(--ws-color-fg-strong);text-wrap:pretty}
+.experience-card{display:flex;flex-direction:column;margin-top:24px;padding:4px 20px;border:1px solid var(--ws-color-border-subtle);border-radius:20px;background:var(--ws-color-bg-surface)}
+.experience-card div{display:flex;flex-direction:column;gap:4px;padding:16px 0}
+.experience-card div+div{border-top:1px solid var(--ws-color-border-subtle)}
+.experience-card b{font:var(--type-headline-2);color:var(--ws-color-fg-strong)}
+.experience-card span{font:var(--type-label-1-read);color:var(--ws-color-fg-secondary)}
+.experience-start{min-height:52px}

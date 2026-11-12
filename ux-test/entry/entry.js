@@ -66,7 +66,7 @@ const view = {
     root.innerHTML = `<div class="stack" style="margin-top:24px"><span class="badge" style="align-self:flex-start">사용성 테스트</span><h1>어떻게 시작해 볼까요?</h1><p class="sub">둘 중 하나를 골라 주세요. 나중에 다시 고를 수도 있어요.</p></div>
       <div class="stack" style="margin-top:24px">
         <button class="opt" data-a="modeNew"><span class="oi">${LI('square-pen')}</span><span class="t"><b>처음부터 사용해 보기</b><span>가입하고, 빈 화면에서 첫 추억을 직접 만들어 봐요.</span></span>${LI('chevron-right', 20)}</button>
-        <button class="opt" data-a="modeDemo"><span class="oi">${LI('images')}</span><span class="t"><b>주요 기능 체험하기</b><span>샘플 데이터로 친구·약속·달력·발자국을 안내에 따라 체험해요.</span></span>${LI('chevron-right', 20)}</button>
+        <button class="opt" data-a="modeDemo"><span class="oi">${LI('images')}</span><span class="t"><b>주요 기능 체험하기</b><span>준비된 샘플 데이터로 주요 기능을 자유롭게 둘러봐요.</span></span>${LI('chevron-right', 20)}</button>
       </div>
       <div class="stack mt"><button class="btn ghost" data-a="toLogin">이미 가입했어요 · 로그인</button><button class="btn ghost" data-a="browse">로그인 없이 둘러보기</button></div>`;
   },
@@ -88,7 +88,17 @@ const view = {
         <p class="note">비밀번호는 확인하지 않아요. 새로고침해도 만든 추억은 이 탭에 남아 있어요.</p>
         <button class="btn" type="submit">로그인하기</button><button class="btn line" type="button" data-a="toSignup">새로 시작하기</button></form>`;
   },
-  guide(n) {
+  guide() {
+    root.innerHTML = `<div class="top"><button data-a="toStart" aria-label="뒤로 가기">${LI('chevron-left')}</button></div>
+      <div class="stack"><h1>우리사이 체험하기</h1><p class="experience-lead">친구와의 순간을 기록하고<br>다시 만나보세요.</p><p class="sub">준비된 샘플 데이터로 우리사이의 주요 기능을 자유롭게 체험할 수 있어요.</p></div>
+      <section class="experience-card" aria-label="체험할 수 있는 기능">
+        <div><b>함께 추억 남기기</b><span>친구의 사진에 반응하고 이야기를 더해보세요.</span></div>
+        <div><b>약속 만들기</b><span>친구들과 만날 일정을 만들어보세요.</span></div>
+        <div><b>지난 추억 발견하기</b><span>발자국에서 함께한 장소를 찾아보세요.</span></div>
+      </section>
+      <div class="stack mt"><button class="btn experience-start" data-a="startFree">체험 시작하기</button><p class="cap" style="text-align:center">순서에 상관없이 자유롭게 둘러볼 수 있어요.</p></div>`;
+  },
+  qa(n) {
     const c = cfg();
     if (!n) {
       root.innerHTML = `<div class="top"><button data-a="toStart" aria-label="뒤로 가기">${LI('chevron-left')}</button></div>
@@ -99,7 +109,7 @@ const view = {
     }
     const s = SC[n - 1], d = done(n), [dn, tt] = prog(n), next = SC[n];
     if (dn === tt && !ss.get('wsux_sc_done:' + n)) { ss.set('wsux_sc_done:' + n, '1'); track('scenario_complete', { scenario: n }); }
-    root.innerHTML = `<div class="top"><button data-a="toGuide" aria-label="목록으로">${LI('chevron-left')}</button></div>
+    root.innerHTML = `<div class="top"><button data-a="toQa" aria-label="목록으로">${LI('chevron-left')}</button></div>
       <div class="stack"><span class="badge guide" style="align-self:flex-start">시나리오 ${n} / ${SC.length}</span><h1>${s.title}</h1><p class="sub">${s.desc}</p></div>
       <ol class="steps" style="margin-top:20px">${s.steps.map((st, i) => `<li class="${d[st[1]] ? 'done' : ''}"><span class="n">${d[st[1]] ? '✓' : i + 1}</span><span>${st[0]}</span></li>`).join('')}</ol>
       <p class="cap" style="margin-top:12px">체험 화면에서 동작하면 단계가 자동으로 체크돼요. 돌아오려면 브라우저·스마트폰의 뒤로 가기를 눌러 주세요.</p>
@@ -116,7 +126,8 @@ function render() {
   else if (r === 'start') view.start();
   else if (r === 'signup') view.signup();
   else if (r === 'login') view.login();
-  else if (r === 'guide') view.guide(+a || 0);
+  else if (r === 'guide') view.guide();
+  else if (r === 'qa') view.qa(+a || 0);
   else view.splash();
   window.scrollTo(0, 0);
   track('page_view', { page_path: '/' + (r || 'splash'), page_location: location.origin + '/', page_title: r || 'splash' });
@@ -132,12 +143,13 @@ root.addEventListener('click', e => {
   else if (a === 'toStart') go('#/start');
   else if (a === 'toSignup') go('#/signup');
   else if (a === 'toLogin') go('#/login');
-  else if (a === 'toGuide') go('#/guide');
+  else if (a === 'toQa') go('#/qa');
   else if (a === 'modeNew') { track('test_start', { flow: 'new' }); go(account() ? '#/login' : '#/signup'); }
   else if (a === 'modeDemo') { track('test_start', { flow: 'demo' }); go('#/guide'); }
+  else if (a === 'startFree') { setCfg({ flow: 'demo', sc: 0 }); track('test_start', { flow: 'demo_free' }); goApp(); }
   else if (a === 'browse') { setCfg({ flow: 'guest' }); goApp(); }
   else if (a === 'testAccount') { const nm = '테스트'; ss.set('wsux_account', JSON.stringify({ name: nm })); clearKeys('wsux_state:new:'); ss.del('wsux_ev:new'); setCfg({ flow: 'new', name: nm }); track('login', { method: 'test_account' }); goApp(); }
-  else if (a === 'openSc') go('#/guide/' + n);
+  else if (a === 'openSc') go('#/qa/' + n);
   else if (a === 'startSc') { setCfg({ flow: 'demo', sc: n }); track('scenario_start', { scenario: n }); goApp(); }
   else if (a === 'restartSc') { resetScenario(n); render(); }
   else if (a === 'resetAll') { if (confirm('이 탭의 테스트 상태(만든 추억, 진행 기록)를 모두 지울까요? 다른 사람의 기록에는 영향이 없어요.')) { resetAll(); go('#/start'); render(); } }
