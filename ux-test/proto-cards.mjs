@@ -40,7 +40,14 @@ const MEM_NEW = `                <span style="display:flex;flex-direction:column
               </div>
             </sc-for>
           </section>`;
-export const CARDS_MARKUP = [[PLAN_OLD, PLAN_NEW], [MEM_OLD, MEM_NEW]];
+// 3) 홈 헤더 로고타입: 한글 글자 덩어리의 시각 중심이 심볼 중심보다 위라서 글자만 0.084em(20px 기준 약 1.7px) 아래로(상대 위치라 레이아웃·클릭 영역은 그대로).
+const WM_OLD = `<span style="font-family:var(--ws-font-wordmark);font-weight:800;font-size:20px;line-height:1;color:var(--ws-color-fg-brand)">우리사이</span>`;
+const WM_NEW = `<span style="position:relative;top:.084em;font-family:var(--ws-font-wordmark);font-weight:800;font-size:20px;line-height:1;color:var(--ws-color-fg-brand)">우리사이</span>`;
+// 4) 약속 상세의 상태 배지(다가오는 약속)·참석자 상태 배지(주최·참석/참석/미정…)는 아이콘 없이 텍스트만.
+const PILL_OLD = `<span style="display:flex;align-items:center;gap:4px;padding:3px 10px 3px 8px;border-radius:9999px;font:var(--type-label-2);background:{{ r.bg }};color:{{ r.color }}"><lucide-icon name="{{ r.icon }}" size="16"></lucide-icon>{{ r.label }}</span>`;
+const PILL_NEW = `<span style="display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:9999px;font:var(--type-label-2);background:{{ r.bg }};color:{{ r.color }}">{{ r.label }}</span>`;
+export const CARDS_MARKUP = [[PILL_OLD, PILL_NEW], [WM_OLD, WM_NEW], [PLAN_OLD, PLAN_NEW], [MEM_OLD, MEM_NEW]];
 export const CARDS_LOGIC = [
+  ["calSmall: LI('calendar-days', 16),", "calSmall: undefined,"],
   ["myLabel: state === 'cancelled' ? '취소됨' : MY[0],", "isHost: p.host === ME, showResp: p.host !== ME || state === 'cancelled', changeText: p.changed ? String(p.changed).split(' · ')[0] : '',\n        myLabel: state === 'cancelled' ? '취소됨' : MY[0],"],
 ];
