@@ -23,3 +23,31 @@
 
 /* 테스트 배포에는 로그인 서버가 없어 소셜 로그인(카카오·네이버·Google)이 작동하지 않는다. 누르면 오류만 나므로 숨긴다. */
 .hero [aria-label="간편 로그인"], .hero .or { display: none; }
+
+/* 앱 전반 상호작용: 빠른 눌림 피드백, 짧은 진입 모션, 명확한 키보드 포커스. */
+:root{--ws-color-bg-disabled:var(--ws-control-disabled-bg)}
+.ws-btn,.ws-iconbtn,.ws-chip,.ws-seg__item,.ws-bnav__item,[data-press]{
+  -webkit-tap-highlight-color:transparent;
+  transform:translateZ(0);
+  transition:transform 150ms cubic-bezier(.2,.8,.2,1),background-color 150ms ease,border-color 150ms ease,color 150ms ease,box-shadow 180ms ease;
+}
+.ws-btn:active:not(:disabled),.ws-iconbtn:active:not(:disabled),.ws-chip:active:not(:disabled),.ws-seg__item:active:not(:disabled),.ws-bnav__item:active:not(:disabled),[data-press]:active:not(:disabled){transform:scale(.97)}
+.ws-btn:focus-visible,.ws-iconbtn:focus-visible,.ws-chip:focus-visible,.ws-seg__item:focus-visible,.ws-bnav__item:focus-visible,[data-press]:focus-visible{outline:2px solid #566B5C;outline-offset:2px}
+.wsux-fixed-bar{padding-bottom:calc(14px + env(safe-area-inset-bottom))!important}
+.wsux-fixed-bar .ws-btn{min-height:52px;border-radius:16px}
+.wsux-scrim{animation:wsux-fade-in 160ms ease-out both}
+.wsux-sheet-shell,div[style*="z-index:30"][style*="bottom:0"]{transform-origin:50% 100%;animation:wsux-sheet-in 260ms cubic-bezier(.22,.84,.32,1) both}
+.wsux-reaction-popover{transform-origin:22px 100%;animation:wsux-pop-in 180ms cubic-bezier(.2,.9,.3,1.15) both}
+.wsux-thread-row{animation:wsux-row-in 180ms ease-out both}
+.wsux-toast{animation:wsux-toast-in 220ms cubic-bezier(.2,.85,.3,1) both}
+@keyframes wsux-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes wsux-sheet-in{from{opacity:.3;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes wsux-pop-in{from{opacity:0;transform:translateY(5px) scale(.92)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes wsux-row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes wsux-toast-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media (prefers-reduced-motion:reduce){
+  .ws-btn,.ws-iconbtn,.ws-chip,.ws-seg__item,.ws-bnav__item,[data-press],.wsux-scrim,.wsux-sheet-shell,div[style*="z-index:30"][style*="bottom:0"],.wsux-reaction-popover,.wsux-thread-row,.wsux-toast{animation:none!important;transition:none!important}
+}
+@media (max-width:390px){
+  .wsux-reaction-popover{max-width:calc(100vw - 40px);gap:2px;padding:5px}
+}

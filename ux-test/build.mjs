@@ -22,7 +22,7 @@ for (const n of COPY) fs.cpSync(path.join(src, n), path.join(out, n), { recursiv
 // 테스트 전용 정적 파일(원본 파일 아님)
 const UXT = path.join(out, 'ux-test');
 fs.mkdirSync(path.join(UXT, 'entry'), { recursive: true });
-for (const f of ['analytics.js', 'app-ga.js', 'original-consent.css']) fs.copyFileSync(path.join(root, 'ux-test', f), path.join(UXT, f));
+for (const f of ['analytics.js', 'app-ga.js', 'original-consent.css', 'ux-test.css']) fs.copyFileSync(path.join(root, 'ux-test', f), path.join(UXT, f));
 for (const f of ['entry.js', 'entry.css']) fs.copyFileSync(path.join(root, 'ux-test', 'entry', f), path.join(UXT, 'entry', f));
 
 // 설치 가능한 PWA 메타데이터와 최소 오프라인 안내. 기존 앱 자산은 캐시하지 않는다.
@@ -42,7 +42,7 @@ fs.writeFileSync(path.join(out, 'index.html'), fs.readFileSync(path.join(root, '
 
 // 테스트 빌드 화면
 const original = fs.readFileSync(path.join(src, PROTO), 'utf8');
-const inject = `<meta name="theme-color" content="#FAF9F6">\n<meta name="application-name" content="우리사이">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n<meta name="apple-mobile-web-app-title" content="우리사이">\n<link rel="manifest" href="/manifest.webmanifest">\n<link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">\n<script type="module" src="/pwa-register.js"></script>\n<link rel="stylesheet" href="/ux-test/original-consent.css">\n<script>window.__UX_GA_ID=${JSON.stringify(gaId)};</script>\n<script type="module" src="/ux-test/app-ga.js"></script>\n</head>`;
+const inject = `<meta name="theme-color" content="#FAF9F6">\n<meta name="application-name" content="우리사이">\n<meta name="apple-mobile-web-app-capable" content="yes">\n<meta name="apple-mobile-web-app-status-bar-style" content="default">\n<meta name="apple-mobile-web-app-title" content="우리사이">\n<link rel="manifest" href="/manifest.webmanifest">\n<link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png">\n<script type="module" src="/pwa-register.js"></script>\n<link rel="stylesheet" href="/ux-test/original-consent.css">\n<link rel="stylesheet" href="/ux-test/ux-test.css">\n<script>window.__UX_GA_ID=${JSON.stringify(gaId)};</script>\n<script type="module" src="/ux-test/app-ga.js"></script>\n</head>`;
 const patched = patchProto(original);
 if (!patched.includes('</head>')) throw new Error('</head> 가 없어요.');
 fs.writeFileSync(path.join(out, 'app.html'), patched.replace('</head>', inject));
@@ -62,7 +62,7 @@ const mk = '<script type="text/x-dc" data-dc-script';
 let appHtml = fs.readFileSync(path.join(out, 'app.html'), 'utf8').replace(inject, '</head>');
 for (const [a, c] of [...MARKUP].reverse()) appHtml = appHtml.replace(c, () => a);
 if (appHtml.slice(0, appHtml.indexOf(mk)) !== original.slice(0, original.indexOf(mk))) throw new Error('app.html 의 화면(마크업)이 허용한 패치 밖에서 원본과 달라요.');
-const need = ['index.html', 'app.html', 'support.js', 'lucide-icon.js', PROTO, 'manifest.webmanifest', 'pwa-register.js', 'sw.js', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon-180.png', 'ux-test/analytics.js', 'ux-test/app-ga.js', 'ux-test/entry/entry.js', 'ux-test/entry/entry.css', 'ux-test/original-consent.css'];
+const need = ['index.html', 'app.html', 'support.js', 'lucide-icon.js', PROTO, 'manifest.webmanifest', 'pwa-register.js', 'sw.js', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon-180.png', 'ux-test/analytics.js', 'ux-test/app-ga.js', 'ux-test/entry/entry.js', 'ux-test/entry/entry.css', 'ux-test/original-consent.css', 'ux-test/ux-test.css'];
 const miss = need.filter(f => !fs.existsSync(path.join(out, f)));
 if (miss.length) throw new Error('산출물에 빠진 파일: ' + miss.join(', '));
 console.log(`dist-ux-test 생성 완료: 원본 ${n}개 파일 sha256 일치, app.html 화면(마크업)은 허용 패치(갤러리·접근 대상 확인 시트·우리 공간 화면·약속 시간/장소·사진 확대 미리보기·약속/추억 카드 정보 구조) 외 원본과 동일(심볼 SVG 2개는 중앙 보정본), 진입 영역 index.html (GA4: ${gaId ? '측정 ID 설정됨' : '미설정, 전송 없음'})`);
