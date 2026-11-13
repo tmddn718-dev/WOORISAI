@@ -42,7 +42,13 @@ const MEM_NEW = `                <span style="display:flex;flex-direction:column
               </div>
             </sc-for>
           </section>`;
-export const CARDS_MARKUP = [
+// 3) 홈 헤더 로고타입: 한글 글자 덩어리의 시각 중심이 심볼 중심보다 위라서 글자만 0.084em(20px 기준 약 1.7px) 아래로(상대 위치라 레이아웃·클릭 영역은 그대로).
+const WM_OLD = `<span style="font-family:var(--ws-font-wordmark);font-weight:800;font-size:20px;line-height:1;color:var(--ws-color-fg-brand)">우리사이</span>`;
+const WM_NEW = `<span style="position:relative;top:.084em;font-family:var(--ws-font-wordmark);font-weight:800;font-size:20px;line-height:1;color:var(--ws-color-fg-brand)">우리사이</span>`;
+// 4) 약속 상세의 상태 배지(다가오는 약속)·참석자 상태 배지(주최·참석/참석/미정…)는 아이콘 없이 텍스트만.
+const PILL_OLD = `<span style="display:flex;align-items:center;gap:4px;padding:3px 10px 3px 8px;border-radius:9999px;font:var(--type-label-2);background:{{ r.bg }};color:{{ r.color }}"><lucide-icon name="{{ r.icon }}" size="16"></lucide-icon>{{ r.label }}</span>`;
+const PILL_NEW = `<span style="display:flex;align-items:center;gap:4px;padding:3px 10px;border-radius:9999px;font:var(--type-label-2);background:{{ r.bg }};color:{{ r.color }}">{{ r.label }}</span>`;
+export const CARDS_MARKUP = [[PILL_OLD, PILL_NEW], [WM_OLD, WM_NEW], 
   [PLAN_OLD, PLAN_NEW],
   [MEM_OLD, MEM_NEW],
   ['<div onClick="{{ p.open }}" role="button" aria-label="{{ p.aria }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle)">', '<div onClick="{{ p.open }}" role="button" aria-label="{{ p.aria }}" style="cursor:pointer;display:grid;grid-template-columns:54px minmax(0,1fr);align-items:start;gap:12px;padding:16px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle)">'],
@@ -52,5 +58,6 @@ export const CARDS_MARKUP = [
   ['<sc-for list="{{ region.list }}" as="m" hint-placeholder-count="2">\n              <div onClick="{{ m.open }}" role="button" style="cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle)">\n                <span style="position:relative;width:64px;height:64px;flex:none;border-radius:var(--ws-radius-small);overflow:hidden;background:var(--ws-color-bg-recall-subtle)">', '<sc-for list="{{ region.list }}" as="m" hint-placeholder-count="2">\n              <div onClick="{{ m.open }}" role="button" style="cursor:pointer;display:grid;grid-template-columns:76px minmax(0,1fr) 44px;align-items:center;gap:12px;padding:16px;border-radius:var(--ws-radius-card);background:var(--ws-color-bg-surface);border:1px solid var(--ws-color-border-subtle)">\n                <span style="position:relative;width:76px;height:76px;border-radius:var(--ws-radius-small);overflow:hidden;background:var(--ws-color-bg-recall-subtle)">']
 ];
 export const CARDS_LOGIC = [
+  ["calSmall: LI('calendar-days', 16),", "calSmall: undefined,"],
   ["myLabel: state === 'cancelled' ? '취소됨' : MY[0],", "isHost: p.host === ME, showResp: p.host !== ME || state === 'cancelled', changeTitle: p.changed ? (/^장소가 .+에서 .+으로 바뀌었어요/.test(String(p.changed)) ? '장소가 변경되었어요' : String(p.changed).split(' · ')[0]) : '', changeDetail: p.changed && /^장소가 (.+)에서 (.+)으로 바뀌었어요/.test(String(p.changed)) ? String(p.changed).match(/^장소가 (.+)에서 (.+)으로 바뀌었어요/).slice(1).join(' → ') : '', hasChangeDetail: !!(p.changed && /^장소가 (.+)에서 (.+)으로 바뀌었어요/.test(String(p.changed))),\n        myLabel: state === 'cancelled' ? '취소됨' : MY[0],"],
 ];
