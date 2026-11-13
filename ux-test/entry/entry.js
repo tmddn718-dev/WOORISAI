@@ -58,7 +58,7 @@ const view = {
         <section class="intro-copy"><p class="intro-eyebrow">${s.eyebrow}</p><h1>${s.title.replace('\n', '<br>')}</h1><p class="sub">${s.body}</p></section>
       </main>
       <nav class="dots" aria-label="온보딩 페이지">${SLIDES.map((_, k) => `<button class="${k === i ? 'on' : ''}" data-a="jump" data-i="${k}" aria-label="${k + 1}번째 소개 보기"${k === i ? ' aria-current="page"' : ''}></button>`).join('')}</nav>
-      <div class="intro-actions">${i ? `<button class="btn line" data-a="prev" data-i="${i - 1}">이전</button>` : ''}<button class="btn" data-a="${last ? 'introDone' : 'next'}" data-i="${i + 1}" data-m="finish">${last ? '시작하기' : '다음'}</button></div>`;
+      <div class="intro-actions${i ? '' : ' single'}">${i ? `<button class="btn line" data-a="prev" data-i="${i - 1}">이전</button>` : ''}<button class="btn" data-a="${last ? 'introDone' : 'next'}" data-i="${i + 1}" data-m="finish">${last ? '시작하기' : '다음'}</button></div>`;
     let start;
     root.onpointerdown = e => { start = { x: e.clientX, y: e.clientY }; };
     root.onpointerup = e => {

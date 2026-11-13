@@ -37,7 +37,8 @@ p{margin:0}
 .dots button{width:8px;height:8px;padding:0;border:0;border-radius:9999px;background:var(--ws-color-border-default);cursor:pointer;transition:width .22s ease,background-color .22s ease}
 .dots button.on{width:24px;background:var(--ws-color-bg-brand)}
 .dots button:focus-visible{outline:2px solid var(--ws-color-border-focus);outline-offset:3px}
-.intro-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px}
+.intro-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:8px;width:100%}
+.intro-actions.single{grid-template-columns:1fr}
 @keyframes intro-visual-in{from{opacity:.35;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes intro-copy-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .stack{display:flex;flex-direction:column;gap:12px}
