@@ -41,8 +41,14 @@ p{margin:0}
 .intro-actions.single{grid-template-columns:1fr}
 @keyframes intro-visual-in{from{opacity:.35;transform:translateY(12px) scale(.985)}to{opacity:1;transform:none}}
 @keyframes intro-copy-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes intro-photo-in{from{transform:scale(1.055)}to{transform:scale(1.01)}}
+@keyframes intro-card-in{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes entry-view-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes entry-check-in{0%{transform:scale(.72)}70%{transform:scale(1.08)}100%{transform:scale(1)}}
 .stack{display:flex;flex-direction:column;gap:12px}
 .btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:var(--ws-radius-control);border:1px solid var(--ws-color-bg-brand);background:var(--ws-color-bg-brand);color:var(--ws-color-fg-on-brand);font:var(--type-label-1);font-family:var(--ws-font-product);cursor:pointer;text-decoration:none;width:100%}
+.btn,.opt,.sc,.top button,.skip{-webkit-tap-highlight-color:transparent;transform:translateZ(0);transition:transform 150ms cubic-bezier(.2,.8,.2,1),background-color 150ms ease,border-color 150ms ease,box-shadow 200ms ease}
+.btn:active,.opt:active,.sc:active,.top button:active,.skip:active{transform:scale(.975)}
 .btn:active{background:var(--ws-color-bg-brand-active)}
 .btn.line{background:var(--ws-color-bg-surface);color:var(--ws-color-fg-strong);border-color:var(--ws-color-border-default)}
 .btn.ghost{background:none;border-color:transparent;color:var(--ws-color-fg-secondary);min-height:44px}
@@ -84,6 +90,14 @@ p{margin:0}
 .experience-card b{font:var(--type-headline-2);color:var(--ws-color-fg-strong)}
 .experience-card span{font:var(--type-label-1-read);color:var(--ws-color-fg-secondary)}
 .experience-start{min-height:52px}
+.intro-photo-frame img{animation:intro-photo-in .72s cubic-bezier(.22,1,.36,1) both}
+.intro-memory-card{animation:intro-card-in .42s .12s cubic-bezier(.22,1,.36,1) both}
+.intro-photo-count{animation:intro-card-in .36s .08s cubic-bezier(.22,1,.36,1) both}
+#root:not(.onboarding)>:first-child{animation:entry-view-in .28s cubic-bezier(.22,1,.36,1) both}
+.experience-card div{animation:entry-view-in .34s cubic-bezier(.22,1,.36,1) both}
+.experience-card div:nth-child(2){animation-delay:45ms}
+.experience-card div:nth-child(3){animation-delay:90ms}
+.steps li.done .n{animation:entry-check-in .28s cubic-bezier(.2,.9,.3,1.12) both}
 @media (max-height:700px){
   .intro-top{margin-bottom:4px}
   .intro-slide{gap:14px}
@@ -93,6 +107,6 @@ p{margin:0}
   .dots{margin:8px 0 10px}
 }
 @media (prefers-reduced-motion:reduce){
-  .intro-visual,.intro-copy{animation:none}
-  .dots button{transition:none}
+  .intro-visual,.intro-copy,.intro-photo-frame img,.intro-memory-card,.intro-photo-count,#root:not(.onboarding)>:first-child,.experience-card div,.steps li.done .n{animation:none}
+  .dots button,.btn,.opt,.sc,.top button,.skip{transition:none}
 }
