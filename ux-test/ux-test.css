@@ -24,29 +24,64 @@
 /* 테스트 배포에는 로그인 서버가 없어 소셜 로그인(카카오·네이버·Google)이 작동하지 않는다. 누르면 오류만 나므로 숨긴다. */
 .hero [aria-label="간편 로그인"], .hero .or { display: none; }
 
-/* 앱 전반 상호작용: 빠른 눌림 피드백, 짧은 진입 모션, 명확한 키보드 포커스. */
-:root{--ws-color-bg-disabled:var(--ws-control-disabled-bg)}
+/* 앱 전반 상호작용: 콘텐츠를 방해하지 않는 짧은 이동과 명확한 눌림 피드백. */
+:root{
+  --ws-color-bg-disabled:var(--ws-control-disabled-bg);
+  --wsux-motion-fast:150ms;
+  --wsux-motion-base:240ms;
+  --wsux-motion-slow:360ms;
+  --wsux-ease-out:cubic-bezier(.22,1,.36,1);
+  --wsux-ease-spring:cubic-bezier(.2,.9,.3,1.12);
+}
 .ws-btn,.ws-iconbtn,.ws-chip,.ws-seg__item,.ws-bnav__item,[data-press]{
   -webkit-tap-highlight-color:transparent;
   transform:translateZ(0);
-  transition:transform 150ms cubic-bezier(.2,.8,.2,1),background-color 150ms ease,border-color 150ms ease,color 150ms ease,box-shadow 180ms ease;
+  transition:transform var(--wsux-motion-fast) cubic-bezier(.2,.8,.2,1),background-color var(--wsux-motion-fast) ease,border-color var(--wsux-motion-fast) ease,color var(--wsux-motion-fast) ease,box-shadow 180ms ease;
 }
 .ws-btn:active:not(:disabled),.ws-iconbtn:active:not(:disabled),.ws-chip:active:not(:disabled),.ws-seg__item:active:not(:disabled),.ws-bnav__item:active:not(:disabled),[data-press]:active:not(:disabled){transform:scale(.97)}
 .ws-btn:focus-visible,.ws-iconbtn:focus-visible,.ws-chip:focus-visible,.ws-seg__item:focus-visible,.ws-bnav__item:focus-visible,[data-press]:focus-visible{outline:2px solid #566B5C;outline-offset:2px}
+.ws-scroll [data-screen-label]{animation:wsux-view-in var(--wsux-motion-base) var(--wsux-ease-out) both}
+.ws-scroll [data-screen-label]>section,.ws-scroll [data-screen-label]>div[role="button"]{animation:wsux-section-in var(--wsux-motion-slow) var(--wsux-ease-out) both}
+.ws-scroll [data-screen-label]>section:nth-of-type(2){animation-delay:35ms}
+.ws-scroll [data-screen-label]>section:nth-of-type(3){animation-delay:70ms}
+.ws-scroll [data-screen-label]>section:nth-of-type(4){animation-delay:105ms}
+.ws-scroll [role="button"],.ws-scroll button,.ws-scroll label[style*="cursor:pointer"]{
+  -webkit-tap-highlight-color:transparent;
+  transform:translateZ(0);
+  transition:transform var(--wsux-motion-fast) cubic-bezier(.2,.8,.2,1),border-color var(--wsux-motion-fast) ease,background-color var(--wsux-motion-fast) ease,box-shadow var(--wsux-motion-base) ease;
+}
+.ws-scroll [role="button"]:active,.ws-scroll button:active:not(:disabled),.ws-scroll label[style*="cursor:pointer"]:active{transform:scale(.985)}
+.ws-scroll [role="button"] img,.ws-scroll [data-ph] img{transition:transform var(--wsux-motion-slow) var(--wsux-ease-out),filter var(--wsux-motion-base) ease}
+.ws-scroll [role="button"]:active img,.ws-scroll [data-ph]:active img{transform:scale(1.018);filter:saturate(1.04)}
+[data-gal]{scroll-behavior:smooth;scroll-padding-inline:20px}
+[data-gal] [data-ph]{transition:opacity var(--wsux-motion-fast) ease,transform var(--wsux-motion-base) var(--wsux-ease-out)}
+[data-gal] [data-ph]:active{transform:scale(.992)}
+.ws-bnav__item[aria-current="true"] .ws-bnav__icon,.ws-bnav__item[aria-current="page"] .ws-bnav__icon{animation:wsux-nav-settle var(--wsux-motion-base) var(--wsux-ease-spring) both}
+.ws-bnav__item[aria-current="true"] lucide-icon,.ws-bnav__item[aria-current="page"] lucide-icon{animation:wsux-icon-settle var(--wsux-motion-base) var(--wsux-ease-spring) both}
+button[aria-pressed="true"]{animation:wsux-select var(--wsux-motion-base) var(--wsux-ease-spring)}
+button[style*="position:absolute"][style*="translate(-50%,-50%)"] img,button[style*="position:absolute"][style*="translate(-50%,-50%)"]>span{animation:wsux-marker-in var(--wsux-motion-slow) var(--wsux-ease-spring) both}
 .wsux-fixed-bar{padding-bottom:calc(14px + env(safe-area-inset-bottom))!important}
 .wsux-fixed-bar .ws-btn{min-height:52px;border-radius:16px}
+.wsux-fixed-bar{animation:wsux-fixed-in var(--wsux-motion-base) var(--wsux-ease-out) both}
 .wsux-scrim{animation:wsux-fade-in 160ms ease-out both}
 .wsux-sheet-shell,div[style*="z-index:30"][style*="bottom:0"]{transform-origin:50% 100%;animation:wsux-sheet-in 260ms cubic-bezier(.22,.84,.32,1) both}
 .wsux-reaction-popover{transform-origin:22px 100%;animation:wsux-pop-in 180ms cubic-bezier(.2,.9,.3,1.15) both}
 .wsux-thread-row{animation:wsux-row-in 180ms ease-out both}
 .wsux-toast{animation:wsux-toast-in 220ms cubic-bezier(.2,.85,.3,1) both}
+@keyframes wsux-view-in{from{opacity:.35;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes wsux-section-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes wsux-nav-settle{0%{transform:scale(.86)}70%{transform:scale(1.04)}100%{transform:scale(1)}}
+@keyframes wsux-icon-settle{0%{transform:translateY(2px) scale(.9)}100%{transform:none}}
+@keyframes wsux-select{0%{transform:scale(.94)}65%{transform:scale(1.025)}100%{transform:scale(1)}}
+@keyframes wsux-marker-in{from{opacity:.25;transform:translateY(6px) scale(.88)}to{opacity:1;transform:none}}
+@keyframes wsux-fixed-in{from{opacity:.4;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes wsux-fade-in{from{opacity:0}to{opacity:1}}
 @keyframes wsux-sheet-in{from{opacity:.3;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
 @keyframes wsux-pop-in{from{opacity:0;transform:translateY(5px) scale(.92)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes wsux-row-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes wsux-toast-in{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media (prefers-reduced-motion:reduce){
-  .ws-btn,.ws-iconbtn,.ws-chip,.ws-seg__item,.ws-bnav__item,[data-press],.wsux-scrim,.wsux-sheet-shell,div[style*="z-index:30"][style*="bottom:0"],.wsux-reaction-popover,.wsux-thread-row,.wsux-toast{animation:none!important;transition:none!important}
+  .ws-btn,.ws-iconbtn,.ws-chip,.ws-seg__item,.ws-bnav__item,[data-press],.ws-scroll [data-screen-label],.ws-scroll [data-screen-label]>section,.ws-scroll [data-screen-label]>div[role="button"],.ws-scroll [role="button"],.ws-scroll button,.ws-scroll label[style*="cursor:pointer"],.ws-scroll [role="button"] img,.ws-scroll [data-ph] img,[data-gal],[data-gal] [data-ph],button[aria-pressed="true"],button[style*="position:absolute"][style*="translate(-50%,-50%)"] img,button[style*="position:absolute"][style*="translate(-50%,-50%)"]>span,.wsux-fixed-bar,.wsux-scrim,.wsux-sheet-shell,div[style*="z-index:30"][style*="bottom:0"],.wsux-reaction-popover,.wsux-thread-row,.wsux-toast{animation:none!important;transition:none!important;scroll-behavior:auto!important}
 }
 @media (max-width:390px){
   .wsux-reaction-popover{max-width:calc(100vw - 40px);gap:2px;padding:5px}
