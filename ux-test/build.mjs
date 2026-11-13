@@ -24,6 +24,10 @@ const UXT = path.join(out, 'ux-test');
 fs.mkdirSync(path.join(UXT, 'entry'), { recursive: true });
 for (const f of ['analytics.js', 'app-ga.js', 'original-consent.css', 'ux-test.css']) fs.copyFileSync(path.join(root, 'ux-test', f), path.join(UXT, f));
 for (const f of ['entry.js', 'entry.css']) fs.copyFileSync(path.join(root, 'ux-test', 'entry', f), path.join(UXT, 'entry', f));
+fs.mkdirSync(path.join(UXT, 'images'), { recursive: true });
+for (const [srcName, outName] of [['mem-han.jpg', 'onboarding-han.jpg'], ['mem-cafe.jpg', 'onboarding-cafe.jpg'], ['mem-jeju.jpg', 'onboarding-jeju.jpg']]) {
+  fs.copyFileSync(path.join(root, 'ux-test', 'images', 'unsplash', srcName), path.join(UXT, 'images', outName));
+}
 
 // 설치 가능한 PWA 메타데이터와 최소 오프라인 안내. 기존 앱 자산은 캐시하지 않는다.
 const PWA = path.join(root, 'ux-test', 'pwa');
@@ -62,7 +66,7 @@ const mk = '<script type="text/x-dc" data-dc-script';
 let appHtml = fs.readFileSync(path.join(out, 'app.html'), 'utf8').replace(inject, '</head>');
 for (const [a, c] of [...MARKUP].reverse()) appHtml = appHtml.replace(c, () => a);
 if (appHtml.slice(0, appHtml.indexOf(mk)) !== original.slice(0, original.indexOf(mk))) throw new Error('app.html 의 화면(마크업)이 허용한 패치 밖에서 원본과 달라요.');
-const need = ['index.html', 'app.html', 'support.js', 'lucide-icon.js', PROTO, 'manifest.webmanifest', 'pwa-register.js', 'sw.js', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon-180.png', 'ux-test/analytics.js', 'ux-test/app-ga.js', 'ux-test/entry/entry.js', 'ux-test/entry/entry.css', 'ux-test/original-consent.css', 'ux-test/ux-test.css'];
+const need = ['index.html', 'app.html', 'support.js', 'lucide-icon.js', PROTO, 'manifest.webmanifest', 'pwa-register.js', 'sw.js', 'offline.html', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon-180.png', 'ux-test/analytics.js', 'ux-test/app-ga.js', 'ux-test/entry/entry.js', 'ux-test/entry/entry.css', 'ux-test/images/onboarding-han.jpg', 'ux-test/images/onboarding-cafe.jpg', 'ux-test/images/onboarding-jeju.jpg', 'ux-test/original-consent.css', 'ux-test/ux-test.css'];
 const miss = need.filter(f => !fs.existsSync(path.join(out, f)));
 if (miss.length) throw new Error('산출물에 빠진 파일: ' + miss.join(', '));
 console.log(`dist-ux-test 생성 완료: 원본 ${n}개 파일 sha256 일치, app.html 화면(마크업)은 허용 패치(갤러리·접근 대상 확인 시트·우리 공간 화면·약속 시간/장소·사진 확대 미리보기·약속/추억 카드 정보 구조) 외 원본과 동일(심볼 SVG 2개는 중앙 보정본), 진입 영역 index.html (GA4: ${gaId ? '측정 ID 설정됨' : '미설정, 전송 없음'})`);

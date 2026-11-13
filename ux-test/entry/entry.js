@@ -34,9 +34,9 @@ const goApp = () => location.assign('/app.html');
 const go = h => { location.hash = h; };
 
 const SLIDES = [
-  { icon: 'images', title: '함께한 순간을, 우리만의 이야기로', body: '각자 찍은 사진과 이야기를 하나의 추억으로 모아요.' },
-  { icon: 'lock', title: '초대한 사람만 볼 수 있어요', body: '추억마다 볼 수 있는 사람을 직접 정해요.' },
-  { icon: 'map-pinned', title: '다녀온 곳에 발자국이 남아요', body: '지역별로 쌓인 추억을 달력과 발자국으로 다시 찾아요.' }
+  { icon: 'images', eyebrow: '함께 기록하기', title: '우리의 사진을\n한곳에 모아요', body: '각자 찍은 사진과 짧은 이야기가 하나의 추억이 돼요.', note: '민지 외 3명이 함께 남긴 순간', image: '/ux-test/images/onboarding-han.jpg', alt: '해 질 무렵 한강 공원에 모여 앉은 사람들', position: 'center 64%' },
+  { icon: 'lock-keyhole', eyebrow: '우리만 보기', title: '초대한 사람끼리만\n기억을 이어가요', body: '사진마다 반응과 이야기를 남기고, 공개 범위는 직접 정해요.', note: '초대한 사람만 볼 수 있어요', image: '/ux-test/images/onboarding-cafe.jpg', alt: '따뜻한 조명이 켜진 아늑한 카페', position: 'center 48%' },
+  { icon: 'map-pinned', eyebrow: '다시 발견하기', title: '쌓인 추억을\n발자국에서 만나요', body: '함께 다녀온 지역과 그날의 사진을 지도에서 다시 찾아요.', note: '제주 · 함께한 추억 6개', image: '/ux-test/images/onboarding-jeju.jpg', alt: '푸른 바다와 제주의 해안 산책길', position: 'center 58%' }
 ];
 
 const view = {
@@ -48,10 +48,17 @@ const view = {
   intro(i) {
     i = Math.max(0, Math.min(+i || 0, SLIDES.length - 1));
     const s = SLIDES[i], last = i >= SLIDES.length - 1;
-    root.innerHTML = `<button class="skip" data-a="introDone" data-m="skip">건너뛰기</button>
-      <div class="center intro-slide"><span class="ic">${LI(s.icon, 72, 1.5)}</span><h1>${s.title}</h1><p class="sub">${s.body}</p></div>
-      <div class="dots" role="group" aria-label="소개 ${i + 1} / ${SLIDES.length}">${SLIDES.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
-      <div class="intro-actions">${i ? `<button class="btn line" data-a="prev" data-i="${i - 1}">이전</button>` : ''}<button class="btn" data-a="${last ? 'introDone' : 'next'}" data-i="${i + 1}" data-m="finish">${last ? '시작하기' : '다음'}</button></div>`;
+    root.className = 'onboarding';
+    root.innerHTML = `<header class="intro-top"><span class="intro-brand"><img src="/brand/woorisai-symbol.svg" alt=""><b>우리사이</b></span><button class="skip" data-a="introDone" data-m="skip">건너뛰기</button></header>
+      <main class="intro-slide" aria-live="polite">
+        <div class="intro-visual intro-visual-${i + 1}">
+          <div class="intro-photo-frame"><img src="${s.image}" alt="${esc(s.alt)}" style="object-position:${s.position}" fetchpriority="high"><span class="intro-photo-count">${i + 1} / ${SLIDES.length}</span></div>
+          <div class="intro-memory-card"><span>${LI(s.icon, 18, 1.8)}</span><b>${s.note}</b></div>
+        </div>
+        <section class="intro-copy"><p class="intro-eyebrow">${s.eyebrow}</p><h1>${s.title.replace('\n', '<br>')}</h1><p class="sub">${s.body}</p></section>
+      </main>
+      <nav class="dots" aria-label="온보딩 페이지">${SLIDES.map((_, k) => `<button class="${k === i ? 'on' : ''}" data-a="jump" data-i="${k}" aria-label="${k + 1}번째 소개 보기"${k === i ? ' aria-current="page"' : ''}></button>`).join('')}</nav>
+      <div class="intro-actions">${i ? `<button class="intro-back" data-a="prev" data-i="${i - 1}" aria-label="이전 화면">${LI('chevron-left', 24, 2)}</button>` : '<span aria-hidden="true"></span>'}<button class="btn intro-next" data-a="${last ? 'introDone' : 'next'}" data-i="${i + 1}" data-m="finish">${last ? '우리사이 시작하기' : '다음'}</button></div>`;
     let start;
     root.onpointerdown = e => { start = { x: e.clientX, y: e.clientY }; };
     root.onpointerup = e => {
@@ -121,6 +128,9 @@ const view = {
 
 function render() {
   const h = (location.hash || '#/').slice(2), [r, a] = h.split('/');
+  root.className = '';
+  root.onpointerdown = null;
+  root.onpointerup = null;
   if (!r) return view.splash();
   if (r === 'intro') view.intro(a);
   else if (r === 'start') view.start();
@@ -139,6 +149,7 @@ root.addEventListener('click', e => {
   if (a === 'skip') { clearTimeout(view._t); go('#/intro/0'); }
   else if (a === 'next') go('#/intro/' + t.dataset.i);
   else if (a === 'prev') go('#/intro/' + t.dataset.i);
+  else if (a === 'jump') go('#/intro/' + t.dataset.i);
   else if (a === 'introDone') { track('onboarding_complete', { method: t.dataset.m }); ss.set('wsux_seen', '1'); go('#/start'); }
   else if (a === 'toStart') go('#/start');
   else if (a === 'toSignup') go('#/signup');
