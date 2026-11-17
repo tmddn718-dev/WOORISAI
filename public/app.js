@@ -32,10 +32,10 @@ function sheet(html) {
   closeSheet();
   const b = document.createElement('div'); b.className = 'back';
   b.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" tabindex="-1"><div class="grab"></div>${html}</div>`;
-  b.addEventListener('mousedown', e => { if (e.target === b) closeSheet(); });
-  $('#layer').append(b); b.querySelectorAll('form[data-form]').forEach(f => f.noValidate = true); b.firstElementChild.focus(); return b;
+  b.addEventListener('pointerdown', e => { if (e.target === b) closeSheet(); });
+  document.body.classList.add('sheet-open'); $('#layer').append(b); b.querySelectorAll('form[data-form]').forEach(f => f.noValidate = true); b.firstElementChild.focus(); return b;
 }
-const closeSheet = () => { $('#layer').innerHTML = ''; };
+const closeSheet = () => { $('#layer').innerHTML = ''; document.body.classList.remove('sheet-open'); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
 const ask = o => new Promise(res => {
   const b = sheet(`<h2>${esc(o.title)}</h2><p class="sub body2">${o.body || ''}</p>${o.check ? `<label class="row" style="margin-top:16px"><input type="checkbox" id="ck" style="width:20px;height:20px"><span class="body2">${esc(o.check)}</span></label>` : ''}<div class="actions"><button class="btn ${o.danger ? 'danger' : ''}" data-r="1">${esc(o.ok)}</button><button class="btn line" data-r="0">${esc(o.cancel || '취소')}</button></div>`);
@@ -192,7 +192,14 @@ function ppRender() {
   const n = $('#pp-note'); if (n && PP.files.length) n.textContent = `사진 ${PP.files.length}장 · 맨 앞 사진이 대표 사진이 돼요.`;
 }
 const RSL = { yes: '참석', maybe: '미정', no: '불참', invited: '응답 대기' };
-const planCard = m => { const d = new Date(m.starts_at), off = m.status === 'cancelled'; return `<a class="plan${off ? ' off' : ''}" href="#/meetup/${m.id}" aria-label="${esc(m.title)}, ${off ? '취소됨' : RSL[m.rsvp] || ''}"><span class="pd"><span>${d.getMonth() + 1}월</span><b>${d.getDate()}</b></span><span class="pb"><b>${esc(m.title)}</b><span class="cap">${timeTxt(m, { timeZone: localTz })} · ${placeTxt(m)}</span><span class="going">${m.going?.length ? `<span class="avs">${m.going.map(n => av(n, 's')).join('')}</span>` : ''}<span class="cap">${m.yes ? m.yes + '명 참석' : '아직 응답이 없어요'}</span></span></span><span class="pr"><span class="rs ${off ? 'x' : m.rsvp}">${off ? '취소됨' : RSL[m.rsvp] || ''}</span>${m.changed && !off ? '<span class="chg">변경됨</span>' : ''}</span></a>`; };
+const planCard = m => { const d = new Date(m.starts_at), off = m.status === 'cancelled', host = m.organizer_id === S.me?.id; return `<a class="plan${off ? ' off' : ''}" href="#/meetup/${m.id}" aria-label="${esc(m.title)}, ${off ? '취소됨' : RSL[m.rsvp] || ''}"><span class="pd"><span>${d.getMonth() + 1}월</span><b>${d.getDate()}</b></span><span class="pb"><b>${esc(m.title)}</b><span class="plan-where"><span>${I('clock', 'xs')}${timeTxt(m, { timeZone: localTz })}</span><span>${I('pin', 'xs')}${placeTxt(m)}</span></span><span class="plan-attend">전체 참석 ${m.yes || 0}명</span></span><span class="plan-state"><span>내 응답 <strong class="rs ${off ? 'x' : m.rsvp}">${off ? '취소됨' : RSL[m.rsvp] || ''}</strong></span>${host ? '<span class="plan-host">내가 만든 약속</span>' : ''}</span>${m.changed && !off ? `<span class="plan-change">${I('help', 'xs')}<span><b>${esc(m.changed)}</b></span></span>` : ''}</a>`; };
+
+const threadComment = c => `<article class="thread-comment${c.parent_id ? ' reply' : ''}"><div class="thread-author"><span><b>${esc(c.author)}</b><time>${esc(c.created_at.slice(0, 16).replace('T', ' '))}</time></span>${c.mine ? `<button class="thread-delete" data-act="memory-del" data-id="${c.id}" data-mid="${c.media_id || ''}">삭제</button>` : ''}</div>${c.restricted ? '<p class="cap">검토 중인 콘텐츠예요.</p>' : `<p>${esc(c.text)}</p>${c.attachment ? `<img class="thread-attachment" src="/media/${c.attachment}" alt="댓글에 첨부한 사진">` : ''}`}<button class="thread-reply" data-act="memory-reply" data-id="${c.id}" data-name="${esc(c.author)}">답글</button></article>`;
+async function THREAD_UI(mid) {
+  const t = await api('GET', `/api/media/${mid}/thread`), choices = ['❤️', '😊', '😂', '🥹', '👏'];
+  const byEmoji = Object.fromEntries(t.reactions.map(x => [x.emoji, x]));
+  sheet(`<div class="thread-sheet"><div class="thread-head"><div><h2>기억 이어가기</h2><p class="sub body2">이 사진에 떠오르는 이야기를 남겨보세요.</p></div><button class="icon-btn" data-act="sheet-close" aria-label="닫기">${I('x')}</button></div><div class="reaction-row" aria-label="이모지 반응">${choices.map(e => { const r = byEmoji[e]; return `<button data-act="memory-react" data-id="${mid}" data-emoji="${e}" aria-pressed="${!!r?.mine}" aria-label="${e} 반응 ${r?.count || 0}개">${e}<span>${r?.count || ''}</span></button>`; }).join('')}</div><section class="thread-memories"><h3>친구들의 기억</h3><div class="thread-list">${t.comments.map(c => threadComment({ ...c, media_id: mid })).join('') || '<p class="thread-empty">아직 남긴 기억이 없어요.</p>'}</div></section>${t.open ? `<form data-form="memory-comment" data-mid="${mid}" class="thread-form"><input type="hidden" name="parent_id"><label class="field"><span id="thread-label">짧은 기억 남기기</span><textarea name="text" maxlength="500" required placeholder="이 사진에서 떠오르는 순간을 남겨보세요"></textarea></label><p class="err" role="alert"></p><button class="btn block">남기기</button></form>` : '<p class="note">종료된 추억에는 새 기억을 남길 수 없어요.</p>'}</div>`);
+}
 
 P.home = async () => {
   const [d, today, fm] = await Promise.all([api('GET', '/api/home'), api('GET', '/api/today?date=' + localDate()), api('GET', '/api/map').catch(() => ({ total: 0, countries: [] }))]);
@@ -206,7 +213,7 @@ P.home = async () => {
     ${d.friendRequests.map(x => `<div>${av(x.name)}<span class="grow"><b>${esc(x.name)}</b><br><span class="cap">연결을 요청했어요</span></span><button class="btn sm" data-act="accept-friend" data-id="${x.id}">수락</button><button class="btn sm line" data-act="decline-friend" data-id="${x.id}">거절</button></div>`).join('')}
     ${d.meetupInvites.map(x => `<a href="#/meetup/${x.id}">${av('약')}<span class="grow"><b>${esc(x.title)}</b><br><span class="cap">${fmtDT(x.starts_at, x.tz, x.time_kind)} · 참석 여부를 알려 주세요</span></span>${I('chev', 's')}</a>`).join('')}</div></section>` : ''}
   ${d.posts.length ? `<section class="home-sec sec" aria-label="최근 함께한 추억"><h2>최근 함께한 추억</h2><div class="hero-card">${postCard(d.posts[0])}</div>${d.posts.slice(1, 3).map(p => `<a class="mrow" href="#/post/${p.id}"><span class="th">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)} · ${p.count}명${p.place ? ' · ' + esc(p.place.label) : ''}</span></span>${I('chev', 's')}</a>`).join('')}${d.posts.length > 3 ? `<a class="btn sm line" style="align-self:flex-start" href="#/memories">추억 모두 보기 (${d.posts.length})</a>` : ''}</section>
-  <div class="cta-card sec"><span class="ic">${I('create')}</span><span class="tx"><b>함께한 순간을 남겨볼까요?</b><span>사진과 이야기를 하나의 추억으로 모아보세요.</span><a class="btn sm" href="#/new-post">새 추억 만들기</a></span></div>` : `<section class="sec" aria-label="우리의 추억"><div class="hd"><h2>우리의 추억</h2></div>${empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>')}</section>`}
+  <section class="memory-create sec" aria-label="새 추억 만들기"><div class="memory-create-guide"><span class="memory-create-icon">${I('create')}</span><span class="memory-create-copy"><h2>함께한 순간을 남겨볼까요?</h2><p>사진과 이야기를 하나의 추억으로 모아보세요.</p></span></div><a class="btn block memory-create-button" href="#/new-post">새 추억 만들기</a></section>` : `<section class="sec" aria-label="우리의 추억"><div class="hd"><h2>우리의 추억</h2></div>${empty('아직 남긴 추억이 없어요.', '함께했던 하루를 첫 번째 추억으로 남겨보세요.', '<a class="btn" href="#/new-post">첫 추억 만들기</a>')}</section>`}
   ${today.items.length ? `<section class="moment" aria-label="1년 전 오늘"><h2>그날의 우리가 여기 있어요</h2><p class="cap" style="margin:4px 0 16px">함께 남긴 사진과 이야기를 다시 살펴보세요.</p>${postCard(today.items[0])}<div class="row" style="margin-top:12px;flex-wrap:wrap"><a class="btn sm line" href="#/post/${today.items[0].id}?add=1">기억 더하기</a><button class="btn sm line" data-act="hide-post" data-id="${today.items[0].id}">다시 추천하지 않기</button></div></section>` : ''}
   <section class="sec" aria-label="다가오는 약속"><div class="hd"><h2>다가오는 약속</h2><a class="btn sm line" href="#/new-meetup">새 약속 만들기</a></div><div class="stack" style="gap:12px">${d.upcoming.length ? d.upcoming.map(planCard).join('') : `<div class="plan-empty"><span class="pe-ic">${I('cal')}</span><span><b>다가오는 약속이 없어요</b><span class="cap">만날 날을 정해 두면, 그날을 추억으로 이어 남길 수 있어요.</span></span></div>`}${d.pastNudge ? `<a class="nudge" href="#/meetup/${d.pastNudge.id}"><span class="pe-ic s">${I('photo', 's')}</span><span><b>지난 약속을 추억으로 남길까요?</b><span class="cap">${esc(d.pastNudge.title)} · ${new Date(d.pastNudge.starts_at).getMonth() + 1}월 ${new Date(d.pastNudge.starts_at).getDate()}일</span></span>${I('chev', 's')}</a>` : ''}${d.upcoming.length ? '<a class="body2" style="color:var(--green)" href="#/meetups">약속 모두 보기</a>' : ''}</div></section>
   <section class="sec" aria-label="우리의 발자국"><div class="hd"><h2>우리의 발자국</h2></div><a class="foot-card" href="#/foot"><span class="fc-h"><span class="cap">${fr.length ? `${fr.length}개 지역 · 추억 ${fm.total}개` : '추억에 지역을 연결하면 발자국이 쌓여요.'}</span>${I('chev', 's')}</span>${fr.length ? `<span class="fc-m">${fr.slice(0, 5).map(r => `<span><span class="sp">${fby[r][0].cover ? `<img loading="lazy" src="/media/${fby[r][0].cover}" alt="">` : esc(r[0])}</span><span class="cap">${r}</span></span>`).join('')}</span>` : ''}</a></section>
@@ -218,22 +225,22 @@ P.post = async id => {
   if (p.preview) return `${top('추억 초대')}<div class="page stack"><div class="card pad stack"><span class="tag" style="align-self:flex-start">초대받은 추억</span><h1>${esc(p.title)}</h1><p class="sub body2">${esc(p.inviter)}${p.inviter_username ? ` (@${esc(p.inviter_username)})` : ''}님이 이 추억을 함께 기록하자고 초대했어요.</p><div class="note">수락하면 사진과 글, 함께한 사람을 볼 수 있어요. 수락하기 전에는 사진과 장소가 보이지 않아요.</div></div><div class="row"><button class="btn grow" data-act="respond" data-id="${p.id}" data-v="1">수락하기</button><button class="btn line grow" data-act="respond" data-id="${p.id}" data-v="0">거절하기</button></div></div>`;
   const isAdmin = p.me.role === 'admin', open = p.status === 'active';
   const acc = p.members.filter(m => m.access === 'accepted'), inv = p.members.filter(m => m.access === 'invited');
-  const stories = p.notes.filter(n => n.kind === 'story'), cmts = p.notes.filter(n => n.kind === 'comment');
+  const stories = p.notes.filter(n => n.kind === 'story');
   const noteHtml = n => `<div class="card pad" style="${n.kind === 'comment' ? 'border:0;background:var(--sage)' : ''}"><div class="row between"><span class="cap"><b style="color:var(--ink)">${esc(n.author)}</b> · ${n.created_at.slice(0, 10)}</span>${n.mine ? `<button class="btn sm line" data-act="del-note" data-id="${n.id}" aria-label="내 글 삭제하기">삭제</button>` : `<button class="btn sm line" data-act="report" data-t="note" data-id="${n.id}" aria-label="신고하기">신고</button>`}</div><p style="margin-top:8px;white-space:pre-wrap">${n.restricted ? '<span class="sub">검토 중인 콘텐츠예요</span>' : esc(n.text)}</p></div>`;
+  const photoSlide = (m, i) => { const recent = m.comments.slice(-2), reacts = m.reactions.filter(x => x.count).map(x => `${x.emoji} ${x.count}`).join(' · '); return `<article class="memory-photo"><button class="memory-photo-open" data-act="photo" data-id="${m.id}" data-mine="${m.mine ? 1 : 0}" data-cover="${p.cover === m.id ? 1 : 0}" aria-label="${i + 1}번째 사진 크게 보기"><span class="memory-photo-frame"><img loading="lazy" src="/media/${m.id}" alt="함께 남긴 ${i + 1}번째 사진"><span class="memory-photo-count">${i + 1} / ${p.media.length}</span></span></button><div class="memory-preview"><h3>기억 이어가기</h3><div class="memory-totals"><span>${I('pen', 'xs')} 댓글 ${m.comment_count}</span><span>${I('heart', 'xs')} 반응 ${m.reaction_count}</span>${reacts ? `<span class="memory-emojis">${esc(reacts)}</span>` : ''}</div>${recent.length ? `<div class="memory-recent">${recent.map(c => `<p><b>${esc(c.author)}</b> ${c.restricted ? '검토 중인 콘텐츠예요.' : esc(c.text || '사진을 남겼어요.')}</p>`).join('')}</div>` : '<p class="memory-empty">이 사진에 이어진 기억이 아직 없어요.</p>'}<button class="btn line block" data-act="memory-thread" data-id="${m.id}">이 사진에 댓글 남기기</button></div></article>`; };
   return `<nav class="crumb" aria-label="현재 위치"><a href="#/">홈</a> › <a href="#/memories">추억</a> › ${esc(p.title)}</nav>${top('', { right: `<button class="icon-btn" data-act="post-menu" data-id="${p.id}" aria-label="더 보기">${I('more')}</button>` })}
   <div class="page stack" style="padding-top:8px" data-post="${p.id}">
     ${(() => { const cv = p.media.find(m => m.id === p.cover && !m.restricted)?.id ?? p.media.find(m => !m.restricted)?.id; return cv ? `<div class="cover"><img src="/media/${cv}" alt="대표 사진"></div>` : ''; })()}
     <div><h1>${esc(p.title)}</h1><p class="sub body2">${I('cal', 'xs')} ${fmtDate(p.occurred_on)}${p.place ? ` · <span title="${p.place.precision === 'exact' ? '정확한 장소' : p.place.precision === 'area' ? '동네까지만 표시' : '도시까지만 표시'}">${I('pin', 'xs')} ${esc(p.place.label)}</span>` : ''}${p.status === 'closed' ? ' · <span class="tag warn">종료됨</span>' : ''}</p>
       ${p.meetup ? `<a class="tag" href="#/meetup/${p.meetup.id}">${esc(p.meetup.title)} 약속에서</a>` : ''}${p.groups.map(g => `<span class="tag">${esc(g.name)}</span>`).join(' ')}</div>
-    ${open ? `<button class="btn block" data-act="add-more">사진 또는 기억 더하기</button><input type="file" accept="image/*" multiple hidden data-upload="${p.id}" id="pf">` : ''}
     <div class="split"><div class="stack"><section class="card pad" aria-label="볼 수 있는 사람"><div class="row between"><h3>함께한 사람 ${acc.length}명</h3><span class="cap">${I('lock', 'xs')} 초대된 사람만 볼 수 있어요</span></div>
       <div class="row" style="flex-wrap:wrap;margin-top:12px;gap:8px">${acc.map(m => `<span class="row" style="gap:8px">${av(m.name, 's')}<span class="body2"><i class="dot" title="수락함"></i> ${esc(m.name)}${m.role === 'admin' ? ' <span class="tag">관리자</span>' : ''}</span></span>`).join('')}${inv.map(m => `<span class="tag"><i class="dot hollow"></i> ${esc(m.name)} · 초대 중</span>`).join('')}</div></section>
     <section><div class="row between" style="margin-bottom:12px"><h2>사진 ${p.media.length ? p.media.length + '장' : ''}</h2></div>
-      ${p.media.length ? `<div class="grid3">${p.media.map(m => m.restricted ? '<div class="res">검토 중인 콘텐츠예요</div>' : `<button data-act="photo" data-id="${m.id}" data-mine="${m.mine ? 1 : 0}" data-cover="${p.cover === m.id ? 1 : 0}" aria-label="사진 크게 보기"><img loading="lazy" src="/media/${m.id}" alt="함께 남긴 사진"></button>`).join('')}</div>` : `<div class="card pad sub body2">아직 사진이 없어요. 오늘 찍은 사진을 가장 먼저 보태 보세요.</div>`}</section>
+      ${p.media.length ? `<div class="memory-swipe" aria-label="사진별 기억">${p.media.map((m, i) => m.restricted ? '<div class="res">검토 중인 콘텐츠예요</div>' : photoSlide(m, i)).join('')}</div>` : `<div class="card pad sub body2">아직 사진이 없어요. 오늘 찍은 사진을 가장 먼저 보태 보세요.</div>`}</section>
+      ${open ? `<section class="memory-contrib"><h2>함께 남기는 추억</h2><p class="sub body2">같은 날의 사진과 이야기를 함께 남겨보세요.</p><button class="btn block" data-act="add-more">내 사진 추가하기</button><input type="file" accept="image/*" multiple hidden data-upload="${p.id}" id="pf"></section>` : ''}
     </div><div class="stack"><section class="stack"><h2>우리의 이야기</h2>${stories.map(noteHtml).join('') || '<p class="sub body2">아직 남긴 이야기가 없어요.</p>'}
       ${open ? `<form data-form="note" data-id="${p.id}" data-kind="story" class="stack"><label class="field"><span class="cap">내가 기억하는 그날</span><textarea name="text" id="story-ta" maxlength="2000" required placeholder="그날의 이야기를 남겨 보세요"></textarea><small>남긴 기억은 이 추억의 참여자 ${acc.length}명이 볼 수 있어요.</small></label><button class="btn block">함께 기록하기</button></form>` : ''}</section>
-    <section class="stack"><div class="row between"><h2>댓글 ${cmts.length || ''}</h2><button class="btn sm ${p.reactions.mine ? '' : 'line'}" data-act="react" data-id="${p.id}" aria-pressed="${p.reactions.mine}">${I('heart', 's')} ${p.reactions.count || ''} 좋아요</button></div>${cmts.map(noteHtml).join('')}
-      ${open ? `<form data-form="note" data-id="${p.id}" data-kind="comment" class="row"><input type="text" name="text" maxlength="500" required placeholder="댓글 남기기" aria-label="댓글"><button class="btn sm" style="flex:none">남기기</button></form>` : ''}</section></div></div></div>`;
+    </div></div></div>`;
 };
 
 P.newPost = async () => {
@@ -326,24 +333,54 @@ P.memories = async () => {
 };
 
 const REGIONS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
+// Natural Earth 1:10m 행정구역 중심점 기반. 수도권 세 지역만 52px 마커 충돌을 피하도록 제한적으로 벌렸다.
+const REGION_POS = { 서울: [34, 13], 인천: [17, 12], 경기: [49, 16], 강원: [61, 9], 충북: [50, 28], 세종: [36, 31], 충남: [29, 33], 대전: [40, 38], 경북: [67, 38], 대구: [65, 49], 전북: [36, 50], 광주: [27, 62], 전남: [32, 70], 경남: [58, 61], 부산: [74, 68], 울산: [77, 57], 제주: [30, 93] };
+const KOREA_COUNTRIES = new Set(['대한민국', '한국', 'South Korea', 'Republic of Korea', 'Korea', '기타']);
+const isKorea = c => KOREA_COUNTRIES.has(String(c || '').trim());
 const regionOf = c => { const x = String(c || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, ''); return { 충청북: '충북', 충청남: '충남', 전라북: '전북', 전라남: '전남', 경상북: '경북', 경상남: '경남' }[x] || x.slice(0, 2); };
-const regionMap = m => { const by = {}; m.countries.forEach(c => c.cities.forEach(ct => { const k = regionOf(ct.city); (by[k] ||= []).push(...ct.items); })); return by; };
+const regionMap = m => { const by = {}; m.countries.filter(c => isKorea(c.country)).forEach(c => c.cities.forEach(ct => { const k = regionOf(ct.city); (by[k] ||= []).push(...ct.items); })); return by; };
+const SEOUL_DISTRICT = { 망원한강공원: '마포구', 연남동: '마포구', 망원동: '마포구', 합정: '마포구', 성수동: '성동구', 서울숲: '성동구', 종로: '종로구', 연희동: '서대문구', 반포한강공원: '서초구', 남산: '중구', 을지로: '중구' };
+const districtOf = (p, region = '') => { const area = String(p?.area || '').trim(); if (region === '서울') return SEOUL_DISTRICT[area] || (/구$/.test(area) ? area : area || '세부 지역 미지정'); return area || '세부 지역 미지정'; };
+const regionMemoryCard = p => `<a class="region-memory-card" href="#/post/${p.id}"><span class="region-thumb">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span class="region-copy"><b>${esc(p.title)}</b><span class="region-place">${fmtDate(p.occurred_on)}${p.label ? ' · ' + esc(p.label) : ''}</span><span class="region-meta">사진 ${p.photo_count || 0}장 · 이야기 ${p.story_count || 0}개</span></span><span class="region-chevron">${I('chev', 's')}</span></a>`;
+function REGION_UI(region) {
+  const items = S.footBy?.[region]?.items || [];
+  const b = sheet(`<div class="region-sheet"><div class="thread-head"><div><h2>${esc(region)}의 발자국</h2><p class="cap">추억 ${items.length}개</p></div><button class="icon-btn" data-act="sheet-close" aria-label="닫기">${I('x')}</button></div><div class="region-preview">${items.slice(0, 2).map(p => `<a class="region-mini" href="#/post/${p.id}"><span>${p.cover ? `<img src="/media/${p.cover}" alt="">` : KNOT}</span><b>${esc(p.title)}</b><small>${esc(region)} &gt; ${esc(districtOf(p, region))} · ${fmtDate(p.occurred_on)}</small></a>`).join('')}</div><a class="btn block" href="#/foot-region/${encodeURIComponent(region)}">전체 추억 보기</a></div>`);
+  b.querySelector('a[href^="#/foot-region/"]')?.addEventListener('click', closeSheet);
+}
 P.foot = async () => {
-  const f = S.foot ||= { mode: 'all', people: [], region: '' };
+  const f = S.foot ||= { mode: 'all', people: [], region: '', scope: 'domestic' }; f.scope ||= 'domestic';
   const pp = await api('GET', '/api/people'), withMode = f.mode === 'with';
   const m = await api('GET', '/api/map?' + new URLSearchParams({ people: withMode ? f.people.join(',') : '', mode: 'and' }));
-  const by = {}; m.countries.forEach(c => c.cities.forEach(ct => { const k = regionOf(ct.city); (by[k] ||= { items: [] }).items.push(...ct.items); }));
-  const n = REGIONS.filter(r => by[r]).length;
-  const stamp = r => { const it = by[r]?.items[0]; return `<button class="stamp${by[r] ? ' on' : ''}" ${by[r] ? '' : 'disabled '}data-act="foot-region" data-v="${r}" aria-pressed="${f.region === r}" aria-label="${r}${by[r] ? ', 추억 ' + by[r].items.length + '개, 눌러서 보기' : ', 아직 기록이 없어요'}"><span class="sp">${it?.cover ? `<img loading="lazy" src="/media/${it.cover}" alt="">` : esc(r[0])}</span><span class="cap">${by[r] ? r : ''}</span></button>`; };
-  const sel = by[f.region]?.items || [];
+  const domestic = m.countries.filter(c => isKorea(c.country)), overseas = m.countries.filter(c => !isKorea(c.country));
+  const by = {}; domestic.forEach(c => c.cities.forEach(ct => { const k = regionOf(ct.city); (by[k] ||= { items: [] }).items.push(...ct.items); }));
+  S.footBy = by;
+  const activeRegions = REGIONS.filter(r => by[r]), n = activeRegions.length, domesticTotal = domestic.reduce((sum, c) => sum + c.count, 0);
+  const marker = r => { const it = by[r].items[0], [x, y] = REGION_POS[r]; return `<button class="map-marker on" style="--mx:${x}%;--my:${y}%" data-act="foot-region" data-v="${r}" aria-label="${r}, 추억 ${by[r].items.length}개, 눌러서 보기"><span class="map-marker-img">${it?.cover ? `<img loading="lazy" src="/media/${it.cover}" alt="">` : esc(r[0])}</span><span class="map-count">${by[r].items.length}</span><span class="map-label">${r}</span></button>`; };
+  const overseasHtml = overseas.length ? `<section class="country-list" aria-label="해외에서 남긴 추억">${overseas.map(c => { const items = c.cities.flatMap(x => x.items), cover = items.find(x => x.cover)?.cover; return `<a class="country-card" href="#/foot-country/${encodeURIComponent(c.country)}"><span class="country-photo">${cover ? `<img loading="lazy" src="/media/${cover}" alt="">` : KNOT}</span><span><b>${esc(c.country)}</b><small>추억 ${c.count}개 · 도시 ${c.cities.length}곳</small></span>${I('chev', 's')}</a>`; }).join('')}</section>` : `<div class="foot-empty"><h2>아직 해외에 남긴 발자국이 없어요</h2><p>해외에서 함께한 추억을 기록하면 이곳에서 다시 만날 수 있어요.</p></div>`;
   return `<header class="top"><h1>우리의 발자국</h1></header><div class="page stack" style="padding-top:8px">
-    <p class="sub body2">${m.total ? `추억 ${m.total}개가 ${n}곳에 쌓였어요.` : '추억에 지역을 연결하면 발자국이 쌓여요.'}</p>
+    <p class="sub body2">함께한 순간이 남아 있는 곳을 다시 찾아보세요.</p>
+    <div class="seg" role="tablist" aria-label="국내외 발자국"><button role="tab" aria-selected="${f.scope === 'domestic'}" data-act="foot-scope" data-v="domestic">국내</button><button role="tab" aria-selected="${f.scope === 'overseas'}" data-act="foot-scope" data-v="overseas">해외</button></div>
     <div class="seg" role="tablist" aria-label="발자국 종류">${[['all', '우리의 발자국'], ['with', '함께한 발자국']].map(([k, l]) => `<button role="tab" aria-selected="${f.mode === k}" data-act="foot-mode" data-v="${k}">${l}</button>`).join('')}</div>
     ${withMode ? `<div class="chips" aria-label="함께한 사람">${pp.friends.map(u => `<button class="chip${f.people.includes(u.id) ? ' on' : ''}" aria-pressed="${f.people.includes(u.id)}" data-act="foot-person" data-v="${u.id}">${esc(u.name)}</button>`).join('') || '<span class="cap">연결된 사람이 없어요</span>'}</div>` : ''}
-    <div class="foot-stats"><div><span class="cap">기록된 지역</span><b>${n}<small> / 17곳</small></b></div><div><span class="cap">연결된 추억</span><b>${m.total}<small>개</small></b></div></div>
-    <div class="stamps">${REGIONS.map(stamp).join('')}</div>${n ? '<p class="cap">사진이 있는 지역을 눌러 그 지역의 추억을 볼 수 있어요. 흐린 지역은 아직 기록이 없어요.</p>' : ''}
-    ${f.region ? `<section class="stack" aria-label="${f.region}의 추억"><h2>${f.region}의 추억</h2>${sel.length ? sel.map(p => `<a class="mrow" href="#/post/${p.id}"><span class="th">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span><b>${esc(p.title)}</b><span class="cap">${fmtDate(p.occurred_on)}${p.label ? ' · ' + esc(p.label) : ''}</span></span>${I('chev', 's')}</a>`).join('') : '<p class="sub body2">아직 이 지역에 남긴 추억이 없어요.</p>'}</section>` : ''}
+    ${f.scope === 'domestic' ? `<div class="foot-stats"><div><span class="cap">기록된 지역</span><b>${n}<small> / 17곳</small></b></div><div><span class="cap">연결된 추억</span><b>${domesticTotal}<small>개</small></b></div></div><div class="korea-map" aria-label="대한민국 지역별 추억 지도"><img class="korea-shape" src="/brand/korea-admin1.svg" alt="">${activeRegions.map(marker).join('')}</div>${n ? `<section class="foot-region-summary"><div class="row between"><h2>추억이 있는 지역</h2><span class="cap">${n}곳</span></div>${activeRegions.map(r => { const p = by[r].items[0]; return `<button data-act="foot-region" data-v="${r}"><span>${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><b>${r}</b><small>추억 ${by[r].items.length}개</small>${I('chev', 's')}</button>`; }).join('')}</section>` : '<div class="foot-empty"><h2>아직 국내에 남긴 발자국이 없어요</h2><p>추억에 지역을 연결하면 이곳에서 다시 만날 수 있어요.</p></div>'}` : overseasHtml}
     <p class="cap">발자국은 추억을 볼 수 있는 사람에게만 보여요.</p></div>`;
+};
+P.footRegion = async raw => {
+  const region = decodeURIComponent(raw), f = S.foot || { mode: 'all', people: [] }, m = await api('GET', '/api/map?' + new URLSearchParams({ people: f.mode === 'with' ? f.people.join(',') : '', mode: 'and' })), items = regionMap(m)[region] || [];
+  const districts = [...new Set(items.map(p => districtOf(p, region)))];
+  return `${top(region + '의 발자국')}<div class="page stack region-page"><div><h1>세부 지역</h1><p class="sub body2">${items.length ? `${region} 안에서 추억이 있는 곳을 골라보세요.` : '아직 이 지역에 남긴 추억이 없어요.'}</p></div><div class="city-list">${districts.map(d => `<a href="#/foot-district/${encodeURIComponent(region)}/${encodeURIComponent(d)}"><span><b>${esc(region)} &gt; ${esc(d)}</b><small>추억 ${items.filter(p => districtOf(p, region) === d).length}개</small></span>${I('chev', 's')}</a>`).join('') || '<div class="card pad sub body2">다른 지역의 발자국을 살펴보세요.</div>'}</div></div>`;
+};
+P.footDistrict = async (rawRegion, rawDistrict) => {
+  const region = decodeURIComponent(rawRegion), district = decodeURIComponent(rawDistrict), f = S.foot || { mode: 'all', people: [] }, m = await api('GET', '/api/map?' + new URLSearchParams({ people: f.mode === 'with' ? f.people.join(',') : '', mode: 'and' })), items = (regionMap(m)[region] || []).filter(p => districtOf(p, region) === district);
+  return `${top(region + ' > ' + district)}<div class="page stack region-page"><div><h1>이곳의 추억</h1><p class="sub body2">${items.length}개의 추억이 이어져 있어요.</p></div><div class="region-memory-list">${items.map(regionMemoryCard).join('') || '<div class="card pad sub body2">볼 수 있는 추억이 없어요.</div>'}</div></div>`;
+};
+P.footCountry = async raw => {
+  const country = decodeURIComponent(raw), f = S.foot || { mode: 'all', people: [] }, m = await api('GET', '/api/map?' + new URLSearchParams({ people: f.mode === 'with' ? f.people.join(',') : '', mode: 'and' })), c = m.countries.find(x => x.country === country);
+  return `${top(country + '의 발자국')}<div class="page stack region-page"><p class="sub body2">도시를 골라 함께 남긴 추억을 살펴보세요.</p><div class="city-list">${c ? c.cities.map(city => `<a href="#/foot-city/${encodeURIComponent(country)}/${encodeURIComponent(city.city)}"><span><b>${esc(city.city)}</b><small>추억 ${city.count}개</small></span>${I('chev', 's')}</a>`).join('') : '<div class="card pad sub body2">볼 수 있는 추억이 없어요.</div>'}</div></div>`;
+};
+P.footCity = async (rawCountry, rawCity) => {
+  const country = decodeURIComponent(rawCountry), cityName = decodeURIComponent(rawCity), f = S.foot || { mode: 'all', people: [] }, m = await api('GET', '/api/map?' + new URLSearchParams({ people: f.mode === 'with' ? f.people.join(',') : '', mode: 'and' })), city = m.countries.find(x => x.country === country)?.cities.find(x => x.city === cityName), items = city?.items || [];
+  return `${top(cityName + '의 발자국')}<div class="page stack region-page"><div><h1>이곳의 추억</h1><p class="sub body2">${items.length}개의 추억이 이어져 있어요.</p></div><div class="region-memory-list">${items.map(regionMemoryCard).join('') || '<div class="card pad sub body2">볼 수 있는 추억이 없어요.</div>'}</div></div>`;
 };
 
 P.meetups = async () => {
@@ -443,7 +480,7 @@ P.join = async code => {
 };
 
 // ---------- 라우터 ----------
-const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/foot$/, P.foot, 'foot'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, ''], [/^\/new-post$/, P.newPost, ''], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/space\/(\d+)$/, P.space, 'memories'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
+const routes = [[/^\/(terms|privacy-policy|help)$/, async () => docPage(location.hash.slice(1).split('?')[0]), 'me'], [/^\/$/, P.home, 'home'], [/^\/meetups$/, P.meetups, 'meetups'], [/^\/memories$/, P.memories, 'memories'], [/^\/foot$/, P.foot, 'foot'], [/^\/foot-region\/([^/]+)$/, P.footRegion, 'foot'], [/^\/foot-district\/([^/]+)\/([^/]+)$/, P.footDistrict, 'foot'], [/^\/foot-country\/([^/]+)$/, P.footCountry, 'foot'], [/^\/foot-city\/([^/]+)\/([^/]+)$/, P.footCity, 'foot'], [/^\/me$/, P.me, 'me'], [/^\/post\/(\d+)$/, P.post, ''], [/^\/new-post$/, P.newPost, ''], [/^\/new-meetup$/, P.newMeetup, 'meetups'], [/^\/meetup\/(\d+)$/, P.meetup, 'meetups'], [/^\/people$/, P.people, 'me'], [/^\/groups$/, P.groups, 'me'], [/^\/space\/(\d+)$/, P.space, 'memories'], [/^\/blocks$/, P.blocks, 'me'], [/^\/hidden$/, P.hidden, 'me'], [/^\/reports$/, P.reports, 'me'], [/^\/join\/([\w-]+)$/, P.join, 'me'], [/^\/saved$/, P.saved, 'me'], [/^\/privacy$/, P.privacy, 'me']];
 let seq = 0;
 async function route() {
   const my = ++seq, view = $('#view');
@@ -495,6 +532,7 @@ const REPORT_UI = (t, id) => { const b = sheet(`<h2>신고하기</h2><p class="s
 const A = {
   back: () => history.length > 1 ? history.back() : go('/'),
   reload: () => route(),
+  'sheet-close': () => closeSheet(),
   auth: (d) => { if (location.hash.startsWith('#/signup/oauth')) history.replaceState(null, '', '#/'); S.authMode = d.m; route(); },
   sns: d => {
     if (S.snsBusy) return; // 연속 탭 방지
@@ -511,6 +549,10 @@ const A = {
   'accept-friend': d => act(() => api('POST', `/api/people/${d.id}/accept`), '연결됐어요.'),
   'decline-friend': d => act(() => api('DELETE', `/api/people/${d.id}`)),
   react: d => act(() => api('POST', `/api/posts/${d.id}/react`)),
+  'memory-thread': d => THREAD_UI(+d.id).catch(e => toast(e.message)),
+  'memory-react': async d => { try { await api('POST', `/api/media/${d.id}/reactions`, { emoji: d.emoji }); await THREAD_UI(+d.id); } catch (e) { toast(e.message); } },
+  'memory-reply': (d, el) => { const f = el.closest('.sheet')?.querySelector('[data-form=memory-comment]'); if (!f) return; f.elements.parent_id.value = d.id; $('#thread-label', f).textContent = `${d.name}님에게 답글`; f.elements.text.focus(); },
+  'memory-del': async d => { if (!await ask({ title: '이 댓글을 삭제할까요?', body: '삭제하면 이 사진을 보는 모두에게서 사라져요.', ok: '삭제하기', danger: true })) return; try { await api('DELETE', `/api/notes/${d.id}`); await THREAD_UI(+d.mid); } catch (e) { toast(e.message); } },
   'del-note': async d => { if (await ask({ title: '내 글을 삭제할까요?', body: '삭제하면 모두에게서 사라지고 되돌릴 수 없어요.', ok: '삭제하기', danger: true })) act(() => api('DELETE', `/api/notes/${d.id}`), '삭제했어요.'); },
   report: d => REPORT_UI(d.t, d.id),
   photo: d => {
@@ -562,7 +604,7 @@ const A = {
       }
     });
   },
-  'add-more': () => { const b = sheet(`<h2>무엇을 더할까요?</h2><div class="menu" style="margin-top:8px"><button data-a="photo">${I('imgplus')}<span><b>사진 고르기</b><br><span class="cap">여러 장을 한 번에 올릴 수 있어요</span></span></button><button data-a="text">${I('pen')}<span><b>기억 쓰기</b><br><span class="cap">내가 기억하는 그날을 남겨요</span></span></button></div>`); b.addEventListener('click', e => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; closeSheet(); if (a === 'photo') $('#pf')?.click(); else { const t = $('#story-ta'); t?.scrollIntoView({ block: 'center' }); t?.focus(); } }); },
+  'add-more': () => { const b = sheet(`<h2>내 사진과 이야기 더하기</h2><p class="sub body2">추억 전체에 새 사진이나 긴 이야기를 정식으로 보태요.</p><div class="menu add-menu" style="margin-top:8px"><button data-a="photo"><span><b>사진 고르기</b><br><span class="cap">여러 장을 한 번에 올릴 수 있어요</span></span></button><button data-a="text"><span><b>이야기 쓰기</b><br><span class="cap">내가 기억하는 그날을 길게 남겨요</span></span></button></div>`); b.addEventListener('click', e => { const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; closeSheet(); if (a === 'photo') $('#pf')?.click(); else { const t = $('#story-ta'); t?.scrollIntoView({ block: 'center' }); t?.focus(); } }); },
   save: d => act(() => api('POST', '/api/saves', { post_id: +d.id })),
   marker: (d, t) => {
     const city = window._map.countries[+d.c].cities[+d.i], pv = $('#preview');
@@ -606,8 +648,9 @@ const A = {
   'cal-move': d => { const [y, m] = S.cal.ym.split('-').map(Number), x = new Date(y, m - 1 + +d.v, 1); S.cal = { ym: `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`, day: '' }; route(); },
   'cal-day': d => { S.cal.day = S.cal.day === d.v ? '' : d.v; route(); },
   'foot-mode': d => { S.foot.mode = d.v; route(); },
+  'foot-scope': d => { S.foot.scope = d.v; route(); },
   'foot-person': d => { const id = +d.v, p = S.foot.people; S.foot.people = p.includes(id) ? p.filter(x => x !== id) : [...p, id]; route(); },
-  'foot-region': d => { S.foot.region = S.foot.region === d.v ? '' : d.v; route(); },
+  'foot-region': d => REGION_UI(d.v),
   mem: d => act(async () => { S.me = await api('PATCH', '/api/me', { mem_enabled: d.v === '1' }); }, d.v === '1' ? '켰어요. 언제든 끌 수 있어요.' : '껐어요. 기록은 그대로 보관돼요.'),
   'hide-post': d => act(() => api('POST', '/api/hides', { type: 'post', id: +d.id }), '숨긴 추억은 다시 추천하지 않아요. 설정에서 언제든 바꿀 수 있어요.'),
   unhide: d => act(() => api('DELETE', `/api/hides/${d.t}/${d.id}`)),
@@ -697,6 +740,7 @@ const F = {
   async login(fd) { S.me = await api('POST', '/api/login', { username: fd.get('username'), password: fd.get('password') }); },
   async signup(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('POST', '/api/signup', { username: fd.get('username'), nickname: r.value, password: fd.get('password'), consents: { terms: fd.get('c_terms') === 'on', privacy: fd.get('c_privacy') === 'on', marketing: fd.get('c_marketing') === 'on' } }); try { sessionStorage.removeItem('ws_nick'); } catch { } },
   async note(fd, f) { await api('POST', `/api/posts/${f.dataset.id}/notes`, { kind: f.dataset.kind, text: fd.get('text') }); },
+  async 'memory-comment'(fd, f) { await api('POST', `/api/media/${f.dataset.mid}/comments`, { text: fd.get('text'), parent_id: +fd.get('parent_id') || null }); await THREAD_UI(+f.dataset.mid); return 'noroute'; },
   async request(fd) { await api('POST', '/api/people/request', { username: fd.get('username') }); toast('연결 요청을 보냈어요. 상대가 수락하면 연결돼요.'); },
   async rename(fd) { const r = validateNickname(fd.get('nickname')); if (!r.ok) throw new Error(r.message); S.me = await api('PATCH', '/api/me', { nickname: r.value }); closeSheet(); toast('닉네임을 바꿨어요.'); },
   async 'oauth-consent'(fd) { S.oauthConsents = { terms: true, privacy: true, marketing: fd.get('c_marketing') === 'on' }; S.oauthStep = 'profile'; },
@@ -817,6 +861,7 @@ const VALID = {
   login: fd => [['username', need(fd.get('username'), '이름을 입력해 주세요.')], ['password', need(fd.get('password'), '비밀번호를 입력해 주세요.')]],
   request: fd => { const v = String(fd.get('username') || '').trim().replace(/^@/, ''); return [['username', !v ? '연결할 이름을 입력해 주세요.' : !/^[a-z0-9_]{3,20}$/i.test(v) ? '이름은 영문, 숫자, _ 로 3–20자예요.' : null]]; },
   note: fd => [['text', need(fd.get('text'), '내용을 입력해 주세요.')]],
+  'memory-comment': fd => [['text', need(fd.get('text'), '짧은 기억을 남겨 주세요.')]],
   newpost: fd => [['title', need(fd.get('title'), '추억 제목을 입력해 주세요.')], ['m', fd.getAll('m').length ? null : '함께한 사람을 한 명 이상 선택해 주세요.'], ['date', pastOk(fd.get('date'))], ['pcity', (fd.get('pname') || fd.get('parea')) && !fd.get('pcity') && !fd.get('pcity_x') && !fd.get('pcountry') && !fd.get('pcountry_x') ? '지역을 골라 주세요.' : null]],
   newmeetup: fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ...whenValid(fd)],
   'meetup-edit': fd => [['title', need(fd.get('title'), '약속 이름을 입력해 주세요.')], ...whenValid(fd)],
