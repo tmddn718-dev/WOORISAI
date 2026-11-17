@@ -339,7 +339,19 @@ const KOREA_COUNTRIES = new Set(['대한민국', '한국', 'South Korea', 'Repub
 const isKorea = c => KOREA_COUNTRIES.has(String(c || '').trim());
 const regionOf = c => { const x = String(c || '').replace(/(특별자치시|특별자치도|특별시|광역시|도)$/, ''); return { 충청북: '충북', 충청남: '충남', 전라북: '전북', 전라남: '전남', 경상북: '경북', 경상남: '경남' }[x] || x.slice(0, 2); };
 const regionMap = m => { const by = {}; m.countries.filter(c => isKorea(c.country)).forEach(c => c.cities.forEach(ct => { const k = regionOf(ct.city); (by[k] ||= []).push(...ct.items); })); return by; };
-const SEOUL_DISTRICT = { 망원한강공원: '마포구', 연남동: '마포구', 망원동: '마포구', 합정: '마포구', 성수동: '성동구', 서울숲: '성동구', 종로: '종로구', 연희동: '서대문구', 반포한강공원: '서초구', 남산: '중구', 을지로: '중구' };
+const SEOUL_DISTRICT = {
+  망원한강공원: '마포구', 망원동: '마포구', 연남동: '마포구', 합정: '마포구', 합정동: '마포구', 상수동: '마포구', 서교동: '마포구', 홍대: '마포구', 홍대입구: '마포구',
+  성수동: '성동구', 서울숲: '성동구', 뚝섬: '성동구', 왕십리: '성동구',
+  종로: '종로구', 북촌: '종로구', 서촌: '종로구', 인사동: '종로구', 익선동: '종로구', 광화문: '종로구',
+  연희동: '서대문구', 신촌: '서대문구', 연세로: '서대문구',
+  반포한강공원: '서초구', 반포동: '서초구', 서래마을: '서초구', 교대: '서초구',
+  남산: '중구', 을지로: '중구', 명동: '중구', 충무로: '중구',
+  이태원: '용산구', 한남동: '용산구', 용리단길: '용산구', 삼각지: '용산구', 해방촌: '용산구',
+  잠실: '송파구', 석촌호수: '송파구', 송리단길: '송파구', 건대: '광진구', 건대입구: '광진구', 어린이대공원: '광진구',
+  여의도: '영등포구', 여의도한강공원: '영등포구', 영등포: '영등포구', 문래동: '영등포구',
+  강남역: '강남구', 압구정: '강남구', 청담동: '강남구', 삼성동: '강남구', 대치동: '강남구', 코엑스: '강남구', 신사동: '강남구', 가로수길: '강남구',
+  구로동: '구로구', 고척동: '구로구', 신도림: '구로구', 신도림동: '구로구', 개봉동: '구로구', 오류동: '구로구', 구로디지털단지: '구로구', 구로역: '구로구',
+};
 const districtOf = (p, region = '') => { const area = String(p?.area || '').trim(); if (region === '서울') return SEOUL_DISTRICT[area] || (/구$/.test(area) ? area : area || '세부 지역 미지정'); return area || '세부 지역 미지정'; };
 const regionMemoryCard = p => `<a class="region-memory-card" href="#/post/${p.id}"><span class="region-thumb">${p.cover ? `<img loading="lazy" src="/media/${p.cover}" alt="">` : KNOT}</span><span class="region-copy"><b>${esc(p.title)}</b><span class="region-place">${fmtDate(p.occurred_on)}${p.label ? ' · ' + esc(p.label) : ''}</span><span class="region-meta">사진 ${p.photo_count || 0}장 · 이야기 ${p.story_count || 0}개</span></span><span class="region-chevron">${I('chev', 's')}</span></a>`;
 function REGION_UI(region) {
