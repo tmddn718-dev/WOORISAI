@@ -1,0 +1,12 @@
+/* 접근성 P0(테스트 빌드 전용 덮어쓰기). 원본 디자인 시스템 파일은 건드리지 않고, 글자 크기 토큰과 눌리는 영역만 고친다. */
+/* 1) 12px 미만 글자: caption-2(11px) → 12px. 하단 탭 라벨, 사진 위 '친구 A'·'대표' 칩 등이 이 토큰을 쓴다 */
+html:root { --type-caption-2: 500 12px/16px var(--font-product) !important; }
+/* 2) 눌리는 영역 44px — 보이는 크기는 그대로 */
+button[aria-label="나"] { position: relative; }
+button[aria-label="나"]::after { content: ""; position: absolute; inset: -6px; }
+button[style*="underline"] { position: relative; }
+button[style*="underline"]::after { content: ""; position: absolute; inset: -11px -4px; }
+button[aria-label="이 사진 빼기"] { top: 0 !important; right: 0 !important; width: 44px !important; height: 44px !important; background: none !important; z-index: 1; }
+button[aria-label="이 사진 빼기"]::before { content: ""; position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 9999px; background: rgba(36,38,34,.72); z-index: -1; }
+/* 하단 탭 라벨: 디자인 시스템이 11px 로 고정해 둔 값을 12px 로 */
+.ws-bnav__item { font-size: 12px !important; line-height: 16px !important; }
