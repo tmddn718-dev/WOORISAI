@@ -765,3 +765,7 @@ label.row { min-height: 44px; }
 .place-sec > summary::-webkit-details-marker { display: none; }
 details.plain { border-top: 1px solid var(--ws-color-border-subtle); padding-top: 4px; }
 details.plain > summary { font-size: .875rem; color: var(--ws-color-fg-secondary); }
+
+/* 사람이 아닌 항목(약속 알림 등)은 이니셜 대신 아이콘 아바타 */
+.av.ic { background: #E9EDE7; color: #435648; }
+.av.ic svg { width: 20px; height: 20px; }
