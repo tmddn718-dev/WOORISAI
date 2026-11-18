@@ -751,3 +751,17 @@ label.row { min-height: 44px; }
   .region-chevron { width: 36px; }
   .map-marker.on .map-marker-img { width: 44px; height: 44px; }
 }
+
+/* P1: 사람별 색조 아바타 + 상태 점, 홈 바로가기, 접는 지역 영역 */
+.av { position: relative; }
+.av.t0 { background: #E9EDE7; color: #435648; } .av.t1 { background: #F1E9DD; color: #6B4A12; } .av.t2 { background: #E3ECF4; color: #2F5A84; }
+.av.t3 { background: #F6E5E2; color: #8A3128; } .av.t4 { background: #ECE6F3; color: #5A4379; } .av.t5 { background: #EEF0D4; color: #575A15; }
+.av .av-dot { position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px var(--ws-color-bg-surface); }
+.av .av-dot.hollow { background: var(--ws-color-bg-surface); box-shadow: 0 0 0 1.5px var(--green) inset, 0 0 0 2px var(--ws-color-bg-surface); }
+.av.s .av-dot { width: 8px; height: 8px; }
+.news .hd h2 { display: flex; align-items: center; gap: 8px; }
+.chips.quick { margin: 24px 0 0; }
+.place-sec > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; list-style: none; }
+.place-sec > summary::-webkit-details-marker { display: none; }
+details.plain { border-top: 1px solid var(--ws-color-border-subtle); padding-top: 4px; }
+details.plain > summary { font-size: .875rem; color: var(--ws-color-fg-secondary); }
