@@ -683,8 +683,8 @@ label.row { min-height: 44px; }
 .thread-author b { font-size: .875rem; }
 .thread-author time { color: var(--ws-color-fg-tertiary); font-size: .75rem; }
 .thread-comment p { margin: 7px 0 0; white-space: pre-wrap; font-size: .875rem; line-height: 21px; }
-.thread-delete, .thread-reply { min-height: 32px; padding: 0 6px; border: 0; background: none; color: var(--ws-color-fg-secondary); font: inherit; font-size: .75rem; cursor: pointer; }
-.thread-reply { display: block; margin: 4px -6px -6px auto; }
+.thread-delete, .thread-reply { min-height: 44px; padding: 0 6px; border: 0; background: none; color: var(--ws-color-fg-secondary); font: inherit; font-size: .75rem; cursor: pointer; }
+.thread-reply { display: block; margin: -2px -6px -10px auto; }
 .thread-attachment { display: block; width: min(100%, 220px); max-height: 220px; margin-top: 10px; border-radius: var(--ws-radius-small); object-fit: cover; }
 .thread-empty { padding: 20px 8px; text-align: center; color: var(--ws-color-fg-tertiary); font-size: .875rem; }
 .thread-form { display: grid; gap: 10px; padding-top: 14px; border-top: 1px solid var(--ws-color-border-subtle); }
@@ -692,13 +692,13 @@ label.row { min-height: 44px; }
 .korea-map { position: relative; width: 100%; max-width: 430px; aspect-ratio: 300 / 324; margin: 0 auto; border-radius: var(--r-card); overflow: hidden; background: var(--ws-color-bg-surface); border: 1px solid var(--ws-color-border-subtle); }
 .korea-shape { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .map-marker { position: absolute; left: var(--mx); top: var(--my); transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 2px; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: none; color: var(--ws-color-fg-tertiary); font: inherit; cursor: pointer; z-index: 2; }
-.map-marker-img { position: relative; width: 18px; height: 18px; display: grid; place-items: center; overflow: hidden; border-radius: 9999px; background: var(--ws-color-bg-surface-muted); border: 1px dashed var(--ws-color-border-default); font-size: .625rem; }
+.map-marker-img { position: relative; width: 18px; height: 18px; display: grid; place-items: center; overflow: hidden; border-radius: 9999px; background: var(--ws-color-bg-surface-muted); border: 1px dashed var(--ws-color-border-default); font-size: .75rem; }
 .map-marker.on .map-marker-img { width: 52px; height: 52px; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--ws-color-border-brand), 0 4px 12px rgba(86,107,92,.2); background: var(--ws-color-bg-brand-subtle); color: var(--ws-color-fg-brand); }
 .map-marker-img img { width: 100%; height: 100%; object-fit: cover; }
 .map-marker.on:hover, .map-marker.on:focus-visible { z-index: 5; transform: translate(-50%, -50%) scale(1.06); }
 .map-marker:focus-visible { outline: 2px solid var(--ws-color-border-focus); outline-offset: 3px; }
-.map-count { position: absolute; top: -5px; right: -2px; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border-radius: 9999px; background: var(--ws-color-bg-brand); color: #fff; border: 2px solid #fff; font-size: .6875rem; font-weight: 700; }
-.map-label { padding: 1px 4px; border-radius: 4px; background: rgba(250,249,246,.86); font-size: .6875rem; line-height: 14px; white-space: nowrap; }
+.map-count { position: absolute; top: -5px; right: -2px; min-width: 20px; height: 20px; padding: 0 5px; display: grid; place-items: center; border-radius: 9999px; background: var(--ws-color-bg-brand); color: #fff; border: 2px solid #fff; font-size: .75rem; font-weight: 700; }
+.map-label { padding: 1px 4px; border-radius: 4px; background: rgba(250,249,246,.86); font-size: .75rem; line-height: 16px; white-space: nowrap; }
 .foot-region-summary, .country-list, .city-list { display: grid; gap: 10px; }
 .foot-region-summary > button, .country-card, .city-list > a { display: grid; grid-template-columns: 56px minmax(0,1fr) auto auto; align-items: center; gap: 12px; min-height: 72px; padding: 8px 12px; border: 1px solid var(--ws-color-border-subtle); border-radius: var(--r-card); background: var(--ws-color-bg-surface); color: inherit; text-align: left; text-decoration: none; cursor: pointer; }
 .foot-region-summary > button > span, .country-photo { position: relative; width: 56px; height: 56px; overflow: hidden; border-radius: var(--ws-radius-small); background: var(--ws-color-bg-recall-subtle); }
