@@ -2,3 +2,5 @@ data/
 node_modules/
 .DS_Store
 dist-ux-test/
+.vercel
+.env*

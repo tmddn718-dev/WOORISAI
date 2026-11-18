@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #4f46e5;
+  --color-brand-soft: #eef2ff;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+}
+
+/* 안전 영역 유틸리티(노치·홈 인디케이터). env() 를 지원하지 않는 브라우저에서는 0 으로 동작한다. */
+@utility pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+@utility px-safe { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+
+/* ── 앱 레이아웃 ─────────────────────────────────────────
+   body 는 스크롤하지 않는다. 본문 영역(.scroll-area)만 스크롤한다.
+   높이: 100dvh 가 기본. 구형 WebView 를 위해 100vh 를 먼저 쓰고, JS(useAppViewport)가
+   visualViewport 로 --app-height 를 덮어쓴다(iOS 키보드 대응). */
+html, body, #root { height: 100%; margin: 0; }
+html { overflow: hidden; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #fff;
+  color: #111827;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* 더블탭 확대·300ms 지연 제거 */
+}
+.app {
+  position: fixed;
+  left: 0; right: 0;
+  top: var(--app-top, 0px);
+  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+.scroll-area {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain; /* 본문 끝에서 body·주소창으로 스크롤이 번지지 않게 */
+}
+
+/* 키보드가 열리면 하단 탭을 숨겨 입력 영역을 확보한다. */
+html[data-kb="open"] .tabbar { display: none; }
+
+/* 크롬(UI)은 길게 눌러도 선택·콜아웃이 뜨지 않게 하고, 입력과 본문 텍스트는 선택 가능하게 둔다. */
+.chrome { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, select { font-size: 16px; } /* 16px 미만이면 iOS Safari 가 포커스 때 화면을 확대한다 */
+
+/* ── 화면 전환 ─────────────────────────────────────────── */
+@keyframes push-in { from { transform: translateX(28px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes pop-in { from { transform: translateX(-28px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.anim-push { animation: push-in 240ms cubic-bezier(.2, 0, 0, 1) both; }
+.anim-pop { animation: pop-in 240ms cubic-bezier(.2, 0, 0, 1) both; }
+.anim-fade { animation: fade-in 160ms ease-out both; }
+@media (prefers-reduced-motion: reduce) { .anim-push, .anim-pop, .anim-fade { animation: none; } }
